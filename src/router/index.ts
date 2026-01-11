@@ -1,17 +1,20 @@
+import { ROUTE_PATH } from '@/constants/routePath'
+import ProblemDetailPage from '@/pages/user/problem/ProblemDetailPage.vue'
+import ProblemListPage from '@/pages/user/problem/ProblemListPage.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/problems',
+      path: ROUTE_PATH.PROBLEM,
       name: 'Problem',
-      component: () => import('@/pages/user/problem/ProblemListPage.vue')
+      component: ProblemListPage
     },
     {
-      path: '/problems/:id',
+      path: ROUTE_PATH.PROBLEM_DETAIL,
       name: 'ProblemDetail',
-      component: () => import('@/pages/user/problem/ProblemDetailPage.vue')
+      component: ProblemDetailPage
     }
   ],
 })

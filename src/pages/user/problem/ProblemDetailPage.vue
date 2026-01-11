@@ -1,6 +1,14 @@
 <template>
     <div class="space-y-6">
-        <Tabs default-value="description" class="w-full">
+        <div v-if="isLoading" class="flex justify-center py-20">
+            <Loading />
+        </div>
+
+        <div v-else-if="error" class="text-center py-20 text-red-500">
+            Error loading problem details.
+        </div>
+
+        <Tabs v-else-if="problem" v-model="activeTab" default-value="description" class="w-full">
             <Card>
                 <CardHeader class="px-6 pb-0 space-y-4 border-b">
                     <!-- Header Info -->
@@ -24,7 +32,7 @@
                 </CardHeader>
 
                 <CardContent>
-                    <div class="grid grid-cols-1 lg:grid-cols-[9.5fr_2.5fr] gap-6">
+                    <div class="grid gap-6" :class="activeTab === 'submissions' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[10fr_2fr]'">
                         <!-- Left Column -->
                         <div>
                             <!-- Tab: Description -->
@@ -34,7 +42,7 @@
 
                             <!-- Tab: Submit -->
                             <TabsContent value="submit" class="mt-0">
-                                <ProblemSubmit />
+                                <ProblemSubmit :languages="languages || undefined" />
                             </TabsContent>
 
                             <!-- Tab: Submissions -->
@@ -44,7 +52,9 @@
                         </div>
 
                         <!-- Sidebar -->
-                        <ProblemSidebar :problem="problem" />
+                        <div :class="{ 'hidden': activeTab === 'submissions' }">
+                            <ProblemSidebar :problem="problem" />
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -53,6 +63,7 @@
 </template>
 
 <script setup lang="ts">
+import { useRoute } from 'vue-router'
 import { ref } from 'vue'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -61,22 +72,24 @@ import ProblemDescription from '@/components/problem/detail/ProblemDescription.v
 import ProblemSubmit from '@/components/problem/detail/ProblemSubmit.vue'
 import ProblemSubmissions from '@/components/problem/detail/ProblemSubmissions.vue'
 import ProblemSidebar from '@/components/problem/detail/ProblemSidebar.vue'
+import Loading from '@/components/common/Loading.vue'
 
-// Mock Data (simulating data passed from list or fetched)
-const problem = ref({
-    id: 1,
-    title: 'Simple A + B Problem',
-    timeLimit: 1000,
-    memoryLimit: 32,
-    createdBy: 'root',
-    level: 'Easy',
-    total: 9717,
-    acRate: 47.9,
-    description: `Calculate the sum of two integers and output the result.<br>Be careful not to have unnecessary output, such as "Please enter the values of a and b". See the hidden part for sample code.`,
-    inputDesc: `Two integers separated by spaces.`,
-    outputDesc: `Sum of two numbers.`,
-    sampleInput: `1 1`,
-    sampleOutput: `2`,
-    hint: `#include <stdio.h>\nint main() {\n    int a, b;\n    scanf("%d%d", &a, &b);\n    printf("%d\\n", a+b);\n    return 0;\n}`
+import { useFetch } from '@/composables/useFetch'
+import problemService from '@/services/problemService'
+import { useLanguageStore } from '@/stores/language'
+import { storeToRefs } from 'pinia'
+
+const route = useRoute()
+const slug = route.params.slug as string
+const activeTab = ref('description')
+
+const { data: problem, isLoading, error } = useFetch(problemService.getProblemBySlug, {
+    params: slug,
+    transform: (res) => res.data
 })
+
+const languageStore = useLanguageStore()
+const { languages } = storeToRefs(languageStore)
+
+languageStore.fetchLanguages()
 </script>

@@ -15,26 +15,30 @@
                     class="hover:bg-slate-50/80 border-b border-slate-50 transition-colors h-14">
                     <TableCell class="pl-4 font-normal text-slate-500">{{ index + 1 }}</TableCell>
                     <TableCell>
-                        <RouterLink :to="'/problems/' + problem.id" class="block font-medium text-slate-700 hover:text-blue-600 transition-colors">
+                        <RouterLink :to="'/problems/' + problem.problemSlug"
+                            class="block font-medium text-slate-700 hover:text-blue-600 transition-colors">
                             {{ problem.title }}
                         </RouterLink>
                     </TableCell>
                     <TableCell>
-                        <Badge :class="getLevelColor(problem.level)" class="px-2.5 py-0.5 rounded-sm font-bold border-0">
-                            {{ problem.level }}
+                        <Badge :class="getLevelInfo(problem.hardnessLevel).class" class="px-2.5 py-0.5 rounded-sm font-bold border-0">
+                            {{ getLevelInfo(problem.hardnessLevel).text }}
                         </Badge>
                     </TableCell>
                     <TableCell>
                         <div class="flex items-center gap-1.5 text-slate-500">
                             <User class="h-3.5 w-3.5" />
-                            <span class="text-sm">{{ problem.total }}</span>
+                            <span class="text-sm">{{ problem.totalSubmission }}</span>
                         </div>
                     </TableCell>
                     <TableCell>
                         <div class="flex items-center gap-3">
-                            <Progress :model-value="problem.acRate" class="h-1.5 w-24 bg-slate-100"
-                                :indicator-class="getProgressColor(problem.acRate)" />
-                            <span class="text-xs font-medium text-slate-500">{{ problem.acRate }}%</span>
+                            <Progress :model-value="calculateAcRate(problem.acceptedSubmission, problem.totalSubmission)"
+                                class="h-1.5 w-24 bg-slate-100"
+                                :indicator-class="getProgressColor(calculateAcRate(problem.acceptedSubmission, problem.totalSubmission))" />
+                            <span class="text-xs font-medium text-slate-500">
+                                {{ calculateAcRate(problem.acceptedSubmission, problem.totalSubmission) }}%
+                            </span>
                         </div>
                     </TableCell>
                 </TableRow>
@@ -55,26 +59,15 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { User } from 'lucide-vue-next'
-
-interface Problem {
-    id: number
-    title: string
-    level: string
-    total: number
-    acRate: number
-}
+import { type Problem, getLevelInfo } from '@/types/problem'
 
 defineProps<{
     problems: Problem[]
 }>()
 
-const getLevelColor = (level: string) => {
-    switch (level.toLowerCase()) {
-        case 'easy': return 'bg-emerald-500 hover:bg-emerald-600 text-white'
-        case 'medium': return 'bg-amber-500 hover:bg-amber-600 text-white'
-        case 'hard': return 'bg-rose-500 hover:bg-rose-600 text-white'
-        default: return 'bg-slate-500 hover:bg-slate-600 text-white'
-    }
+const calculateAcRate = (accepted: number, total: number) => {
+    if (!total) return 0
+    return Number(((accepted / total) * 100).toFixed(1))
 }
 
 const getProgressColor = (rate: number) => {

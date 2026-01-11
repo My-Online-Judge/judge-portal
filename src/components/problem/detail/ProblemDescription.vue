@@ -2,21 +2,25 @@
     <Card>
         <CardContent class="space-y-6">
             <!-- Description -->
+            <div v-if="problem.description">
+                <div class="leading-relaxed" v-html="problem.description"></div>
+            </div>
+
             <div>
-                <h3 class="text-lg font-bold mb-3 text-blue-600">Description</h3>
-                <div class="text-slate-600 leading-relaxed" v-html="problem.description"></div>
+                <h3 class="text-lg font-bold mb-3 text-blue-600">Subject</h3>
+                <div class="leading-relaxed" v-html="problem.subject"></div>
             </div>
 
             <!-- Input -->
             <div>
                 <h3 class="text-lg font-bold mb-3 text-blue-600">Input</h3>
-                <div class="text-slate-600 leading-relaxed" v-html="problem.inputDesc"></div>
+                <div class="leading-relaxed" v-html="problem.inputDescription"></div>
             </div>
 
             <!-- Output -->
             <div>
                 <h3 class="text-lg font-bold mb-3 text-blue-600">Output</h3>
-                <div class="text-slate-600 leading-relaxed" v-html="problem.outputDesc"></div>
+                <div class="leading-relaxed" v-html="problem.outputDescription"></div>
             </div>
 
             <!-- Sample -->
@@ -27,7 +31,7 @@
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger as-child>
-                                    <button class="focus:outline-none">
+                                    <button class="focus:outline-none" @click="onCopy(problem.sampleInput)">
                                         <Copy class="h-3.5 w-3.5 text-slate-400 cursor-pointer hover:text-blue-600" />
                                     </button>
                                 </TooltipTrigger>
@@ -47,7 +51,7 @@
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger as-child>
-                                    <button class="focus:outline-none">
+                                    <button class="focus:outline-none" @click="onCopy(problem.sampleOutput)">
                                         <Copy class="h-3.5 w-3.5 text-slate-400 cursor-pointer hover:text-blue-600" />
                                     </button>
                                 </TooltipTrigger>
@@ -66,9 +70,7 @@
             <!-- Hint -->
             <div v-if="problem.hint">
                 <h3 class="text-lg font-bold mb-3 text-blue-600">Hint</h3>
-                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                    <div class="text-sm text-slate-600 whitespace-pre-wrap" v-html="problem.hint"></div>
-                </div>
+                <div class="leading-relaxed" v-html="problem.hint"></div>
             </div>
         </CardContent>
     </Card>
@@ -83,15 +85,17 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip'
+import type { Problem } from '@/types/problem'
+import { useClipboard } from '@vueuse/core'
+import { useToast } from '@/composables/useToast'
 
-defineProps<{
-    problem: {
-        description: string
-        inputDesc: string
-        outputDesc: string
-        sampleInput: string
-        sampleOutput: string
-        hint?: string
-    }
-}>()
+defineProps<{ problem: Problem }>()
+
+const { triggerToast } = useToast()
+const { copy } = useClipboard()
+
+const onCopy = (text: string) => {
+    copy(text)
+    triggerToast('Copied!')
+}
 </script>
