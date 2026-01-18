@@ -1,28 +1,22 @@
 <template>
-  <div class="p-6">
-    <Card>
-      <CardHeader>
-        <CardTitle>Hello shadcn-vue!</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Button variant="default" @click="increment" class="bg-blue-500 hover:bg-blue-600">Click me</Button>
-      </CardContent>
-    </Card>
+  <div class="min-h-screen bg-[#F8F9FA] font-sans text-slate-900 flex flex-col">
+    <Header />
+
+    <main class="w-full mx-auto flex-1 px-4 md:px-6 lg:px-8 py-4">
+      <RouterView />
+    </main>
+
+    <!-- Simple Footer -->
+    <footer class="py-6 text-center text-sm text-slate-500">
+      &copy; {{ new Date().getFullYear() }} QDUOJ Clone. All rights reserved. Designed for demo
+      purposes.
+    </footer>
   </div>
+  <Toaster />
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
-const count = ref(0)
-
-function increment() {
-  count.value++
-}
-
-watch(count, (newCount) => {
-  console.log(newCount)
-})
+import { RouterView } from 'vue-router'
+import Header from '@/components/layout/Header.vue'
+import Toaster from '@/components/ui/toast/Toaster.vue'
 </script>
