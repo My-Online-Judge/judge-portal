@@ -2,32 +2,42 @@ import { ref } from 'vue'
 
 export type ToastType = 'success' | 'info' | 'warning' | 'error'
 
-const showToast = ref(false)
-const toastMessage = ref('')
-const toastType = ref<ToastType>('success')
-let timer: ReturnType<typeof setTimeout> | null = null
+export interface Toast {
+    id: number
+    message: string
+    type: ToastType
+}
+
+const toasts = ref<Toast[]>([])
+let nextId = 0
+const MAX_TOASTS = 3
 
 export function useToast() {
-    function triggerToast(message: string, type: ToastType = 'success', duration = 2000) {
-        if (timer) {
-            clearTimeout(timer)
-            timer = null
+    function triggerToast(message: string, type: ToastType = 'success', duration = 3000) {
+        const id = nextId++
+        const newToast: Toast = { id, message, type }
+
+        toasts.value.push(newToast)
+
+        if (toasts.value.length > MAX_TOASTS) {
+            toasts.value.shift()
         }
 
-        toastMessage.value = message
-        toastType.value = type
-        showToast.value = true
-
-        timer = setTimeout(() => {
-            showToast.value = false
-            timer = null
+        setTimeout(() => {
+            removeToast(id)
         }, duration)
     }
 
+    function removeToast(id: number) {
+        const index = toasts.value.findIndex(t => t.id === id)
+        if (index !== -1) {
+            toasts.value.splice(index, 1)
+        }
+    }
+
     return {
-        showToast,
-        toastMessage,
-        toastType,
-        triggerToast
+        toasts,
+        triggerToast,
+        removeToast
     }
 }

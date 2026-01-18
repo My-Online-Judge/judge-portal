@@ -13,7 +13,16 @@ const axiosClient = axios.create({
 // Request Interceptor
 axiosClient.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
-        // Token is handled via HttpOnly cookie automatically by the browser
+        const getCookie = (name: string) => {
+            const value = `; ${document.cookie}`
+            const parts = value.split(`; ${name}=`)
+            if (parts.length === 2) return parts.pop()?.split(';').shift()
+        }
+
+        const accessToken = getCookie('accessToken')
+        if (accessToken) {
+            config.headers.Authorization = `Bearer ${accessToken}`
+        }
         return config
     },
     (error: AxiosError) => {

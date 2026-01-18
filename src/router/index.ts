@@ -15,6 +15,11 @@ const router = createRouter({
       path: ROUTE_PATH.PROBLEM_DETAIL,
       name: 'ProblemDetail',
       component: ProblemDetailPage
+    },
+    {
+      path: ROUTE_PATH.GOOGLE_CALLBACK,
+      name: 'GoogleCallback',
+      component: () => import('@/components/auth/GoogleCallback.vue')
     }
   ],
 })

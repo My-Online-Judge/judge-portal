@@ -32,7 +32,8 @@
                 </CardHeader>
 
                 <CardContent>
-                    <div class="grid gap-6" :class="activeTab === 'submissions' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[10fr_2fr]'">
+                    <div class="grid gap-6" :class="activeTab === 'submissions' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[10fr_2fr]'
+                        ">
                         <!-- Left Column -->
                         <div>
                             <!-- Tab: Description -->
@@ -42,17 +43,17 @@
 
                             <!-- Tab: Submit -->
                             <TabsContent value="submit" class="mt-0">
-                                <ProblemSubmit :languages="languages || undefined" />
+                                <ProblemSubmit :languages="languages || undefined" :problem-slug="slug" @success="handleSubmissionSuccess" />
                             </TabsContent>
 
                             <!-- Tab: Submissions -->
                             <TabsContent value="submissions" class="mt-0">
-                                <ProblemSubmissions />
+                                <ProblemSubmissions :problem-slug="slug" />
                             </TabsContent>
                         </div>
 
                         <!-- Sidebar -->
-                        <div :class="{ 'hidden': activeTab === 'submissions' }">
+                        <div :class="{ hidden: activeTab === 'submissions' }">
                             <ProblemSidebar :problem="problem" />
                         </div>
                     </div>
@@ -83,13 +84,23 @@ const route = useRoute()
 const slug = route.params.slug as string
 const activeTab = ref('description')
 
-const { data: problem, isLoading, error } = useFetch(problemService.getProblemBySlug, {
+const {
+    data: problem,
+    isLoading,
+    error,
+    execute: fetchProblem,
+} = useFetch(problemService.getProblemBySlug, {
     params: slug,
-    transform: (res) => res.data
+    transform: (res) => res.data,
 })
 
 const languageStore = useLanguageStore()
 const { languages } = storeToRefs(languageStore)
 
 languageStore.fetchLanguages()
+
+const handleSubmissionSuccess = () => {
+    activeTab.value = 'submissions'
+    fetchProblem(slug)
+}
 </script>

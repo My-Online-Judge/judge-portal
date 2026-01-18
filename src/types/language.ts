@@ -12,5 +12,6 @@ export interface Language extends BaseModel {
     exeName: string
     compileMaxMemory: number
     maxMemory: number
+    editorFormat: string
     isDisabled: boolean
 }

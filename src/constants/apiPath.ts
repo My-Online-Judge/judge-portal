@@ -1,8 +1,10 @@
 export const API_ROUTES = {
     AUTH: {
-        LOGIN: '/auth/login',
-        REGISTER: '/auth/register',
         REFRESH_TOKEN: '/auth/refresh',
+        GOOGLE_URL: '/auth/outbound/google',
+        GOOGLE_AUTH: '/auth/outbound/authentication',
+        ME: '/auth/me',
+        LOGOUT: '/auth/logout',
     },
     USERS: {
         ROOT: '/users',
@@ -15,5 +17,10 @@ export const API_ROUTES = {
     },
     LANGUAGES: {
         ROOT: '/languages',
+    },
+    SUBMISSIONS: {
+        ROOT: '/submissions',
+        BY_USER_PROBLEM: (userId: string | number, problemSlug: string) =>
+            `/submissions/user/${userId}/problem/${problemSlug}`,
     },
 }

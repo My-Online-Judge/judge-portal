@@ -8,7 +8,8 @@
 
     <!-- Simple Footer -->
     <footer class="py-6 text-center text-sm text-slate-500">
-      &copy; 2023 QDUOJ Clone. All rights reserved. Designed for demo purposes.
+      &copy; {{ new Date().getFullYear() }} QDUOJ Clone. All rights reserved. Designed for demo
+      purposes.
     </footer>
   </div>
   <Toaster />
