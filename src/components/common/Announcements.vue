@@ -1,35 +1,24 @@
 <template>
-    <div class="rounded-xl border bg-white p-6 shadow-sm">
-        <div class="flex items-center gap-2 mb-4">
-            <div class="h-4 w-1 bg-blue-500 rounded-full"></div>
-            <h3 class="text-lg font-bold text-slate-800">Announcements</h3>
-        </div>
-        <div class="flex flex-col gap-4">
-            <div v-for="(item, index) in items" :key="index" class="flex gap-3">
-                <div class="mt-1">
-                    <Megaphone class="h-4 w-4 text-blue-500" />
-                </div>
-                <div>
-                    <a href="#" class="block font-medium text-slate-800 hover:text-blue-600 hover:underline">
-                        {{ item.title }}
-                    </a>
-                    <span class="text-xs text-slate-500">{{ item.date }}</span>
-                </div>
-            </div>
+    <div class="rounded-xl border border-border bg-card p-6">
+        <h3 class="mb-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">Announcements</h3>
+        <div class="flex flex-col divide-y divide-border">
+            <a v-for="(item, index) in items" :key="index" href="#"
+                class="group flex flex-col gap-0.5 py-3 first:pt-0 last:pb-0">
+                <span class="font-medium text-foreground underline-offset-4 group-hover:underline">{{ item.title }}</span>
+                <span class="text-xs text-muted-foreground">{{ item.date }}</span>
+            </a>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { Megaphone } from 'lucide-vue-next'
-
 const items = [
     {
-        title: 'Weekly Contest 356 Registration Open',
+        title: 'Weekly Contest 356 registration open',
         date: '2 days ago'
     },
     {
-        title: 'Server Maintenance Scheduled for Sunday',
+        title: 'Server maintenance scheduled for Sunday',
         date: '5 days ago'
     }
 ]

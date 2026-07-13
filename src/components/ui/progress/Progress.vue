@@ -13,7 +13,7 @@ const props = withDefaults(
   defineProps<{
     modelValue?: number | null
     max?: number
-    class?: HTMLAttributes["class"] // eslint-disable-line vue/no-reserved-component-names
+    class?: HTMLAttributes["class"]  
     indicatorClass?: HTMLAttributes["class"]
   }>(),
   {

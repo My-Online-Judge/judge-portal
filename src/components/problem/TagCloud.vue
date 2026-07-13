@@ -1,17 +1,14 @@
 <template>
-    <div class="rounded-xl border bg-white p-6 shadow-sm">
-        <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center gap-2">
-                <div class="h-4 w-1 bg-blue-500 rounded-full"></div>
-                <h3 class="text-lg font-bold text-slate-800">Tags</h3>
-            </div>
-            <a href="#" class="text-xs font-medium text-blue-600 hover:underline">View all</a>
+    <div class="rounded-xl border border-border bg-card p-6">
+        <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tags</h3>
+            <a href="#" class="text-xs text-muted-foreground transition-colors hover:text-foreground">View all</a>
         </div>
 
         <div class="flex flex-wrap gap-2">
             <Badge v-for="tag in tags" :key="tag" variant="secondary"
-                class="cursor-pointer font-normal px-3 py-1.5 text-xs text-slate-600 bg-slate-100 hover:bg-slate-200 border-0 rounded-md transition-colors"
-                :class="{ 'bg-[#1e293b] text-white hover:bg-slate-800': isHighlighted(tag) }">
+                class="cursor-pointer rounded-md border-0 bg-muted px-3 py-1.5 text-xs font-normal text-muted-foreground transition-colors hover:bg-muted/70"
+                :class="{ '!bg-primary !text-primary-foreground': isHighlighted(tag) }">
                 {{ tag }}
             </Badge>
         </div>

@@ -1,11 +1,11 @@
 <template>
-    <div class="space-y-6">
+    <div class="animate-enter space-y-6">
         <div v-if="isLoading" class="flex justify-center py-20">
             <Loading />
         </div>
 
-        <div v-else-if="error" class="text-center py-20 text-red-500">
-            Error loading problem details.
+        <div v-else-if="error" class="py-20 text-center text-destructive">
+            Couldn't load this problem. Please try again.
         </div>
 
         <Tabs v-else-if="problem" v-model="activeTab" default-value="description" class="w-full">
@@ -17,22 +17,22 @@
                     <!-- Tabs Navigation -->
                     <TabsList class="w-full justify-start rounded-none bg-transparent p-0 -mb-px">
                         <TabsTrigger value="description"
-                            class="rounded-none border-b-2 border-transparent px-4 py-2 text-slate-600 hover:text-slate-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:shadow-none">
+                            class="rounded-none border-b-2 border-transparent px-4 py-2 text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none">
                             Problem
                         </TabsTrigger>
                         <TabsTrigger value="submit"
-                            class="rounded-none border-b-2 border-transparent px-4 py-2 text-slate-600 hover:text-slate-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:shadow-none">
+                            class="rounded-none border-b-2 border-transparent px-4 py-2 text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none">
                             Submit
                         </TabsTrigger>
                         <TabsTrigger value="submissions"
-                            class="rounded-none border-b-2 border-transparent px-4 py-2 text-slate-600 hover:text-slate-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:shadow-none">
+                            class="rounded-none border-b-2 border-transparent px-4 py-2 text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none">
                             Submissions
                         </TabsTrigger>
                     </TabsList>
                 </CardHeader>
 
                 <CardContent>
-                    <div class="grid gap-6" :class="activeTab === 'submissions' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[10fr_2fr]'
+                    <div class="grid gap-6" :class="activeTab === 'submissions' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[10fr_3fr]'
                         ">
                         <!-- Left Column -->
                         <div>
@@ -48,7 +48,7 @@
 
                             <!-- Tab: Submissions -->
                             <TabsContent value="submissions" class="mt-0">
-                                <ProblemSubmissions :problem-slug="slug" />
+                                <ProblemSubmissions :problem-slug="slug" :pending-submission="pendingSubmission" @consumed="pendingSubmission = null" />
                             </TabsContent>
                         </div>
 
@@ -79,10 +79,12 @@ import { useFetch } from '@/composables/useFetch'
 import problemService from '@/services/problemService'
 import { useLanguageStore } from '@/stores/language'
 import { storeToRefs } from 'pinia'
+import type { Submission } from '@/types/submission'
 
 const route = useRoute()
 const slug = route.params.slug as string
 const activeTab = ref('description')
+const pendingSubmission = ref<Submission | null>(null)
 
 const {
     data: problem,
@@ -99,8 +101,8 @@ const { languages } = storeToRefs(languageStore)
 
 languageStore.fetchLanguages()
 
-const handleSubmissionSuccess = () => {
+const handleSubmissionSuccess = (submission: Submission) => {
     activeTab.value = 'submissions'
-    fetchProblem(slug)
+    pendingSubmission.value = submission
 }
 </script>

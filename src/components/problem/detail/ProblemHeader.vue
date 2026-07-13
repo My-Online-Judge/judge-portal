@@ -1,7 +1,7 @@
 <template>
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center justify-between mb-5">
         <div>
-            <h1 class="text-2xl font-bold text-slate-900">{{ problem.title }}</h1>
+            <h1 class="font-display text-4xl text-foreground">{{ problem.title }}</h1>
         </div>
     </div>
 </template>

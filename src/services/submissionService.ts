@@ -9,6 +9,10 @@ class SubmissionService {
         return axiosClient.post<ApiResponse<Submission>>(API_ROUTES.SUBMISSIONS.ROOT, req)
     }
 
+    getSubmissionById(id: string): Promise<AxiosResponse<ApiResponse<Submission>>> {
+        return axiosClient.get(API_ROUTES.SUBMISSIONS.DETAIL(id))
+    }
+
     getSubmissionsByUserAndProblem(
         signal: AbortSignal,
         userId: string | number,

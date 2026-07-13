@@ -34,6 +34,7 @@ export interface Submission extends BaseModel {
 }
 
 export enum SubmissionResult {
+    COMPILE_ERROR = -2,
     WRONG_ANSWER = -1,
     SUCCESS = 0,
     TIME_LIMIT_EXCEEDED = 1,
@@ -41,17 +42,27 @@ export enum SubmissionResult {
     MEMORY_LIMIT_EXCEEDED = 3,
     RUNTIME_ERROR = 4,
     SYSTEM_ERROR = 5,
+    PENDING = 6,
+    JUDGING = 7,
+    PARTIALLY_ACCEPTED = 8,
 }
 
 export const getSubmissionStatus = (status: number): string => {
     const map: Record<number, string> = {
-        [SubmissionResult.SUCCESS]: 'AC',
+        [SubmissionResult.COMPILE_ERROR]: 'CE',
         [SubmissionResult.WRONG_ANSWER]: 'WA',
+        [SubmissionResult.SUCCESS]: 'AC',
         [SubmissionResult.TIME_LIMIT_EXCEEDED]: 'TLE',
         [SubmissionResult.REAL_TIME_LIMIT_EXCEEDED]: 'TLE',
         [SubmissionResult.MEMORY_LIMIT_EXCEEDED]: 'MLE',
         [SubmissionResult.RUNTIME_ERROR]: 'RE',
         [SubmissionResult.SYSTEM_ERROR]: 'SE',
+        [SubmissionResult.PENDING]: 'Pending',
+        [SubmissionResult.JUDGING]: 'Judging',
+        [SubmissionResult.PARTIALLY_ACCEPTED]: 'PA',
     }
     return map[status] || 'Unknown'
 }
+
+export const isTerminalStatus = (status: number): boolean =>
+    status !== SubmissionResult.PENDING && status !== SubmissionResult.JUDGING

@@ -1,18 +1,13 @@
 <template>
-    <div class="flex flex-col gap-6 p-6 border-b border-slate-100 lg:flex-row lg:items-center lg:justify-between">
+    <div class="flex flex-col gap-6 border-b border-border p-6 lg:flex-row lg:items-center lg:justify-between">
         <!-- Title -->
-        <div class="flex items-center gap-3">
-            <div class="flex h-8 w-8 items-center justify-center rounded bg-blue-50 text-blue-600">
-                <List class="h-5 w-5" />
-            </div>
-            <h1 class="text-xl font-bold text-slate-800">Problem List</h1>
-        </div>
+        <h1 class="font-display text-3xl text-foreground">Problems</h1>
 
         <!-- Filters -->
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
             <!-- Difficulty Dropdown -->
             <Select>
-                <SelectTrigger class="w-[120px] border-slate-200">
+                <SelectTrigger class="w-[120px]">
                     <SelectValue placeholder="Difficulty" />
                 </SelectTrigger>
                 <SelectContent>
@@ -24,19 +19,19 @@
             </Select>
 
             <!-- Tags Switch -->
-            <div class="flex items-center gap-2 rounded-md px-3 py-2 border border-slate-200 cursor-pointer">
-                <Switch id="tags-mode" class="scale-90 data-[state=checked]:bg-blue-500" />
-                <Label for="tags-mode" class="text-sm font-medium text-slate-600 cursor-pointer">Tags</Label>
+            <div class="flex items-center gap-2 rounded-md border border-border px-3 py-2">
+                <Switch id="tags-mode" class="scale-90 data-[state=checked]:bg-primary" />
+                <Label for="tags-mode" class="cursor-pointer text-sm font-medium text-muted-foreground">Tags</Label>
             </div>
 
             <!-- Keyword Input -->
             <div class="relative w-full lg:w-[280px]">
-                <Search class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                <Input placeholder="Search by title or ID..." class="pl-9 border-slate-200" />
+                <Search class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search by title or ID…" class="pl-9" />
             </div>
 
             <!-- Refresh Button -->
-            <Button size="icon" class="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer">
+            <Button variant="outline" size="icon" class="cursor-pointer">
                 <RotateCw class="h-4 w-4" />
             </Button>
         </div>
@@ -55,5 +50,5 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Search, RotateCw, List } from 'lucide-vue-next'
+import { Search, RotateCw } from 'lucide-vue-next'
 </script>

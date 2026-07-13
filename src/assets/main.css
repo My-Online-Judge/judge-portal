@@ -4,10 +4,17 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  /* Type: geometric sans (UI/body), editorial serif (display), mono (data/code) */
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", "JetBrains Mono", monospace;
+
+  /* Crisp, restrained radii (no giant pills on containers) */
+  --radius-sm: calc(var(--radius) - 3px);
+  --radius-md: calc(var(--radius) - 1px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -41,80 +48,122 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Warm monochrome canvas — bone paper, charcoal ink, one near-black accent.
+   Grays are tinted with a single warm hue (~85) so nothing reads clinical. */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --radius: 0.5rem;
+  --background: oklch(0.986 0.004 250);       /* near-white, whisper cool */
+  --foreground: oklch(0.23 0.021 262);        /* dark slate ink */
+  --card: oklch(1 0 0);                        /* white surface */
+  --card-foreground: oklch(0.23 0.021 262);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --popover-foreground: oklch(0.23 0.021 262);
+  --primary: oklch(0.53 0.19 262);            /* brand blue */
+  --primary-foreground: oklch(0.99 0.005 250);
+  --secondary: oklch(0.968 0.006 255);        /* cool light gray */
+  --secondary-foreground: oklch(0.23 0.021 262);
+  --muted: oklch(0.968 0.006 255);
+  --muted-foreground: oklch(0.552 0.025 258); /* slate gray */
+  --accent: oklch(0.955 0.014 258);           /* faint blue-tinted hover */
+  --accent-foreground: oklch(0.4 0.14 262);
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.924 0.008 258);           /* cool hairline */
+  --input: oklch(0.924 0.008 258);
+  --ring: oklch(0.62 0.15 262);               /* blue focus */
+  --chart-1: oklch(0.53 0.19 262);
+  --chart-2: oklch(0.62 0.13 210);
+  --chart-3: oklch(0.65 0.12 160);
+  --chart-4: oklch(0.7 0.14 80);
+  --chart-5: oklch(0.6 0.12 30);
+  --sidebar: oklch(0.986 0.004 250);
+  --sidebar-foreground: oklch(0.23 0.021 262);
+  --sidebar-primary: oklch(0.53 0.19 262);
+  --sidebar-primary-foreground: oklch(0.99 0.005 250);
+  --sidebar-accent: oklch(0.955 0.014 258);
+  --sidebar-accent-foreground: oklch(0.4 0.14 262);
+  --sidebar-border: oklch(0.924 0.008 258);
+  --sidebar-ring: oklch(0.62 0.15 262);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --background: oklch(0.2 0.02 262);          /* cool slate dark */
+  --foreground: oklch(0.97 0.005 255);
+  --card: oklch(0.24 0.021 262);
+  --card-foreground: oklch(0.97 0.005 255);
+  --popover: oklch(0.24 0.021 262);
+  --popover-foreground: oklch(0.97 0.005 255);
+  --primary: oklch(0.62 0.18 262);            /* blue */
+  --primary-foreground: oklch(0.16 0.02 262);
+  --secondary: oklch(0.3 0.02 262);
+  --secondary-foreground: oklch(0.97 0.005 255);
+  --muted: oklch(0.3 0.02 262);
+  --muted-foreground: oklch(0.7 0.02 258);
+  --accent: oklch(0.33 0.03 262);
+  --accent-foreground: oklch(0.85 0.1 262);
+  --destructive: oklch(0.62 0.18 25);
   --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.6 0.15 262);
+  --chart-1: oklch(0.62 0.18 262);
+  --chart-2: oklch(0.65 0.13 210);
+  --chart-3: oklch(0.68 0.12 160);
+  --chart-4: oklch(0.72 0.14 80);
+  --chart-5: oklch(0.63 0.12 30);
+  --sidebar: oklch(0.2 0.02 262);
+  --sidebar-foreground: oklch(0.97 0.005 255);
+  --sidebar-primary: oklch(0.62 0.18 262);
+  --sidebar-primary-foreground: oklch(0.16 0.02 262);
+  --sidebar-accent: oklch(0.33 0.03 262);
+  --sidebar-accent-foreground: oklch(0.97 0.005 255);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.6 0.15 262);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.6;
+    letter-spacing: -0.006em;
+  }
+  /* Display headings: bold sans, tight tracking (sans display, not serif —
+     Instrument Serif is a top production AI-tell per the taste skill). */
+  .font-display {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    letter-spacing: -0.022em;
+    line-height: 1.08;
+  }
+  /* Data numerals: mono + tabular so columns line up */
+  .tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Quiet entrance — transform/opacity only, disabled under reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes enter-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .animate-enter {
+    animation: enter-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 }
