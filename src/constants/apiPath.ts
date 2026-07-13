@@ -20,6 +20,8 @@ export const API_ROUTES = {
     },
     SUBMISSIONS: {
         ROOT: '/submissions',
+        DETAIL: (id: string) => `/submissions/${id}`,
+        STREAM: (id: string) => `/submissions/${id}/stream`,
         BY_USER_PROBLEM: (userId: string | number, problemSlug: string) =>
             `/submissions/user/${userId}/problem/${problemSlug}`,
     },
