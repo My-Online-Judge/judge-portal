@@ -121,7 +121,7 @@ import LoginModal from '@/components/auth/LoginModal.vue'
 import { ref, watch, computed } from 'vue'
 import { useToast } from '@/composables/useToast'
 import submissionService from '@/services/submissionService'
-import type { SubmissionRequest } from '@/types/submission'
+import type { Submission, SubmissionRequest } from '@/types/submission'
 import { getMonacoLanguage } from '@/utils/editorUtils'
 
 const authStore = useAuthStore()
@@ -133,7 +133,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-    (e: 'success'): void
+    (e: 'success', submission: Submission): void
 }>()
 
 const { triggerToast } = useToast()
@@ -184,12 +184,12 @@ const handleSubmit = async () => {
             sourceCode: sourceCode.value,
         }
 
-        await submissionService.submit(data)
+        const res = await submissionService.submit(data)
 
         triggerToast('Submitted', 'success')
         sourceCode.value = ''
 
-        emit('success')
+        emit('success', res.data.data)
     } catch (error: any) {
         triggerToast(error.response?.data?.message || 'An error occurred', 'error')
     } finally {

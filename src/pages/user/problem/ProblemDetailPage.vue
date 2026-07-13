@@ -48,7 +48,7 @@
 
                             <!-- Tab: Submissions -->
                             <TabsContent value="submissions" class="mt-0">
-                                <ProblemSubmissions :problem-slug="slug" />
+                                <ProblemSubmissions ref="submissionsRef" :problem-slug="slug" />
                             </TabsContent>
                         </div>
 
@@ -79,10 +79,12 @@ import { useFetch } from '@/composables/useFetch'
 import problemService from '@/services/problemService'
 import { useLanguageStore } from '@/stores/language'
 import { storeToRefs } from 'pinia'
+import type { Submission } from '@/types/submission'
 
 const route = useRoute()
 const slug = route.params.slug as string
 const activeTab = ref('description')
+const submissionsRef = ref<InstanceType<typeof ProblemSubmissions> | null>(null)
 
 const {
     data: problem,
@@ -99,8 +101,8 @@ const { languages } = storeToRefs(languageStore)
 
 languageStore.fetchLanguages()
 
-const handleSubmissionSuccess = () => {
+const handleSubmissionSuccess = (submission: Submission) => {
     activeTab.value = 'submissions'
-    fetchProblem(slug)
+    submissionsRef.value?.addPendingSubmission(submission)
 }
 </script>

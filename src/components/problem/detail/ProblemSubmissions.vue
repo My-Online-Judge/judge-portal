@@ -29,18 +29,19 @@
                                 Failed to load submissions
                             </TableCell>
                         </TableRow>
-                        <TableRow v-else-if="submissions.length === 0">
+                        <TableRow v-else-if="displayRows.length === 0">
                             <TableCell colspan="6" class="text-center py-8 text-slate-500">
                                 No submissions found
                             </TableCell>
                         </TableRow>
-                        <TableRow v-else v-for="sub in submissions" :key="sub.id">
+                        <TableRow v-else v-for="sub in displayRows" :key="sub.id">
                             <TableCell class="font-mono">#{{ sub.id.substring(0, 8) }}</TableCell>
                             <TableCell class="">{{ formatDateTime(sub.createdAt) }}</TableCell>
                             <TableCell>
-                                <Badge :class="getStatusClass(sub.status)">{{
-                                    getSubmissionStatus(sub.status)
-                                }}</Badge>
+                                <Badge :class="getStatusClass(sub.status)">
+                                    <Loader2 v-if="!isTerminalStatus(sub.status)" class="h-3 w-3 animate-spin mr-1 inline" />
+                                    {{ getSubmissionStatus(sub.status) }}
+                                </Badge>
                             </TableCell>
                             <TableCell class="">
                                 {{ sub.cpuTime != null ? `${sub.cpuTime}ms` : '--' }}
@@ -82,7 +83,10 @@ import submissionService from '@/services/submissionService'
 import { useFetch } from '@/composables/useFetch'
 
 import { formatDateTime } from '@/utils/dateTimeUtils'
-import { SubmissionResult, getSubmissionStatus } from '@/types/submission'
+import { Loader2 } from 'lucide-vue-next'
+import { useSubmissionStream } from '@/composables/useSubmissionStream'
+import type { Submission } from '@/types/submission'
+import { SubmissionResult, getSubmissionStatus, isTerminalStatus } from '@/types/submission'
 
 const props = defineProps<{
     problemSlug: string
@@ -104,6 +108,40 @@ const {
 
 const submissions = computed(() => response.value?.data || [])
 const pagination = computed(() => response.value?.pagination)
+
+const { watch: watchVerdict } = useSubmissionStream()
+const liveRows = ref<Submission[]>([])
+
+// Optimistic + streamed rows shown above the fetched page; dedupe so a row that
+// later appears in the fetched page is not rendered twice.
+const displayRows = computed(() => {
+    const liveIds = new Set(liveRows.value.map((r) => r.id))
+    const fetched = (response.value?.data || []).filter((s) => !liveIds.has(s.id))
+    return [...liveRows.value, ...fetched]
+})
+
+const addPendingSubmission = (sub: Submission) => {
+    if (!liveRows.value.some((r) => r.id === sub.id)) {
+        liveRows.value.unshift(sub) // status is PENDING(6) from the submit response
+    }
+    watchVerdict(sub.id, (verdict) => {
+        const idx = liveRows.value.findIndex((r) => r.id === verdict.id)
+        if (idx !== -1) {
+            liveRows.value.splice(idx, 1, { ...liveRows.value[idx], ...verdict })
+        }
+    })
+}
+
+// Once a finished submission shows up in a fresh fetch, drop its live copy so it
+// stops being pinned above the paginated list.
+watch(response, (r) => {
+    const fetchedIds = new Set((r?.data || []).map((s) => s.id))
+    liveRows.value = liveRows.value.filter(
+        (row) => !(fetchedIds.has(row.id) && isTerminalStatus(row.status)),
+    )
+})
+
+defineExpose({ addPendingSubmission })
 
 const fetchSubmissions = () => {
     if (authStore.isAuthenticated && authStore.user) {
