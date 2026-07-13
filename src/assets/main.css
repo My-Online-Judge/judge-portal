@@ -5,7 +5,7 @@
 
 @theme inline {
   /* Type: geometric sans (UI/body), editorial serif (display), mono (data/code) */
-  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-serif: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", "JetBrains Mono", monospace;
 

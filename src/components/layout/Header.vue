@@ -3,23 +3,28 @@
         <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-6 lg:px-8">
             <!-- Wordmark + navigation -->
             <div class="flex h-full items-center gap-10">
-                <RouterLink to="/" class="font-display text-[1.7rem] leading-none tracking-tight text-foreground">
+                <RouterLink to="/" class="text-xl font-bold tracking-tight text-foreground">
                     My<span class="text-muted-foreground">OJ</span>
                 </RouterLink>
 
                 <nav class="hidden h-full items-center gap-7 text-sm text-muted-foreground md:flex">
                     <RouterLink to="/"
-                        class="flex h-full items-center -mb-px border-b-2 border-transparent transition-colors hover:text-foreground"
+                        class="flex h-full items-center gap-2 -mb-px border-b-2 border-transparent transition-colors hover:text-foreground"
                         exact-active-class="!text-foreground !border-foreground">
+                        <Home class="h-4 w-4" />
                         Home
                     </RouterLink>
                     <RouterLink to="/problems"
-                        class="flex h-full items-center -mb-px border-b-2 border-transparent transition-colors hover:text-foreground"
+                        class="flex h-full items-center gap-2 -mb-px border-b-2 border-transparent transition-colors hover:text-foreground"
                         active-class="!text-foreground !border-foreground">
+                        <List class="h-4 w-4" />
                         Problems
                     </RouterLink>
                     <a href="#"
-                        class="flex h-full items-center -mb-px border-b-2 border-transparent transition-colors hover:text-foreground">Contests</a>
+                        class="flex h-full items-center gap-2 -mb-px border-b-2 border-transparent transition-colors hover:text-foreground">
+                        <Trophy class="h-4 w-4" />
+                        Contests
+                    </a>
                 </nav>
             </div>
 
@@ -67,6 +72,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
+import { Home, List, Trophy } from 'lucide-vue-next'
 import LoginModal from '@/components/auth/LoginModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import {
