@@ -134,12 +134,13 @@
     line-height: 1.6;
     letter-spacing: -0.006em;
   }
-  /* Editorial display headings: serif, tight tracking + leading */
+  /* Display headings: bold sans, tight tracking (sans display, not serif —
+     Instrument Serif is a top production AI-tell per the taste skill). */
   .font-display {
-    font-family: var(--font-serif);
-    letter-spacing: -0.01em;
-    line-height: 1.1;
-    font-weight: 400;
+    font-family: var(--font-sans);
+    font-weight: 700;
+    letter-spacing: -0.022em;
+    line-height: 1.08;
   }
   /* Data numerals: mono + tabular so columns line up */
   .tabular {
@@ -147,5 +148,22 @@
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
     letter-spacing: -0.01em;
+  }
+}
+
+/* Quiet entrance — transform/opacity only, disabled under reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes enter-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .animate-enter {
+    animation: enter-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 }

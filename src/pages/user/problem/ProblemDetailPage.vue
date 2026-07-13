@@ -1,5 +1,5 @@
 <template>
-    <div class="space-y-6">
+    <div class="animate-enter space-y-6">
         <div v-if="isLoading" class="flex justify-center py-20">
             <Loading />
         </div>
