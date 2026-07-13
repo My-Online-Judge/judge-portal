@@ -16,11 +16,13 @@ export interface Problem extends BaseModel {
     status: number
     totalSubmission: number
     acceptedSubmission: number
+    tags?: string[]
     statisticInfo?: Record<string, any>
 }
 
 export interface ProblemSearchParams extends BaseSearchParams {
     status?: 'ACTIVE' | 'INACTIVE'
+    hardnessLevel?: number
 }
 
 export enum SubmissionStatus {
@@ -57,5 +59,14 @@ export const getLevelInfo = (level: number): { text: string, class: string } => 
         case 2: return { text: 'Medium', class: 'bg-[#FBF2D8] text-[#8A5A00]' }
         case 3: return { text: 'Hard', class: 'bg-[#FBEBEC] text-[#9E2F2D]' }
         default: return { text: 'Unknown', class: 'bg-[#F0EFEC] text-[#6B6862]' }
+    }
+}
+
+export const difficultyToHardness = (difficulty: string): number | undefined => {
+    switch (difficulty) {
+        case 'easy': return 1
+        case 'medium': return 2
+        case 'hard': return 3
+        default: return undefined // 'all' or unknown → no filter
     }
 }
