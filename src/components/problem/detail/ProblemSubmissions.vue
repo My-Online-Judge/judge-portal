@@ -40,7 +40,7 @@
                             <TableCell>
                                 <Badge :class="getStatusClass(sub.status)">{{
                                     getSubmissionStatus(sub.status)
-                                    }}</Badge>
+                                }}</Badge>
                             </TableCell>
                             <TableCell class="">
                                 {{ sub.cpuTime != null ? `${sub.cpuTime}ms` : '--' }}
@@ -140,6 +140,10 @@ const getStatusClass = (status: number) => {
             return 'bg-emerald-500 hover:bg-emerald-600 border-0 rounded-sm'
         case SubmissionResult.WRONG_ANSWER:
             return 'bg-red-500 hover:bg-red-600 border-0 rounded-sm'
+        case SubmissionResult.COMPILE_ERROR:
+            return 'bg-violet-500 hover:bg-violet-600 border-0 rounded-sm'
+        case SubmissionResult.PARTIALLY_ACCEPTED:
+            return 'bg-teal-500 hover:bg-teal-600 border-0 rounded-sm'
         case SubmissionResult.TIME_LIMIT_EXCEEDED:
         case SubmissionResult.REAL_TIME_LIMIT_EXCEEDED:
         case SubmissionResult.MEMORY_LIMIT_EXCEEDED:

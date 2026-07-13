@@ -24,23 +24,31 @@ export interface ProblemSearchParams extends BaseSearchParams {
 }
 
 export enum SubmissionStatus {
+    COMPILE_ERROR = -2,
     WRONG_ANSWER = -1,
     SUCCESS = 0,
     TIME_LIMIT_EXCEEDED = 1,
     REAL_TIME_LIMIT_EXCEEDED = 2,
     MEMORY_LIMIT_EXCEEDED = 3,
     RUNTIME_ERROR = 4,
-    SYSTEM_ERROR = 5
+    SYSTEM_ERROR = 5,
+    PENDING = 6,
+    JUDGING = 7,
+    PARTIALLY_ACCEPTED = 8
 }
 
 export const STATUS_CONFIG = {
     [SubmissionStatus.SUCCESS]: { label: 'AC', color: '#10b981', fullName: 'Accepted' }, // Emerald 500
     [SubmissionStatus.WRONG_ANSWER]: { label: 'WA', color: '#ef4444', fullName: 'Wrong Answer' }, // Red 500
+    [SubmissionStatus.COMPILE_ERROR]: { label: 'CE', color: '#8b5cf6', fullName: 'Compile Error' }, // Violet 500
     [SubmissionStatus.TIME_LIMIT_EXCEEDED]: { label: 'TLE', color: '#f97316', fullName: 'Time Limit Exceeded' }, // Orange 500
     [SubmissionStatus.REAL_TIME_LIMIT_EXCEEDED]: { label: 'TLE', color: '#f97316', fullName: 'Time Limit Exceeded' }, // Orange 500
     [SubmissionStatus.MEMORY_LIMIT_EXCEEDED]: { label: 'MLE', color: '#eab308', fullName: 'Memory Limit Exceeded' }, // Yellow 500
     [SubmissionStatus.RUNTIME_ERROR]: { label: 'RE', color: '#ea580c', fullName: 'Runtime Error' }, // Orange 600
-    [SubmissionStatus.SYSTEM_ERROR]: { label: 'SE', color: '#6b7280', fullName: 'System Error' } // Gray 500
+    [SubmissionStatus.SYSTEM_ERROR]: { label: 'SE', color: '#6b7280', fullName: 'System Error' }, // Gray 500
+    [SubmissionStatus.PARTIALLY_ACCEPTED]: { label: 'PA', color: '#14b8a6', fullName: 'Partially Accepted' }, // Teal 500
+    [SubmissionStatus.PENDING]: { label: 'Pending', color: '#94a3b8', fullName: 'Pending' }, // Slate 400
+    [SubmissionStatus.JUDGING]: { label: 'Judging', color: '#3b82f6', fullName: 'Judging' } // Blue 500
 }
 
 export const getLevelInfo = (level: number): { text: string, class: string } => {

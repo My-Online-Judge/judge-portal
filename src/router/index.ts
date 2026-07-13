@@ -2,6 +2,7 @@ import { ROUTE_PATH } from '@/constants/routePath'
 import ProblemDetailPage from '@/pages/user/problem/ProblemDetailPage.vue'
 import ProblemListPage from '@/pages/user/problem/ProblemListPage.vue'
 import { createRouter, createWebHistory } from 'vue-router'
+import GoogleCallbackPage from '@/components/auth/GoogleCallback.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -19,7 +20,7 @@ const router = createRouter({
     {
       path: ROUTE_PATH.GOOGLE_CALLBACK,
       name: 'GoogleCallback',
-      component: () => import('@/components/auth/GoogleCallback.vue')
+      component: GoogleCallbackPage
     }
   ],
 })
