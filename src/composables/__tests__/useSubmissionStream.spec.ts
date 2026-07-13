@@ -95,4 +95,35 @@ describe('useSubmissionStream', () => {
     vi.advanceTimersByTime(20_000)
     expect(submissionService.getSubmissionById).not.toHaveBeenCalled()
   })
+
+  it('closes the stream even when the verdict callback throws', () => {
+    const onVerdict = vi.fn(() => {
+      throw new Error('boom')
+    })
+    useSubmissionStream().watch('s1', onVerdict)
+    const es = MockEventSource.instances[0]
+    expect(() => es.emit('verdict', verdictEvent(SubmissionResult.SUCCESS))).toThrow('boom')
+    expect(es.closed).toBe(true)
+    es.emit('error', {}) // stream already closed → must not trigger a fallback fetch
+    expect(submissionService.getSubmissionById).not.toHaveBeenCalled()
+  })
+
+  it('stopAll cancels an in-flight fallback GET so no verdict is applied', async () => {
+    let resolveFetch!: (v: unknown) => void
+    vi.mocked(submissionService.getSubmissionById).mockReturnValue(
+      new Promise((r) => {
+        resolveFetch = r
+      }) as never,
+    )
+    const onVerdict = vi.fn()
+    const { watch, stopAll } = useSubmissionStream()
+    watch('s1', onVerdict)
+    MockEventSource.instances[0].emit('error', {}) // starts an in-flight fallback fetch
+    expect(submissionService.getSubmissionById).toHaveBeenCalledTimes(1)
+    stopAll()
+    resolveFetch({ data: { data: { id: 's1', status: SubmissionResult.SUCCESS } } })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(onVerdict).not.toHaveBeenCalled()
+  })
 })

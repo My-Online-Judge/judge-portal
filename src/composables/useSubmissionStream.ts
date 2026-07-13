@@ -15,6 +15,7 @@ interface Watcher {
 
 export function useSubmissionStream() {
     const watchers = new Map<string, Watcher>()
+    const pendingFallbacks = new Set<{ cancelled: boolean }>()
 
     const stop = (id: string) => {
         const w = watchers.get(id)
@@ -26,6 +27,7 @@ export function useSubmissionStream() {
 
     const stopAll = () => {
         for (const id of Array.from(watchers.keys())) stop(id)
+        for (const t of pendingFallbacks) t.cancelled = true
     }
 
     // Idempotent: claims (closes + removes) the watcher synchronously so repeated
@@ -33,12 +35,16 @@ export function useSubmissionStream() {
     const fallbackFetch = async (id: string, onVerdict: VerdictHandler) => {
         if (!watchers.has(id)) return
         stop(id)
+        const token = { cancelled: false }
+        pendingFallbacks.add(token)
         try {
             const res = await submissionService.getSubmissionById(id)
             const sub = res.data.data
-            if (sub && isTerminalStatus(sub.status)) onVerdict(sub)
+            if (!token.cancelled && sub && isTerminalStatus(sub.status)) onVerdict(sub)
         } catch {
             // Nothing more we can do; leave the row as Judging.
+        } finally {
+            pendingFallbacks.delete(token)
         }
     }
 
@@ -59,8 +65,8 @@ export function useSubmissionStream() {
                 fallbackFetch(id, onVerdict) // malformed payload → fetch the real value
                 return
             }
+            stop(id) // close BEFORE the callback so a throwing onVerdict can't leave the stream open
             onVerdict(verdict)
-            stop(id) // MUST close, or the browser reconnects and re-subscribes
         })
 
         source.addEventListener('error', () => {
