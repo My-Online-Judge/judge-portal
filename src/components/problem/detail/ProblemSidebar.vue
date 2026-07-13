@@ -161,16 +161,15 @@ const acRate = computed(() => {
     return total ? Math.round((acCount.value / total) * 100) : 0
 })
 
-// Flat donut, no floating labels; the accompanying list is the legend, tooltip on hover.
+// Flat donut, no floating labels or tooltip — the accompanying list/legend
+// already shows every value, and a tooltip only clips the small centered chart.
 const donutOptions = {
     responsive: true,
     maintainAspectRatio: false,
     cutout: '70%',
     plugins: {
         legend: { display: false },
-        tooltip: {
-            callbacks: { label: (ctx: { label: string; parsed: number }) => ` ${ctx.label}: ${ctx.parsed}` },
-        },
+        tooltip: { enabled: false },
     },
 }
 
