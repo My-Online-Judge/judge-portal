@@ -3,7 +3,14 @@
         <!-- Main Content (Left) -->
         <div>
             <div class="rounded-xl border border-border bg-card">
-                <SearchBar />
+                <SearchBar
+                    :search="search"
+                    :difficulty="difficulty"
+                    :show-tags="showTags"
+                    @update:search="onSearch"
+                    @update:difficulty="onDifficulty"
+                    @update:show-tags="showTags = $event"
+                    @refresh="fetchProblems" />
                 <div class="px-6 pb-6">
                     <div v-if="isLoading" class="space-y-3 py-5">
                         <div v-for="n in 6" :key="n" class="flex items-center gap-4">
@@ -14,7 +21,7 @@
                         </div>
                     </div>
                     <div v-else-if="error" class="p-8 text-center text-destructive">Couldn't load problems. Please try again.</div>
-                    <ProblemTable v-else :problems="problems" />
+                    <ProblemTable v-else :problems="problems" :show-tags="showTags" />
                     <PaginationFooter :pagination="pagination" @change-page="onPageChange" @update:size="onSizeChange" />
                 </div>
             </div>
@@ -37,10 +44,13 @@ import PaginationFooter from '@/components/common/PaginationFooter.vue'
 import Announcements from '@/components/common/Announcements.vue'
 import { useFetch } from '@/composables/useFetch'
 import problemService from '@/services/problemService'
+import { difficultyToHardness } from '@/types/problem'
 
 const page = ref(0)
 const size = ref(10)
 const search = ref('')
+const difficulty = ref('all')
+const showTags = ref(false)
 
 const { data: response, isLoading, error, execute } = useFetch(problemService.getProblems, {
     immediate: false
@@ -53,8 +63,22 @@ const fetchProblems = () => {
     execute({
         page: page.value,
         size: size.value,
-        search: search.value || undefined
+        search: search.value || undefined,
+        hardnessLevel: difficultyToHardness(difficulty.value)
     })
+}
+
+// Any filter change resets to the first page.
+const onSearch = (value: string) => {
+    search.value = value
+    page.value = 0
+    fetchProblems()
+}
+
+const onDifficulty = (value: string) => {
+    difficulty.value = value
+    page.value = 0
+    fetchProblems()
 }
 
 const onPageChange = (newPage: number) => {
