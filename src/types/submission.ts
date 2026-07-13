@@ -63,3 +63,6 @@ export const getSubmissionStatus = (status: number): string => {
     }
     return map[status] || 'Unknown'
 }
+
+export const isTerminalStatus = (status: number): boolean =>
+    status !== SubmissionResult.PENDING && status !== SubmissionResult.JUDGING
