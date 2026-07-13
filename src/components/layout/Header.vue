@@ -4,19 +4,19 @@
             <!-- Wordmark + navigation -->
             <div class="flex h-full items-center gap-10">
                 <RouterLink to="/" class="text-xl font-bold tracking-tight text-foreground">
-                    My<span class="text-muted-foreground">OJ</span>
+                    My<span class="text-primary">OJ</span>
                 </RouterLink>
 
                 <nav class="hidden h-full items-center gap-7 text-sm text-muted-foreground md:flex">
                     <RouterLink to="/"
                         class="flex h-full items-center gap-2 -mb-px border-b-2 border-transparent transition-colors hover:text-foreground"
-                        exact-active-class="!text-foreground !border-foreground">
+                        exact-active-class="!text-primary !border-primary">
                         <Home class="h-4 w-4" />
                         Home
                     </RouterLink>
                     <RouterLink to="/problems"
                         class="flex h-full items-center gap-2 -mb-px border-b-2 border-transparent transition-colors hover:text-foreground"
-                        active-class="!text-foreground !border-foreground">
+                        active-class="!text-primary !border-primary">
                         <List class="h-4 w-4" />
                         Problems
                     </RouterLink>

@@ -8,7 +8,7 @@
         <div class="flex flex-wrap gap-2">
             <Badge v-for="tag in tags" :key="tag" variant="secondary"
                 class="cursor-pointer rounded-md border-0 bg-muted px-3 py-1.5 text-xs font-normal text-muted-foreground transition-colors hover:bg-muted/70"
-                :class="{ '!bg-foreground !text-background': isHighlighted(tag) }">
+                :class="{ '!bg-primary !text-primary-foreground': isHighlighted(tag) }">
                 {{ tag }}
             </Badge>
         </div>

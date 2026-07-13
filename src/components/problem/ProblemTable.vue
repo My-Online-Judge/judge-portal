@@ -16,7 +16,7 @@
                     <TableCell class="tabular pl-4 text-muted-foreground">{{ index + 1 }}</TableCell>
                     <TableCell>
                         <RouterLink :to="'/problems/' + problem.problemSlug"
-                            class="block font-medium text-foreground underline-offset-4 transition-colors hover:underline">
+                            class="block font-medium text-foreground transition-colors hover:text-primary">
                             {{ problem.title }}
                         </RouterLink>
                     </TableCell>
@@ -32,7 +32,7 @@
                         <div class="flex items-center gap-3">
                             <Progress :model-value="calculateAcRate(problem.acceptedSubmission, problem.totalSubmission)"
                                 class="h-1.5 w-24 bg-muted"
-                                indicator-class="bg-foreground/55" />
+                                indicator-class="bg-primary" />
                             <span class="tabular text-xs text-muted-foreground">
                                 {{ calculateAcRate(problem.acceptedSubmission, problem.totalSubmission) }}%
                             </span>
