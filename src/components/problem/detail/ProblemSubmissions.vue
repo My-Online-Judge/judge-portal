@@ -49,7 +49,7 @@
                             <TableCell class="">
                                 {{ sub.memory != null ? `${(sub.memory / (1024 * 1024)).toFixed(1)} MB` : '--' }}
                             </TableCell>
-                            <TableCell class="">{{ sub.language.name }}</TableCell>
+                            <TableCell class="">{{ sub.language?.name }}</TableCell>
                         </TableRow>
                     </TableBody>
                 </Table>
@@ -106,7 +106,6 @@ const {
     immediate: false,
 })
 
-const submissions = computed(() => response.value?.data || [])
 const pagination = computed(() => response.value?.pagination)
 
 const { watch: watchVerdict } = useSubmissionStream()

@@ -8,7 +8,7 @@
             Error loading problem details.
         </div>
 
-        <Tabs v-else-if="problem" v-model="activeTab" default-value="description" class="w-full">
+        <Tabs v-else-if="problem" v-model="activeTab" default-value="description" class="w-full" :unmount-on-hide="false">
             <Card>
                 <CardHeader class="px-6 pb-0 space-y-4 border-b">
                     <!-- Header Info -->
@@ -65,7 +65,7 @@
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import ProblemHeader from '@/components/problem/detail/ProblemHeader.vue'
@@ -101,8 +101,9 @@ const { languages } = storeToRefs(languageStore)
 
 languageStore.fetchLanguages()
 
-const handleSubmissionSuccess = (submission: Submission) => {
+const handleSubmissionSuccess = async (submission: Submission) => {
     activeTab.value = 'submissions'
+    await nextTick()
     submissionsRef.value?.addPendingSubmission(submission)
 }
 </script>
