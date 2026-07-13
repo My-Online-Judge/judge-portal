@@ -32,7 +32,7 @@
                 </CardHeader>
 
                 <CardContent>
-                    <div class="grid gap-6" :class="activeTab === 'submissions' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[10fr_2fr]'
+                    <div class="grid gap-6" :class="activeTab === 'submissions' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[10fr_3fr]'
                         ">
                         <!-- Left Column -->
                         <div>

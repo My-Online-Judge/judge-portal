@@ -86,12 +86,12 @@
                     </Dialog>
                 </CardTitle>
             </CardHeader>
-            <CardContent class="p-6">
+            <CardContent class="p-5">
                 <div v-if="!problem.totalSubmission" class="flex h-32 items-center justify-center text-sm text-muted-foreground">
                     No submissions yet
                 </div>
-                <div v-else class="flex items-center gap-5">
-                    <div class="relative h-28 w-28 shrink-0">
+                <div v-else class="flex items-center gap-4">
+                    <div class="relative h-24 w-24 shrink-0">
                         <Doughnut :data="miniData" :options="donutOptions" />
                         <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                             <span class="tabular text-lg font-semibold text-foreground">{{ acRate }}%</span>
@@ -99,19 +99,19 @@
                         </div>
                     </div>
                     <div class="flex-1 space-y-2 text-sm">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between gap-3">
                             <span class="flex items-center gap-2 text-muted-foreground">
                                 <span class="h-2.5 w-2.5 rounded-[3px]" :style="{ backgroundColor: acColor }"></span>Accepted
                             </span>
                             <span class="tabular font-medium text-foreground">{{ acCount }}</span>
                         </div>
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between gap-3">
                             <span class="flex items-center gap-2 text-muted-foreground">
                                 <span class="h-2.5 w-2.5 rounded-[3px] bg-muted-foreground/30"></span>Others
                             </span>
                             <span class="tabular font-medium text-foreground">{{ otherCount }}</span>
                         </div>
-                        <div class="flex items-center justify-between border-t border-border pt-2">
+                        <div class="flex items-center justify-between gap-3 border-t border-border pt-2">
                             <span class="text-muted-foreground">Total</span>
                             <span class="tabular font-medium text-foreground">{{ problem.totalSubmission }}</span>
                         </div>

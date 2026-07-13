@@ -1,6 +1,6 @@
 <template>
     <header class="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
-        <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-6 lg:px-8">
+        <div class="mx-auto flex h-16 max-w-[84rem] items-center justify-between px-4 md:px-6 lg:px-8">
             <!-- Wordmark + navigation -->
             <div class="flex h-full items-center gap-10">
                 <RouterLink to="/" class="text-xl font-bold tracking-tight text-foreground">

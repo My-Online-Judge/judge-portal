@@ -2,7 +2,7 @@
   <div class="flex min-h-screen flex-col bg-background text-foreground">
     <Header />
 
-    <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:px-6 lg:px-8">
+    <main class="mx-auto w-full max-w-[84rem] flex-1 px-4 py-8 md:px-6 lg:px-8">
       <RouterView />
     </main>
 
