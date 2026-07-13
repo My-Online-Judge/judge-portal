@@ -5,6 +5,7 @@
                 <TableRow class="border-border bg-muted/30 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:bg-muted/30">
                     <TableHead class="w-[60px] pl-4">#</TableHead>
                     <TableHead class="min-w-[200px]">Title</TableHead>
+                    <TableHead v-if="showTags" class="w-[220px]">Tags</TableHead>
                     <TableHead class="w-[120px]">Level</TableHead>
                     <TableHead class="w-[120px]">Total</TableHead>
                     <TableHead class="w-[200px]">AC Rate</TableHead>
@@ -19,6 +20,15 @@
                             class="block font-medium text-foreground transition-colors hover:text-primary">
                             {{ problem.title }}
                         </RouterLink>
+                    </TableCell>
+                    <TableCell v-if="showTags">
+                        <div class="flex flex-wrap gap-1.5">
+                            <Badge v-for="tag in problem.tags || []" :key="tag" variant="secondary"
+                                class="rounded-md border-0 bg-muted px-2 py-0.5 text-[11px] font-normal text-muted-foreground">
+                                {{ tag }}
+                            </Badge>
+                            <span v-if="!(problem.tags && problem.tags.length)" class="text-xs text-muted-foreground">—</span>
+                        </div>
                     </TableCell>
                     <TableCell>
                         <Badge :class="getLevelInfo(problem.hardnessLevel).class" class="rounded-md border-0 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">
@@ -57,9 +67,12 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { type Problem, getLevelInfo } from '@/types/problem'
 
-defineProps<{
+withDefaults(defineProps<{
     problems: Problem[]
-}>()
+    showTags?: boolean
+}>(), {
+    showTags: false,
+})
 
 const calculateAcRate = (accepted: number, total: number) => {
     if (!total) return 0
