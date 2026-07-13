@@ -56,49 +56,66 @@
 
                     <Dialog>
                         <DialogTrigger v-if="problem.totalSubmission" as-child>
-                            <Button variant="outline" size="sm" class="h-8 text-xs cursor-pointer">Details</Button>
+                            <Button variant="outline" size="sm" class="h-8 cursor-pointer text-xs">Details</Button>
                         </DialogTrigger>
-                        <DialogContent class="sm:max-w-[800px] max-h-[90vh]">
+                        <DialogContent class="sm:max-w-[560px]">
                             <DialogHeader>
-                                <DialogTitle>Submission Statistics</DialogTitle>
+                                <DialogTitle>Submission statistics</DialogTitle>
                             </DialogHeader>
-                            <!-- Restructured chart container for perfect centering -->
-                            <div v-if="!problem.totalSubmission" class="flex items-center justify-center h-[300px] text-muted-foreground">
-                                No data
+                            <div v-if="!detailTotal" class="flex h-52 items-center justify-center text-sm text-muted-foreground">
+                                No submissions yet
                             </div>
-                            <div v-else class="relative w-full max-w-[600px] mx-auto" style="aspect-ratio: 1/1;">
-                                <!-- Outer Doughnut Chart - takes full container -->
-                                <div class="absolute inset-0">
-                                    <Doughnut :data="detailedOuterData" :options="outerChartOptions" class="w-full h-full" />
-                                </div>
-
-                                <!-- Inner Pie Chart - positioned to align with donut hole accounting for padding -->
-                                <div class="absolute pointer-events-none"
-                                    style="top: 16%; bottom: 30px; left: 60px; right: 60px; display: flex; align-items: center; justify-content: center;">
-                                    <div class="w-[55%] h-[55%] flex items-center justify-center">
-                                        <Pie :data="detailedInnerData" :options="innerChartOptions" class="w-full h-full"
-                                            style="pointer-events: auto" />
+                            <div v-else class="grid gap-8 pt-2 sm:grid-cols-[200px_1fr] sm:items-center">
+                                <div class="relative mx-auto h-48 w-48">
+                                    <Doughnut :data="detailData" :options="donutOptions" />
+                                    <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                                        <span class="tabular text-3xl font-semibold text-foreground">{{ detailTotal }}</span>
+                                        <span class="text-[11px] uppercase tracking-wide text-muted-foreground">submissions</span>
                                     </div>
                                 </div>
+                                <ul class="divide-y divide-border">
+                                    <li v-for="row in breakdown" :key="row.key" class="flex items-center gap-3 py-2">
+                                        <span class="h-2.5 w-2.5 shrink-0 rounded-[3px]" :style="{ backgroundColor: row.color }"></span>
+                                        <span class="flex-1 text-sm text-foreground">{{ row.fullName }}</span>
+                                        <span class="tabular text-sm text-muted-foreground">{{ row.count }}</span>
+                                        <span class="tabular w-12 text-right text-sm font-medium text-foreground">{{ row.pct }}%</span>
+                                    </li>
+                                </ul>
                             </div>
                         </DialogContent>
                     </Dialog>
                 </CardTitle>
             </CardHeader>
-            <CardContent class="p-4 flex flex-col items-center justify-center">
-                <div class="flex justify-center align-center gap-4 mb-4">
-                    <div class="flex items-center gap-1">
-                        <div class="h-4 w-8 rounded-xs bg-emerald-500"></div>
-                        <span class="text-muted-foreground">AC</span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <div class="h-4 w-8 rounded-xs bg-rose-500"></div>
-                        <span class="text-muted-foreground">WA</span>
-                    </div>
+            <CardContent class="p-6">
+                <div v-if="!problem.totalSubmission" class="flex h-32 items-center justify-center text-sm text-muted-foreground">
+                    No submissions yet
                 </div>
-                <div class="relative h-40 w-full flex items-center justify-center">
-                    <div v-if="!problem.totalSubmission" class="text-muted-foreground text-sm">No data</div>
-                    <Pie v-else :data="simpleChartData" :options="simpleChartOptions" />
+                <div v-else class="flex items-center gap-5">
+                    <div class="relative h-28 w-28 shrink-0">
+                        <Doughnut :data="miniData" :options="donutOptions" />
+                        <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                            <span class="tabular text-lg font-semibold text-foreground">{{ acRate }}%</span>
+                            <span class="text-[10px] uppercase tracking-wide text-muted-foreground">AC rate</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 space-y-2 text-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="flex items-center gap-2 text-muted-foreground">
+                                <span class="h-2.5 w-2.5 rounded-[3px]" :style="{ backgroundColor: acColor }"></span>Accepted
+                            </span>
+                            <span class="tabular font-medium text-foreground">{{ acCount }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="flex items-center gap-2 text-muted-foreground">
+                                <span class="h-2.5 w-2.5 rounded-[3px] bg-muted-foreground/30"></span>Others
+                            </span>
+                            <span class="tabular font-medium text-foreground">{{ otherCount }}</span>
+                        </div>
+                        <div class="flex items-center justify-between border-t border-border pt-2">
+                            <span class="text-muted-foreground">Total</span>
+                            <span class="tabular font-medium text-foreground">{{ problem.totalSubmission }}</span>
+                        </div>
+                    </div>
                 </div>
             </CardContent>
         </Card>
@@ -126,197 +143,88 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog'
 
-import { Chart as ChartJS, ArcElement, Tooltip as ChartTooltip, Legend, PieController, DoughnutController } from 'chart.js'
-import { Doughnut, Pie } from 'vue-chartjs'
-import ChartDataLabels from 'chartjs-plugin-datalabels'
+import { Chart as ChartJS, ArcElement, Tooltip as ChartTooltip, Legend, DoughnutController } from 'chart.js'
+import { Doughnut } from 'vue-chartjs'
 
-ChartJS.register(ArcElement, ChartTooltip, Legend, ChartDataLabels, PieController, DoughnutController)
+ChartJS.register(ArcElement, ChartTooltip, Legend, DoughnutController)
 
 const props = defineProps<{
     problem: Problem
 }>()
 
-// Simple Chart Options (Sidebar)
-const simpleChartOptions = {
+const acColor = STATUS_CONFIG[SubmissionStatus.SUCCESS].color
+
+const acCount = computed(() => props.problem.acceptedSubmission || 0)
+const otherCount = computed(() => Math.max(0, (props.problem.totalSubmission || 0) - acCount.value))
+const acRate = computed(() => {
+    const total = props.problem.totalSubmission || 0
+    return total ? Math.round((acCount.value / total) * 100) : 0
+})
+
+// Flat donut, no floating labels; the accompanying list is the legend, tooltip on hover.
+const donutOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    cutout: '70%',
     plugins: {
         legend: { display: false },
-        tooltip: { enabled: false },
-        datalabels: {
-            display: true,
-            color: '#fff',
-            font: { weight: 'normal' as const, size: 12 },
-            formatter: (value: number, ctx: any) => {
-                const label = ctx.chart.data.labels[ctx.dataIndex];
-                const total = ctx.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                const percentage = total > 0 ? ((value / total) * 100).toFixed(2) + '%' : '0%';
-                if (value === 0) return '';
-                // Simple label: AC: 10\n50%
-                return `${label}: ${value}\n${percentage}`;
-            },
-            textAlign: 'center' as const
-        }
-    }
-}
-
-const commonOptions = {
-    responsive: true,
-    maintainAspectRatio: true,
-}
-
-const outerChartOptions = {
-    ...commonOptions,
-    cutout: '65%',
-    layout: {
-        padding: {
-            top: 60,
-            bottom: 30,
-            left: 60,
-            right: 60
-        }
-    },
-    plugins: {
-        legend: {
-            display: true,
-            position: 'top' as const,
-            align: 'center' as const,
-            labels: {
-                usePointStyle: true,
-                pointStyle: 'rectRounded',
-                boxWidth: 10,
-                boxHeight: 10,
-                borderRadius: 4,
-                padding: 12,
-                font: { size: 13 }
-            }
+        tooltip: {
+            callbacks: { label: (ctx: { label: string; parsed: number }) => ` ${ctx.label}: ${ctx.parsed}` },
         },
-        datalabels: {
-            display: (ctx: any) => ctx.dataset.data[ctx.dataIndex] > 0,
-            color: (ctx: any) => ctx.dataset.backgroundColor[ctx.dataIndex],
-            anchor: 'end' as const,
-            align: 'end' as const,
-            offset: 8,
-            font: { size: 13, weight: 'normal' as const },
-            formatter: (value: number, ctx: any) => {
-                const label = ctx.chart.data.labels[ctx.dataIndex];
-                const total = ctx.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                const percentage = ((value / total) * 100).toFixed(1) + '%';
-                return `${label}: ${value}\n${percentage}`;
-            },
-            textAlign: 'center' as const
-        }
-    }
-}
-
-const innerChartOptions = {
-    responsive: true,
-    maintainAspectRatio: true,
-    layout: {
-        padding: 0
     },
-    plugins: {
-        legend: { display: false },
-        datalabels: {
-            color: '#fff',
-            anchor: 'center' as const,
-            align: 'center' as const,
-            font: { size: 12, weight: 'bold' as const },
-            formatter: (value: number, ctx: any) => {
-                const label = ctx.chart.data.labels[ctx.dataIndex];
-                const total = ctx.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                const percentage = ((value / total) * 100).toFixed(1) + '%';
-                return value > 0 ? `${label}\n${value}\n${percentage}` : '';
-            },
-            textAlign: 'center' as const
-        }
-    }
 }
 
-const simpleChartData = computed(() => {
-    const ac = props.problem.acceptedSubmission || 0
-    const total = props.problem.totalSubmission || 0
-    const wa = total - ac
+const miniData = computed(() => ({
+    labels: ['Accepted', 'Others'],
+    datasets: [{
+        backgroundColor: [acColor, '#e3e6ec'],
+        data: [acCount.value, otherCount.value],
+        borderWidth: 0,
+    }],
+}))
 
-    return {
-        labels: ['AC', 'WA'],
-        datasets: [{
-            backgroundColor: [STATUS_CONFIG[SubmissionStatus.SUCCESS].color, STATUS_CONFIG[SubmissionStatus.WRONG_ANSWER].color],
-            data: [ac, wa],
-            borderWidth: 0
-        }]
-    }
-})
-
-const getStatData = () => {
+// Per-status breakdown from statisticInfo, falling back to AC / Others from the summary.
+const breakdown = computed(() => {
     const info = props.problem.statisticInfo || {}
-    const getData = (status: SubmissionStatus) => Number(info[status.toString()] || 0)
-
-    const ac = getData(SubmissionStatus.SUCCESS)
-    const wa = getData(SubmissionStatus.WRONG_ANSWER)
-    const tle = getData(SubmissionStatus.TIME_LIMIT_EXCEEDED) + getData(SubmissionStatus.REAL_TIME_LIMIT_EXCEEDED)
-    const mle = getData(SubmissionStatus.MEMORY_LIMIT_EXCEEDED)
-    const re = getData(SubmissionStatus.RUNTIME_ERROR)
-    const se = getData(SubmissionStatus.SYSTEM_ERROR)
-    const ce = 0 // Assuming CE is not mapped or is 0 for now as per previous code
-
-    const data = [ac, tle, mle, re, wa, ce, se]
-    // Filter statuses for labels/colors
-    const statuses = [
+    const order = [
         SubmissionStatus.SUCCESS,
+        SubmissionStatus.WRONG_ANSWER,
         SubmissionStatus.TIME_LIMIT_EXCEEDED,
+        SubmissionStatus.REAL_TIME_LIMIT_EXCEEDED,
         SubmissionStatus.MEMORY_LIMIT_EXCEEDED,
         SubmissionStatus.RUNTIME_ERROR,
-        SubmissionStatus.WRONG_ANSWER,
-        // CE?
-        SubmissionStatus.SYSTEM_ERROR
+        SubmissionStatus.COMPILE_ERROR,
+        SubmissionStatus.PARTIALLY_ACCEPTED,
+        SubmissionStatus.SYSTEM_ERROR,
     ]
-    // Need to align data with statuses.
-    // Let's reconstruction to be safe
-    return {
-        ac, wa, tle, mle, re, se, ce,
-        total: ac + wa + tle + mle + re + se + ce
+    let rows = order
+        .map((s) => ({
+            key: String(s),
+            fullName: STATUS_CONFIG[s]?.fullName ?? String(s),
+            color: STATUS_CONFIG[s]?.color ?? '#94a3b8',
+            count: Number(info[String(s)] || 0),
+        }))
+        .filter((r) => r.count > 0)
+
+    if (rows.length === 0 && (props.problem.totalSubmission || 0) > 0) {
+        rows = [
+            { key: 'ac', fullName: 'Accepted', color: acColor, count: acCount.value },
+            { key: 'other', fullName: 'Other verdicts', color: '#e2544e', count: otherCount.value },
+        ].filter((r) => r.count > 0)
     }
-}
 
-const detailedOuterData = computed(() => {
-    const s = getStatData()
-    // Order: AC, TLE, MLE, RE, WA, CE, SE (CE added for completeness if needed, else ignore)
-    // Actually let's follow the user image order roughly: AC (Green) -> Others
-
-    const labels = ['AC', 'TLE', 'MLE', 'RE', 'WA', 'SE']
-    const data = [s.ac, s.tle, s.mle, s.re, s.wa, s.se]
-    const backgroundColor = [
-        STATUS_CONFIG[SubmissionStatus.SUCCESS].color,
-        STATUS_CONFIG[SubmissionStatus.TIME_LIMIT_EXCEEDED].color,
-        STATUS_CONFIG[SubmissionStatus.MEMORY_LIMIT_EXCEEDED].color,
-        STATUS_CONFIG[SubmissionStatus.RUNTIME_ERROR].color,
-        STATUS_CONFIG[SubmissionStatus.WRONG_ANSWER].color,
-        STATUS_CONFIG[SubmissionStatus.SYSTEM_ERROR].color
-    ]
-
-    return {
-        labels,
-        datasets: [{
-            backgroundColor,
-            data,
-            borderWidth: 1
-        }]
-    }
+    const total = rows.reduce((sum, r) => sum + r.count, 0)
+    return rows.map((r) => ({ ...r, pct: total ? Number(((r.count / total) * 100).toFixed(1)) : 0 }))
 })
 
-const detailedInnerData = computed(() => {
-    const s = getStatData()
-    const total = s.total
-    const nonAc = total - s.ac
+const detailTotal = computed(() => breakdown.value.reduce((sum, r) => sum + r.count, 0))
 
-    return {
-        labels: ['AC', 'Non-AC'],
-        datasets: [{
-            backgroundColor: [STATUS_CONFIG[SubmissionStatus.SUCCESS].color, STATUS_CONFIG[SubmissionStatus.WRONG_ANSWER].color],
-            data: [s.ac, nonAc],
-            borderWidth: 0
-        }]
-    }
-})
+const detailData = computed(() => ({
+    labels: breakdown.value.map((r) => r.fullName),
+    datasets: [{
+        backgroundColor: breakdown.value.map((r) => r.color),
+        data: breakdown.value.map((r) => r.count),
+        borderWidth: 0,
+    }],
+}))
 </script>
