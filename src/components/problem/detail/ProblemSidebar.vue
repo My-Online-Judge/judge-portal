@@ -2,19 +2,19 @@
     <div class="space-y-6">
         <!-- Information -->
         <Card>
-            <CardHeader class="pb-3 border-b border-slate-100">
-                <CardTitle class="text-sm font-bold flex items-center gap-2">
-                    <Info class="h-6 w-6" />
+            <CardHeader class="border-b border-border pb-3">
+                <CardTitle class="flex items-center gap-2 text-sm font-semibold">
+                    <Info class="h-5 w-5 text-muted-foreground" />
                     Information
                 </CardTitle>
             </CardHeader>
             <CardContent class="space-y-4 text-sm">
-                <div class="flex justify-between items-center py-1 border-b border-slate-50">
-                    <span class="text-slate-500">ID</span>
+                <div class="flex items-center justify-between border-b border-border py-1">
+                    <span class="text-muted-foreground">ID</span>
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger as-child>
-                                <span class="font-mono font-medium text-slate-900 truncate max-w-[120px]">
+                                <span class="tabular max-w-[120px] truncate font-medium text-foreground">
                                     {{ problem.id }}
                                 </span>
                             </TooltipTrigger>
@@ -24,21 +24,21 @@
                         </Tooltip>
                     </TooltipProvider>
                 </div>
-                <div class="flex justify-between py-1 border-b border-slate-50">
-                    <span class="text-slate-500">Time Limit</span>
-                    <span class="font-mono font-medium text-slate-900">{{ problem.timeLimit }}ms</span>
+                <div class="flex justify-between border-b border-border py-1">
+                    <span class="text-muted-foreground">Time Limit</span>
+                    <span class="tabular font-medium text-foreground">{{ problem.timeLimit }} ms</span>
                 </div>
-                <div class="flex justify-between py-1 border-b border-slate-50">
-                    <span class="text-slate-500">Memory Limit</span>
-                    <span class="font-mono font-medium text-slate-900">{{ problem.memoryLimit }}MB</span>
+                <div class="flex justify-between border-b border-border py-1">
+                    <span class="text-muted-foreground">Memory Limit</span>
+                    <span class="tabular font-medium text-foreground">{{ problem.memoryLimit }} MB</span>
                 </div>
-                <div class="flex justify-between py-1 border-b border-slate-50">
-                    <span class="text-slate-500">Created By</span>
-                    <span class="font-medium text-blue-600">{{ problem.createdBy }}</span>
+                <div class="flex justify-between border-b border-border py-1">
+                    <span class="text-muted-foreground">Created By</span>
+                    <span class="font-medium text-foreground">{{ problem.createdBy }}</span>
                 </div>
-                <div class="flex justify-between py-1 border-b border-slate-50">
-                    <span class="text-slate-500">Level</span>
-                    <Badge :class="getLevelInfo(problem.hardnessLevel).class" class="border-0 rounded-md">
+                <div class="flex items-center justify-between py-1">
+                    <span class="text-muted-foreground">Level</span>
+                    <Badge :class="getLevelInfo(problem.hardnessLevel).class" class="rounded-md border-0 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">
                         {{ getLevelInfo(problem.hardnessLevel).text }}
                     </Badge>
                 </div>
@@ -47,10 +47,10 @@
 
         <!-- Statistics -->
         <Card>
-            <CardHeader class="border-b border-slate-100">
-                <CardTitle class="text-sm font-bold flex items-center justify-between">
-                    <div class="flex items-center align-center gap-2">
-                        <PieChart class="h-6 w-6 text-bl" />
+            <CardHeader class="border-b border-border">
+                <CardTitle class="flex items-center justify-between text-sm font-semibold">
+                    <div class="flex items-center gap-2">
+                        <PieChart class="h-5 w-5 text-muted-foreground" />
                         Statistics
                     </div>
 
@@ -63,7 +63,7 @@
                                 <DialogTitle>Submission Statistics</DialogTitle>
                             </DialogHeader>
                             <!-- Restructured chart container for perfect centering -->
-                            <div v-if="!problem.totalSubmission" class="flex items-center justify-center h-[300px] text-slate-400">
+                            <div v-if="!problem.totalSubmission" class="flex items-center justify-center h-[300px] text-muted-foreground">
                                 No data
                             </div>
                             <div v-else class="relative w-full max-w-[600px] mx-auto" style="aspect-ratio: 1/1;">
@@ -89,15 +89,15 @@
                 <div class="flex justify-center align-center gap-4 mb-4">
                     <div class="flex items-center gap-1">
                         <div class="h-4 w-8 rounded-xs bg-emerald-500"></div>
-                        <span class="text-slate-600">AC</span>
+                        <span class="text-muted-foreground">AC</span>
                     </div>
                     <div class="flex items-center gap-1">
                         <div class="h-4 w-8 rounded-xs bg-rose-500"></div>
-                        <span class="text-slate-600">WA</span>
+                        <span class="text-muted-foreground">WA</span>
                     </div>
                 </div>
                 <div class="relative h-40 w-full flex items-center justify-center">
-                    <div v-if="!problem.totalSubmission" class="text-slate-400 text-sm">No data</div>
+                    <div v-if="!problem.totalSubmission" class="text-muted-foreground text-sm">No data</div>
                     <Pie v-else :data="simpleChartData" :options="simpleChartOptions" />
                 </div>
             </CardContent>

@@ -53,9 +53,9 @@ export const STATUS_CONFIG = {
 
 export const getLevelInfo = (level: number): { text: string, class: string } => {
     switch (level) {
-        case 1: return { text: 'Easy', class: 'bg-emerald-500 hover:bg-emerald-600 text-white' }
-        case 2: return { text: 'Medium', class: 'bg-amber-500 hover:bg-amber-600 text-white' }
-        case 3: return { text: 'Hard', class: 'bg-rose-500 hover:bg-rose-600 text-white' }
-        default: return { text: 'Unknown', class: 'bg-slate-500 hover:bg-slate-600 text-white' }
+        case 1: return { text: 'Easy', class: 'bg-[#EAF3EA] text-[#356635]' }
+        case 2: return { text: 'Medium', class: 'bg-[#FBF2D8] text-[#8A5A00]' }
+        case 3: return { text: 'Hard', class: 'bg-[#FBEBEC] text-[#9E2F2D]' }
+        default: return { text: 'Unknown', class: 'bg-[#F0EFEC] text-[#6B6862]' }
     }
 }

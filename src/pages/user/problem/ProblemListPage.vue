@@ -2,11 +2,11 @@
     <div class="grid grid-cols-1 lg:grid-cols-[9.5fr_2.5fr] gap-6">
         <!-- Main Content (Left) -->
         <div>
-            <div class="rounded-xl border bg-white shadow-sm">
+            <div class="rounded-xl border border-border bg-card">
                 <SearchBar />
                 <div class="px-6 pb-6">
                     <Loading v-if="isLoading" />
-                    <div v-else-if="error" class="p-8 text-center text-red-500">Error loading problems</div>
+                    <div v-else-if="error" class="p-8 text-center text-destructive">Couldn't load problems. Please try again.</div>
                     <ProblemTable v-else :problems="problems" />
                     <PaginationFooter :pagination="pagination" @change-page="onPageChange" @update:size="onSizeChange" />
                 </div>

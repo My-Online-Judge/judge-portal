@@ -37,7 +37,7 @@
                             <Tooltip>
                                 <TooltipTrigger as-child>
                                     <DialogTrigger as-child>
-                                        <Button size="icon" class="h-9 w-9 shrink-0 cursor-pointer bg-blue-600 hover:bg-blue-700"
+                                        <Button variant="outline" size="icon" class="h-9 w-9 shrink-0 cursor-pointer"
                                             :disabled="!sourceCode">
                                             <RotateCcw class="h-2 w-2" />
                                         </Button>
@@ -73,14 +73,14 @@
 
             <div class="flex items-center justify-end gap-3">
                 <template v-if="authStore.isAuthenticated">
-                    <Button class="bg-blue-600 hover:bg-blue-700 pl-6 pr-6 cursor-pointer" @click="handleSubmit"
+                    <Button class="cursor-pointer px-6" @click="handleSubmit"
                         :disabled="isSubmitting || sourceCode.trim() === ''">
                         <Send class="h-4 w-4" />
                         {{ isSubmitting ? 'Submitting...' : 'Submit' }}
                     </Button>
                 </template>
                 <template v-else>
-                    <Button class="bg-slate-600 hover:bg-slate-700 pl-6 pr-6 cursor-pointer" @click="isLoginOpen = true">
+                    <Button class="cursor-pointer px-6" @click="isLoginOpen = true">
                         Login to Submit
                     </Button>
                 </template>

@@ -4,8 +4,8 @@
             <Loading />
         </div>
 
-        <div v-else-if="error" class="text-center py-20 text-red-500">
-            Error loading problem details.
+        <div v-else-if="error" class="py-20 text-center text-destructive">
+            Couldn't load this problem. Please try again.
         </div>
 
         <Tabs v-else-if="problem" v-model="activeTab" default-value="description" class="w-full">
@@ -17,15 +17,15 @@
                     <!-- Tabs Navigation -->
                     <TabsList class="w-full justify-start rounded-none bg-transparent p-0 -mb-px">
                         <TabsTrigger value="description"
-                            class="rounded-none border-b-2 border-transparent px-4 py-2 text-slate-600 hover:text-slate-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:shadow-none">
+                            class="rounded-none border-b-2 border-transparent px-4 py-2 text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none">
                             Problem
                         </TabsTrigger>
                         <TabsTrigger value="submit"
-                            class="rounded-none border-b-2 border-transparent px-4 py-2 text-slate-600 hover:text-slate-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:shadow-none">
+                            class="rounded-none border-b-2 border-transparent px-4 py-2 text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none">
                             Submit
                         </TabsTrigger>
                         <TabsTrigger value="submissions"
-                            class="rounded-none border-b-2 border-transparent px-4 py-2 text-slate-600 hover:text-slate-900 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:shadow-none">
+                            class="rounded-none border-b-2 border-transparent px-4 py-2 text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none">
                             Submissions
                         </TabsTrigger>
                     </TabsList>

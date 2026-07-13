@@ -1,55 +1,58 @@
 <template>
-    <Card class="py-0">
+    <Card class="border-border py-0 shadow-none">
         <CardContent class="p-0">
-            <div v-if="!authStore.isAuthenticated" class="flex flex-col items-center justify-center p-12 text-center text-slate-500">
-                <p class="mb-4">Please login to view your submissions</p>
-                <Button @click="isLoginOpen = true">Login to View</Button>
+            <div v-if="!authStore.isAuthenticated" class="flex flex-col items-center justify-center gap-4 p-14 text-center">
+                <p class="text-muted-foreground">Sign in to see your submissions for this problem.</p>
+                <Button @click="isLoginOpen = true">Sign in</Button>
             </div>
 
             <div v-else>
                 <Table>
                     <TableHeader>
-                        <TableRow class="bg-slate-50 hover:bg-slate-50">
-                            <TableHead>ID</TableHead>
-                            <TableHead>When</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Time</TableHead>
-                            <TableHead>Memory</TableHead>
-                            <TableHead>Language</TableHead>
+                        <TableRow class="border-border bg-muted/30 hover:bg-muted/30">
+                            <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">ID</TableHead>
+                            <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">When</TableHead>
+                            <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</TableHead>
+                            <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Time</TableHead>
+                            <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Memory</TableHead>
+                            <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Language</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        <TableRow v-if="isLoading">
-                            <TableCell colspan="6" class="text-center py-8 text-slate-500">
-                                Loading submissions...
+                        <template v-if="isLoading">
+                            <TableRow v-for="n in 5" :key="`sk-${n}`" class="border-border hover:bg-transparent">
+                                <TableCell v-for="c in 6" :key="c" class="py-4">
+                                    <div class="h-3.5 animate-pulse rounded bg-muted" :class="c === 3 ? 'w-16' : 'w-20'"></div>
+                                </TableCell>
+                            </TableRow>
+                        </template>
+                        <TableRow v-else-if="error" class="hover:bg-transparent">
+                            <TableCell colspan="6" class="py-10 text-center text-destructive">
+                                Couldn't load submissions. Please try again.
                             </TableCell>
                         </TableRow>
-                        <TableRow v-else-if="error">
-                            <TableCell colspan="6" class="text-center py-8 text-red-500">
-                                Failed to load submissions
+                        <TableRow v-else-if="displayRows.length === 0" class="hover:bg-transparent">
+                            <TableCell colspan="6" class="py-16 text-center">
+                                <p class="font-display text-2xl text-foreground">No submissions yet</p>
+                                <p class="mt-1.5 text-sm text-muted-foreground">Solve it from the Submit tab — your attempts show up here in real time.</p>
                             </TableCell>
                         </TableRow>
-                        <TableRow v-else-if="displayRows.length === 0">
-                            <TableCell colspan="6" class="text-center py-8 text-slate-500">
-                                No submissions found
-                            </TableCell>
-                        </TableRow>
-                        <TableRow v-else v-for="sub in displayRows" :key="sub.id">
-                            <TableCell class="font-mono">#{{ sub.id.substring(0, 8) }}</TableCell>
-                            <TableCell class="">{{ formatDateTime(sub.createdAt) }}</TableCell>
+                        <TableRow v-else v-for="sub in displayRows" :key="sub.id" class="border-border transition-colors hover:bg-muted/40">
+                            <TableCell class="tabular text-sm text-muted-foreground">#{{ sub.id.substring(0, 8) }}</TableCell>
+                            <TableCell class="text-sm text-muted-foreground">{{ formatDateTime(sub.createdAt) }}</TableCell>
                             <TableCell>
                                 <Badge :class="getStatusClass(sub.status)">
-                                    <Loader2 v-if="!isTerminalStatus(sub.status)" class="h-3 w-3 animate-spin mr-1 inline" />
+                                    <Loader2 v-if="!isTerminalStatus(sub.status)" class="mr-1 inline h-3 w-3 animate-spin" />
                                     {{ getSubmissionStatus(sub.status) }}
                                 </Badge>
                             </TableCell>
-                            <TableCell class="">
-                                {{ sub.cpuTime != null ? `${sub.cpuTime}ms` : '--' }}
+                            <TableCell class="tabular text-sm">
+                                {{ sub.cpuTime != null ? `${sub.cpuTime} ms` : '—' }}
                             </TableCell>
-                            <TableCell class="">
-                                {{ sub.memory != null ? `${(sub.memory / (1024 * 1024)).toFixed(1)} MB` : '--' }}
+                            <TableCell class="tabular text-sm">
+                                {{ sub.memory ? `${(sub.memory / (1024 * 1024)).toFixed(1)} MB` : '—' }}
                             </TableCell>
-                            <TableCell class="">{{ sub.language?.name }}</TableCell>
+                            <TableCell class="text-sm text-muted-foreground">{{ sub.language?.name }}</TableCell>
                         </TableRow>
                     </TableBody>
                 </Table>
@@ -182,25 +185,28 @@ const onSizeChange = (newSize: number) => {
     fetchSubmissions()
 }
 
+// Muted pastel status chips (warm-monochrome palette) — semantic color only,
+// square-ish, uppercase, tracked. No saturated fills, no pill.
+const CHIP = 'rounded-md border-0 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide'
 const getStatusClass = (status: number) => {
     switch (status) {
         case SubmissionResult.SUCCESS:
-            return 'bg-emerald-500 hover:bg-emerald-600 border-0 rounded-sm'
+            return `${CHIP} bg-[#EAF3EA] text-[#356635]`
         case SubmissionResult.WRONG_ANSWER:
-            return 'bg-red-500 hover:bg-red-600 border-0 rounded-sm'
+            return `${CHIP} bg-[#FBEBEC] text-[#9E2F2D]`
         case SubmissionResult.COMPILE_ERROR:
-            return 'bg-violet-500 hover:bg-violet-600 border-0 rounded-sm'
+            return `${CHIP} bg-[#F1EDF9] text-[#5B3E9F]`
         case SubmissionResult.PARTIALLY_ACCEPTED:
-            return 'bg-teal-500 hover:bg-teal-600 border-0 rounded-sm'
+            return `${CHIP} bg-[#E6F1F0] text-[#2C6E68]`
         case SubmissionResult.TIME_LIMIT_EXCEEDED:
         case SubmissionResult.REAL_TIME_LIMIT_EXCEEDED:
         case SubmissionResult.MEMORY_LIMIT_EXCEEDED:
-            return 'bg-orange-500 hover:bg-orange-600 border-0 rounded-sm'
+            return `${CHIP} bg-[#FBF2D8] text-[#8A5A00]`
         case SubmissionResult.RUNTIME_ERROR:
         case SubmissionResult.SYSTEM_ERROR:
-            return 'bg-yellow-500 hover:bg-yellow-600 border-0 rounded-sm'
+            return `${CHIP} bg-[#FBEADF] text-[#9A4A1F]`
         default:
-            return 'bg-slate-500 hover:bg-slate-600 border-0 rounded-sm'
+            return `${CHIP} bg-[#F0EFEC] text-[#6B6862]`
     }
 }
 </script>

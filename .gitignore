@@ -36,3 +36,8 @@ coverage
 __screenshots__/
 
 .env
+
+# skills tooling (npx skills add) — not app code
+.agents/
+.claude/
+skills-lock.json

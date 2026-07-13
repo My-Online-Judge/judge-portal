@@ -1,46 +1,30 @@
 <template>
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div class="w-full mx-auto flex h-[72px] items-center justify-between px-4 md:px-6 lg:px-8">
-            <!-- Logo & Navigation -->
-            <div class="flex h-full items-center gap-12">
-                <!-- Logo -->
-                <RouterLink to="/" class="text-2xl font-bold text-blue-600">My OJ</RouterLink>
+    <header class="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
+        <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-6 lg:px-8">
+            <!-- Wordmark + navigation -->
+            <div class="flex h-full items-center gap-10">
+                <RouterLink to="/" class="font-display text-[1.7rem] leading-none tracking-tight text-foreground">
+                    My<span class="text-muted-foreground">OJ</span>
+                </RouterLink>
 
-                <!-- Navigation Menu -->
-                <nav class="hidden md:flex h-full items-center gap-8 text-[15px] font-medium text-slate-600">
-                    <RouterLink to="/" class="group relative flex h-full items-center gap-2 hover:text-blue-600 transition-colors"
-                        exact-active-class="text-blue-600 header-active">
-                        <Home class="h-4 w-4" />
+                <nav class="hidden h-full items-center gap-7 text-sm text-muted-foreground md:flex">
+                    <RouterLink to="/"
+                        class="flex h-full items-center -mb-px border-b-2 border-transparent transition-colors hover:text-foreground"
+                        exact-active-class="!text-foreground !border-foreground">
                         Home
-                        <div class="absolute bottom-0 h-0.5 w-full bg-blue-600 hidden group-[.header-active]:block"></div>
                     </RouterLink>
-                    <RouterLink to="/problems" class="group relative flex h-full items-center gap-2 hover:text-blue-600 transition-colors"
-                        active-class="text-blue-600 header-active">
-                        <List class="h-4 w-4" />
+                    <RouterLink to="/problems"
+                        class="flex h-full items-center -mb-px border-b-2 border-transparent transition-colors hover:text-foreground"
+                        active-class="!text-foreground !border-foreground">
                         Problems
-                        <div class="absolute bottom-0 h-0.5 w-full bg-blue-600 hidden group-[.header-active]:block"></div>
                     </RouterLink>
-                    <a href="#" class="flex h-full items-center gap-2 hover:text-blue-600 transition-colors">
-                        <Trophy class="h-4 w-4" />
-                        Contests
-                    </a>
-                    <a href="#" class="flex h-full items-center gap-2 hover:text-blue-600 transition-colors">
-                        <BarChart2 class="h-4 w-4" />
-                        State
-                    </a>
-                    <a href="#" class="flex h-full items-center gap-2 hover:text-blue-600 transition-colors">
-                        <BarChart class="h-4 w-4" />
-                        Hand
-                    </a>
-                    <a href="#" class="flex h-full items-center gap-2 hover:text-blue-600 transition-colors">
-                        <Info class="h-4 w-4" />
-                        About
-                    </a>
+                    <a href="#"
+                        class="flex h-full items-center -mb-px border-b-2 border-transparent transition-colors hover:text-foreground">Contests</a>
                 </nav>
             </div>
 
-            <!-- Auth Buttons -->
-            <div class="flex items-center gap-4">
+            <!-- Auth -->
+            <div class="flex items-center gap-3">
                 <template v-if="authStore.isAuthenticated && authStore.user">
                     <DropdownMenu>
                         <DropdownMenuTrigger as-child>
@@ -69,7 +53,7 @@
                     </DropdownMenu>
                 </template>
                 <template v-else>
-                    <Button variant="ghost" class="text-slate-600 hover:text-slate-900 font-medium" @click="openLogin">
+                    <Button variant="ghost" class="font-medium text-muted-foreground hover:text-foreground" @click="openLogin">
                         Login
                     </Button>
                 </template>
@@ -83,7 +67,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
-import { Home, Trophy, BarChart2, BarChart, Info, List, User } from 'lucide-vue-next'
 import LoginModal from '@/components/auth/LoginModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import {
