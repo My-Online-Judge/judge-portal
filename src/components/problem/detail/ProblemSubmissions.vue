@@ -90,7 +90,9 @@ import { SubmissionResult, getSubmissionStatus, isTerminalStatus } from '@/types
 
 const props = defineProps<{
     problemSlug: string
+    pendingSubmission?: Submission | null
 }>()
+const emit = defineEmits<{ (e: 'consumed'): void }>()
 
 const authStore = useAuthStore()
 const isLoginOpen = ref(false)
@@ -140,7 +142,16 @@ watch(response, (r) => {
     )
 })
 
-defineExpose({ addPendingSubmission })
+watch(
+    () => props.pendingSubmission,
+    (sub) => {
+        if (sub) {
+            addPendingSubmission(sub)
+            emit('consumed')
+        }
+    },
+    { immediate: true },
+)
 
 const fetchSubmissions = () => {
     if (authStore.isAuthenticated && authStore.user) {

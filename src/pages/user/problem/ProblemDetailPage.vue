@@ -8,7 +8,7 @@
             Error loading problem details.
         </div>
 
-        <Tabs v-else-if="problem" v-model="activeTab" default-value="description" class="w-full" :unmount-on-hide="false">
+        <Tabs v-else-if="problem" v-model="activeTab" default-value="description" class="w-full">
             <Card>
                 <CardHeader class="px-6 pb-0 space-y-4 border-b">
                     <!-- Header Info -->
@@ -48,7 +48,7 @@
 
                             <!-- Tab: Submissions -->
                             <TabsContent value="submissions" class="mt-0">
-                                <ProblemSubmissions ref="submissionsRef" :problem-slug="slug" />
+                                <ProblemSubmissions :problem-slug="slug" :pending-submission="pendingSubmission" @consumed="pendingSubmission = null" />
                             </TabsContent>
                         </div>
 
@@ -65,7 +65,7 @@
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import { ref, nextTick } from 'vue'
+import { ref } from 'vue'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import ProblemHeader from '@/components/problem/detail/ProblemHeader.vue'
@@ -84,7 +84,7 @@ import type { Submission } from '@/types/submission'
 const route = useRoute()
 const slug = route.params.slug as string
 const activeTab = ref('description')
-const submissionsRef = ref<InstanceType<typeof ProblemSubmissions> | null>(null)
+const pendingSubmission = ref<Submission | null>(null)
 
 const {
     data: problem,
@@ -101,9 +101,8 @@ const { languages } = storeToRefs(languageStore)
 
 languageStore.fetchLanguages()
 
-const handleSubmissionSuccess = async (submission: Submission) => {
+const handleSubmissionSuccess = (submission: Submission) => {
     activeTab.value = 'submissions'
-    await nextTick()
-    submissionsRef.value?.addPendingSubmission(submission)
+    pendingSubmission.value = submission
 }
 </script>
