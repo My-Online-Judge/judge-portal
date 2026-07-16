@@ -25,6 +25,12 @@
                         <Trophy class="h-4 w-4" />
                         Contests
                     </a>
+                    <RouterLink v-if="isAdmin" :to="ROUTE_PATH.ADMIN"
+                        class="flex h-full items-center gap-2 -mb-px border-b-2 border-transparent transition-colors hover:text-foreground"
+                        active-class="!text-primary !border-primary">
+                        <ShieldCheck class="h-4 w-4" />
+                        Admin
+                    </RouterLink>
                 </nav>
             </div>
 
@@ -70,11 +76,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
-import { Home, List, Trophy } from 'lucide-vue-next'
+import { Home, List, Trophy, ShieldCheck } from 'lucide-vue-next'
 import LoginModal from '@/components/auth/LoginModal.vue'
 import { useAuthStore } from '@/stores/auth'
+import { ROUTE_PATH } from '@/constants/routePath'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -91,6 +98,9 @@ import {
 
 const isLoginOpen = ref(false)
 const authStore = useAuthStore()
+
+const ADMIN_ANY = ['problem:create', 'problem:update', 'problem:delete', 'judgeserver:read', 'role:read', 'user:read']
+const isAdmin = computed(() => ADMIN_ANY.some((p) => authStore.hasPermission(p)))
 
 const openLogin = () => {
     isLoginOpen.value = true
