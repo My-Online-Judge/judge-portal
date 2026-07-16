@@ -39,7 +39,7 @@
 
         <!-- Edit mode — form constrained for readability; view mode stays full-width -->
         <template v-else-if="isEditing">
-            <div class="flex w-full max-w-[960px] flex-col gap-[22px]">
+            <div class="flex w-full flex-col gap-[22px]">
                 <div class="min-w-0">
                     <h1 class="text-[24px] font-semibold leading-tight tracking-tight text-foreground">Edit problem</h1>
                     <p class="mt-1 text-sm text-muted-foreground">

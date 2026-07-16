@@ -1,5 +1,5 @@
 <template>
-    <div class="flex w-full max-w-[960px] flex-col gap-[22px]">
+    <div class="flex w-full flex-col gap-[22px]">
         <!-- Header -->
         <div class="flex flex-col gap-3">
             <RouterLink
