@@ -12,7 +12,11 @@ const userWith = (permissions: string[]) =>
   ({ username: 'u@example.com', permissions } as unknown as UserResponse)
 
 describe('auth store hasPermission', () => {
-  beforeEach(() => setActivePinia(createPinia()))
+  beforeEach(async () => {
+    setActivePinia(createPinia())
+    const authService = (await import('@/services/authService')).default as any
+    authService.getMe.mockReset()
+  })
 
   it('is false when unauthenticated', () => {
     const store = useAuthStore()
@@ -33,5 +37,24 @@ describe('auth store hasPermission', () => {
     await Promise.all([store.ensureLoaded(), store.ensureLoaded()])
     await store.ensureLoaded()
     expect(authService.getMe).toHaveBeenCalledTimes(1)
+  })
+
+  it('ensureLoaded retries fetchUser after a failed attempt', async () => {
+    const authService = (await import('@/services/authService')).default as any
+    vi.stubGlobal('document', { cookie: '' })
+    authService.getMe
+      .mockRejectedValueOnce(new Error('network error'))
+      .mockResolvedValueOnce({ data: { data: { username: 'a', permissions: [] } } })
+
+    const store = useAuthStore()
+
+    await store.ensureLoaded()
+    expect(store.user).toBeNull()
+
+    await store.ensureLoaded()
+    expect(authService.getMe).toHaveBeenCalledTimes(2)
+    expect(store.user).not.toBeNull()
+
+    vi.unstubAllGlobals()
   })
 })
