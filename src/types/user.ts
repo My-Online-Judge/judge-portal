@@ -16,4 +16,5 @@ export interface UserResponse extends BaseModel {
     avatar: string
     googleId: string
     roles: Role[]
+    permissions: string[]
 }
