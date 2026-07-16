@@ -1,5 +1,5 @@
 <template>
-    <div class="relative flex min-h-[640px] overflow-hidden rounded-xl border border-border bg-card">
+    <div class="flex h-screen overflow-hidden bg-background text-foreground">
         <!-- Mobile drawer backdrop -->
         <div
             v-if="sidebarOpen"
@@ -13,17 +13,24 @@
             class="fixed inset-y-0 left-0 z-40 flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-out motion-reduce:transition-none md:static md:z-auto md:translate-x-0"
             :class="sidebarOpen ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full'"
         >
-            <!-- Sidebar header / wordmark -->
-            <div class="flex h-14 items-center justify-between gap-2 border-b border-sidebar-border px-4">
-                <RouterLink :to="ROUTE_PATH.ADMIN" class="flex items-center gap-2" @click="sidebarOpen = false">
-                    <span class="flex size-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-                        <ShieldCheck class="size-4" />
+            <!-- Brand -->
+            <div class="flex h-14 shrink-0 items-center gap-2.5 border-b border-sidebar-border px-4">
+                <RouterLink
+                    :to="ROUTE_PATH.ADMIN"
+                    class="flex min-w-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                    @click="sidebarOpen = false"
+                >
+                    <span class="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                        <Binary class="size-4" />
                     </span>
-                    <span class="text-sm font-semibold tracking-tight">Admin console</span>
+                    <span class="flex min-w-0 flex-col leading-tight">
+                        <span class="text-[13px] font-semibold">Judge Admin</span>
+                        <span class="font-mono text-[11px] text-muted-foreground">oj.console</span>
+                    </span>
                 </RouterLink>
                 <button
                     type="button"
-                    class="rounded-md p-1.5 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring md:hidden"
+                    class="ml-auto rounded-md p-1.5 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring md:hidden"
                     aria-label="Close navigation"
                     @click="sidebarOpen = false"
                 >
@@ -32,16 +39,16 @@
             </div>
 
             <!-- Navigation -->
-            <nav class="flex-1 space-y-6 overflow-y-auto px-3 py-5">
+            <nav class="flex flex-1 flex-col gap-[18px] overflow-y-auto px-2.5 py-3.5">
                 <div v-for="group in navGroups" :key="group.label">
-                    <p class="px-2 pb-1.5 text-[0.6875rem] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+                    <p class="px-2.5 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-sidebar-foreground/50">
                         {{ group.label }}
                     </p>
                     <ul class="space-y-0.5">
                         <li v-for="item in group.items" :key="item.to">
                             <RouterLink
                                 :to="item.to"
-                                class="group flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                                class="group flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
                                 :active-class="item.exact ? '' : activeLinkClass"
                                 :exact-active-class="activeLinkClass"
                                 @click="sidebarOpen = false"
@@ -53,63 +60,103 @@
                     </ul>
                 </div>
             </nav>
+
+            <!-- User chip (non-interactive for now) -->
+            <div class="flex items-center gap-2.5 border-t border-sidebar-border p-3">
+                <span class="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted font-mono text-[12px] font-semibold text-foreground">
+                    {{ initials }}
+                </span>
+                <div class="flex min-w-0 flex-1 flex-col leading-tight">
+                    <span class="truncate text-[13px] font-medium text-foreground">{{ displayName }}</span>
+                    <span class="truncate font-mono text-[11px] text-muted-foreground">{{ roleLabel }}</span>
+                </div>
+                <ChevronsUpDown class="size-4 shrink-0 text-muted-foreground" />
+            </div>
         </aside>
 
         <!-- Content column -->
         <div class="flex min-w-0 flex-1 flex-col">
-            <!-- Top bar -->
-            <header class="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border px-4 md:px-6">
-                <div class="flex min-w-0 items-center gap-2">
-                    <button
-                        type="button"
-                        class="-ml-1 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
-                        aria-label="Open navigation"
-                        @click="sidebarOpen = true"
-                    >
-                        <Menu class="size-5" />
-                    </button>
-                    <div class="min-w-0">
-                        <p class="text-[0.6875rem] font-medium uppercase tracking-wider text-muted-foreground">Admin</p>
-                        <h1 class="truncate text-lg font-semibold leading-tight tracking-tight text-foreground">
-                            {{ pageTitle }}
-                        </h1>
-                    </div>
+            <!-- Top header -->
+            <header class="flex h-14 shrink-0 items-center gap-4 border-b border-border bg-background px-4 sm:px-6">
+                <button
+                    type="button"
+                    class="-ml-1 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+                    aria-label="Open navigation"
+                    @click="sidebarOpen = true"
+                >
+                    <Menu class="size-5" />
+                </button>
+
+                <!-- Breadcrumb -->
+                <nav class="flex min-w-0 items-center gap-1.5 text-sm" aria-label="Breadcrumb">
+                    <span class="text-muted-foreground">Admin</span>
+                    <ChevronRight class="size-4 shrink-0 text-muted-foreground/60" />
+                    <span class="truncate font-medium text-foreground">{{ pageTitle }}</span>
+                </nav>
+
+                <div class="flex-1"></div>
+
+                <!-- Search affordance (visual placeholder) -->
+                <div
+                    class="hidden h-[34px] w-[220px] items-center gap-2 rounded-md border border-input bg-background px-2.5 text-muted-foreground sm:flex"
+                    aria-hidden="true"
+                >
+                    <Search class="size-4 shrink-0" />
+                    <span class="flex-1 text-[13px]">Search…</span>
+                    <kbd class="rounded border border-border px-1 font-mono text-[11px] leading-4">⌘K</kbd>
                 </div>
 
-                <!-- Current admin identity -->
-                <div v-if="user" class="flex items-center gap-2.5">
-                    <div class="hidden text-right sm:block">
-                        <p class="text-sm font-medium leading-tight text-foreground">{{ user.name || user.username }}</p>
-                        <p class="font-mono text-xs leading-tight text-muted-foreground">{{ user.email }}</p>
-                    </div>
-                    <Avatar class="size-9">
-                        <AvatarImage v-if="user.avatar" :src="user.avatar" :alt="user.username" />
-                        <AvatarFallback>{{ initials }}</AvatarFallback>
-                    </Avatar>
-                </div>
+                <!-- Theme toggle (functional) -->
+                <button
+                    type="button"
+                    class="flex size-[34px] shrink-0 items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    :aria-label="isDark ? 'Switch to light theme' : 'Switch to dark theme'"
+                    @click="toggleTheme"
+                >
+                    <Sun v-if="isDark" class="size-4" />
+                    <Moon v-else class="size-4" />
+                </button>
+
+                <!-- Notifications (decorative) -->
+                <button
+                    type="button"
+                    class="relative flex size-[34px] shrink-0 items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Notifications"
+                >
+                    <Bell class="size-4" />
+                    <span class="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-err" />
+                </button>
             </header>
 
             <!-- Routed content -->
-            <main class="flex-1 overflow-x-hidden bg-background p-4 md:p-6">
-                <RouterView />
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-background p-6">
+                <div class="mx-auto max-w-[1180px]">
+                    <RouterView />
+                </div>
             </main>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, type Component } from 'vue'
+import { computed, onMounted, ref, type Component } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import {
+    Binary,
     LayoutDashboard,
-    FileCode2,
+    ListChecks,
     Server,
     ShieldCheck,
     Users,
     Menu,
     X,
+    ChevronRight,
+    ChevronsUpDown,
+    Search,
+    Moon,
+    Sun,
+    Bell,
 } from 'lucide-vue-next'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useAuthStore } from '@/stores/auth'
 import { ROUTE_PATH } from '@/constants/routePath'
 
@@ -145,7 +192,7 @@ const navGroups = computed(() => {
                 {
                     label: 'Problems',
                     to: ROUTE_PATH.ADMIN_PROBLEMS,
-                    icon: FileCode2,
+                    icon: ListChecks,
                     show: can('problem:create', 'problem:update', 'problem:delete'),
                 },
             ],
@@ -180,8 +227,40 @@ const titleMap: Record<string, string> = {
 
 const pageTitle = computed(() => titleMap[String(route.name ?? '')] ?? 'Dashboard')
 
+const displayName = computed(() => user.value?.name || user.value?.username || 'Admin')
+
+const roleLabel = computed(() => {
+    const name = user.value?.roles?.[0]?.name
+    return `role:${name ? name.toLowerCase() : 'user'}`
+})
+
 const initials = computed(() => {
-    const source = user.value?.name || user.value?.username || '?'
-    return source.charAt(0).toUpperCase()
+    const source = (user.value?.name || user.value?.username || '?').trim()
+    const parts = source.split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) return `${parts[0]!.charAt(0)}${parts[1]!.charAt(0)}`.toUpperCase()
+    return source.slice(0, 2).toUpperCase()
+})
+
+// Theme toggle — dark class on <html> + localStorage persistence.
+const isDark = ref(false)
+
+const applyTheme = (dark: boolean) => {
+    isDark.value = dark
+    document.documentElement.classList.toggle('dark', dark)
+}
+
+const toggleTheme = () => {
+    const next = !isDark.value
+    applyTheme(next)
+    localStorage.setItem('theme', next ? 'dark' : 'light')
+}
+
+onMounted(() => {
+    const stored = localStorage.getItem('theme')
+    if (stored === 'dark' || stored === 'light') {
+        applyTheme(stored === 'dark')
+    } else {
+        isDark.value = document.documentElement.classList.contains('dark')
+    }
 })
 </script>

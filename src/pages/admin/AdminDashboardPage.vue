@@ -1,61 +1,97 @@
 <template>
-    <div class="space-y-6">
-        <!-- KPI card row -->
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <!-- Problems (live) -->
-            <Card class="gap-0">
-                <CardContent class="flex items-start justify-between gap-4">
-                    <div class="min-w-0 space-y-2">
-                        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Problems</p>
-                        <div v-if="isLoading" class="h-9 w-20 animate-pulse rounded bg-muted motion-reduce:animate-none" />
-                        <p v-else class="font-mono text-3xl font-semibold tabular-nums tracking-tight text-foreground">
-                            {{ totalProblems ?? '—' }}
-                        </p>
-                        <p class="text-xs text-muted-foreground">Total problems in the catalog.</p>
-                    </div>
-                    <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                        <FileCode2 class="size-5" />
-                    </span>
-                </CardContent>
-            </Card>
-
-            <!-- Users (not wired) -->
-            <Card class="gap-0">
-                <CardContent class="flex items-start justify-between gap-4">
-                    <div class="min-w-0 space-y-2">
-                        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Users</p>
-                        <p class="font-mono text-3xl font-semibold tabular-nums tracking-tight text-muted-foreground/60">—</p>
-                        <p class="text-xs text-muted-foreground">Available soon in the Users section.</p>
-                    </div>
-                    <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                        <Users class="size-5" />
-                    </span>
-                </CardContent>
-            </Card>
-
-            <!-- Judge servers (not wired) -->
-            <Card class="gap-0">
-                <CardContent class="flex items-start justify-between gap-4">
-                    <div class="min-w-0 space-y-2">
-                        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Judge servers</p>
-                        <p class="font-mono text-3xl font-semibold tabular-nums tracking-tight text-muted-foreground/60">—</p>
-                        <p class="text-xs text-muted-foreground">Available soon in the Judge servers section.</p>
-                    </div>
-                    <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                        <Server class="size-5" />
-                    </span>
-                </CardContent>
-            </Card>
+    <div class="flex flex-col gap-[22px]">
+        <!-- Page header -->
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="min-w-0">
+                <h1 class="text-[24px] font-semibold leading-tight tracking-tight text-foreground">Dashboard</h1>
+                <p class="mt-1 text-sm text-muted-foreground">Content, infrastructure and access at a glance.</p>
+            </div>
+            <RouterLink v-if="hasPermission('problem:create')" :to="ROUTE_PATH.ADMIN_PROBLEMS">
+                <Button class="h-[38px]">
+                    <Plus class="size-4" />
+                    Create problem
+                </Button>
+            </RouterLink>
         </div>
 
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <!-- Recent problems -->
-            <Card class="lg:col-span-2">
-                <CardHeader class="flex flex-row items-center justify-between gap-3 space-y-0">
-                    <div class="space-y-1">
-                        <CardTitle class="text-base">Recent problems</CardTitle>
-                        <CardDescription>The five most recently listed problems.</CardDescription>
+        <!-- KPI row -->
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <!-- Problems (live) -->
+            <div class="rounded-xl border border-border bg-card p-[18px]">
+                <div class="flex items-start justify-between gap-3">
+                    <span class="text-[13px] font-medium text-muted-foreground">Problems</span>
+                    <ListChecks class="size-[18px] shrink-0 text-muted-foreground" />
+                </div>
+                <div class="mt-3 flex h-[30px] items-center">
+                    <div v-if="isLoading" class="h-5 w-[88px] rounded bg-muted animate-ojpulse" />
+                    <p v-else-if="error" class="font-mono text-[30px] font-semibold leading-none text-muted-foreground">—</p>
+                    <p v-else class="font-mono text-[30px] font-semibold leading-none tracking-tight text-foreground">
+                        {{ totalProblems ?? '—' }}
+                    </p>
+                </div>
+                <p class="mt-2 text-[12px] text-muted-foreground">
+                    {{ error ? "Couldn't load" : 'In the catalog' }}
+                </p>
+            </div>
+
+            <!-- Judge servers (pending — Phase 2) -->
+            <div class="rounded-xl border border-border bg-card p-[18px]">
+                <div class="flex items-start justify-between gap-3">
+                    <span class="text-[13px] font-medium text-muted-foreground">Judge servers</span>
+                    <Server class="size-[18px] shrink-0 text-muted-foreground" />
+                </div>
+                <div class="mt-3 flex h-[30px] items-center">
+                    <p class="font-mono text-[30px] font-semibold leading-none text-muted-foreground/60">—</p>
+                </div>
+                <p class="mt-2 text-[12px] text-muted-foreground">Wired up in the Judge servers section.</p>
+            </div>
+
+            <!-- Users (pending — Phase 4) -->
+            <div class="rounded-xl border border-border bg-card p-[18px]">
+                <div class="flex items-start justify-between gap-3">
+                    <span class="text-[13px] font-medium text-muted-foreground">Users</span>
+                    <Users class="size-[18px] shrink-0 text-muted-foreground" />
+                </div>
+                <div class="mt-3 flex h-[30px] items-center">
+                    <p class="font-mono text-[30px] font-semibold leading-none text-muted-foreground/60">—</p>
+                </div>
+                <p class="mt-2 text-[12px] text-muted-foreground">Lands in the Users section.</p>
+            </div>
+        </div>
+
+        <!-- Two-column grid -->
+        <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
+            <!-- Judge server health -->
+            <div class="rounded-xl border border-border bg-card">
+                <div class="flex items-start justify-between gap-3 border-b border-border p-[18px]">
+                    <div class="min-w-0">
+                        <h2 class="text-base font-medium text-foreground">Judge server health</h2>
+                        <p class="mt-0.5 text-[12px] text-muted-foreground">Connect in the Judge servers section.</p>
                     </div>
+                    <button
+                        type="button"
+                        class="flex size-8 shrink-0 items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-label="Refresh judge server health"
+                    >
+                        <RefreshCw class="size-4" />
+                    </button>
+                </div>
+                <div class="p-[18px]">
+                    <!-- Phase 2 fills status rows here: dot (bg-ok/warn/err) + mono host/ip + mono "seen". -->
+                    <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-10 text-center">
+                        <Server class="size-6 text-muted-foreground" />
+                        <p class="text-sm font-medium text-foreground">No judge servers reporting yet.</p>
+                        <p class="max-w-[15rem] text-xs text-muted-foreground">
+                            They'll show up here once a judge server checks in.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent problems -->
+            <div class="min-w-0 rounded-xl border border-border bg-card">
+                <div class="flex items-center justify-between gap-3 border-b border-border p-[18px]">
+                    <h2 class="text-base font-medium text-foreground">Recent problems</h2>
                     <RouterLink
                         :to="ROUTE_PATH.ADMIN_PROBLEMS"
                         class="inline-flex items-center gap-1 rounded-md text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -63,23 +99,17 @@
                         View all
                         <ArrowRight class="size-4" />
                     </RouterLink>
-                </CardHeader>
-                <CardContent>
-                    <!-- Loading -->
-                    <div v-if="isLoading" class="space-y-2.5">
-                        <div
-                            v-for="n in 5"
-                            :key="n"
-                            class="h-10 w-full animate-pulse rounded bg-muted motion-reduce:animate-none"
-                        />
-                    </div>
+                </div>
 
-                    <!-- Error -->
-                    <div
-                        v-else-if="error"
-                        class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-destructive/40 bg-destructive/5 px-6 py-10 text-center"
-                    >
-                        <TriangleAlert class="size-6 text-destructive" />
+                <!-- Loading -->
+                <div v-if="isLoading" class="space-y-2.5 p-[18px]">
+                    <div v-for="n in 5" :key="n" class="h-10 w-full rounded bg-muted animate-ojpulse" />
+                </div>
+
+                <!-- Error -->
+                <div v-else-if="error" class="p-[18px]">
+                    <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-err/40 bg-err/5 px-6 py-10 text-center">
+                        <TriangleAlert class="size-6 text-err" />
                         <p class="text-sm font-medium text-foreground">Couldn't load problems.</p>
                         <p class="max-w-xs text-xs text-muted-foreground">
                             The request failed. Check your connection and try again.
@@ -89,15 +119,13 @@
                             Retry
                         </Button>
                     </div>
+                </div>
 
-                    <!-- Empty -->
-                    <div
-                        v-else-if="problems.length === 0"
-                        class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-10 text-center"
-                    >
-                        <FileCode2 class="size-6 text-muted-foreground" />
-                        <p class="text-sm font-medium text-foreground">No problems yet</p>
-                        <p class="max-w-xs text-xs text-muted-foreground">Create your first problem to get started.</p>
+                <!-- Empty -->
+                <div v-else-if="problems.length === 0" class="p-[18px]">
+                    <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-10 text-center">
+                        <ListChecks class="size-6 text-muted-foreground" />
+                        <p class="text-sm font-medium text-foreground">No problems yet — create one.</p>
                         <RouterLink :to="ROUTE_PATH.ADMIN_PROBLEMS">
                             <Button variant="outline" size="sm">
                                 <Plus class="size-4" />
@@ -105,48 +133,78 @@
                             </Button>
                         </RouterLink>
                     </div>
+                </div>
 
-                    <!-- Data -->
-                    <Table v-else>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Title</TableHead>
-                                <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Slug</TableHead>
-                                <TableHead class="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            <TableRow v-for="problem in problems" :key="problem.id">
-                                <TableCell class="max-w-[16rem] truncate font-medium text-foreground">{{ problem.title }}</TableCell>
-                                <TableCell class="font-mono text-xs text-muted-foreground">{{ problem.problemSlug }}</TableCell>
-                                <TableCell class="text-right">
-                                    <Badge variant="outline" class="gap-1.5 font-normal">
-                                        <span class="size-1.5 rounded-full" :class="statusDot(problem.status)" />
-                                        {{ statusLabel(problem.status) }}
-                                    </Badge>
-                                </TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-
-            <!-- Judge server health placeholder -->
-            <Card>
-                <CardHeader class="space-y-1">
-                    <CardTitle class="text-base">Judge server health</CardTitle>
-                    <CardDescription>Live status of connected judge servers.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-10 text-center">
-                        <Server class="size-6 text-muted-foreground" />
-                        <p class="text-sm font-medium text-foreground">No data yet</p>
-                        <p class="max-w-xs text-xs text-muted-foreground">
-                            Wired up in the Judge servers section.
-                        </p>
+                <!-- Data -->
+                <template v-else>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[640px] border-collapse text-sm">
+                            <thead>
+                                <tr class="border-b border-border text-left">
+                                    <th class="px-[18px] py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">ID</th>
+                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Title</th>
+                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Difficulty</th>
+                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Status</th>
+                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Updated</th>
+                                    <th class="px-[18px] py-2.5"><span class="sr-only">Actions</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="problem in problems"
+                                    :key="problem.id"
+                                    class="border-b border-border last:border-b-0 transition-colors hover:bg-muted/40"
+                                >
+                                    <td class="whitespace-nowrap px-[18px] py-3 font-mono text-[12px] text-muted-foreground">
+                                        {{ shortId(problem.id) }}
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <div class="flex min-w-0 flex-col">
+                                            <span class="truncate font-medium text-foreground">{{ problem.title }}</span>
+                                            <span class="truncate font-mono text-[11px] text-muted-foreground">{{ problem.problemSlug }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="whitespace-nowrap px-3 py-3 font-mono text-[12px] text-muted-foreground">
+                                        {{ difficultyLabel(problem.hardnessLevel) }}
+                                    </td>
+                                    <td class="whitespace-nowrap px-3 py-3">
+                                        <span class="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-[12px] text-foreground">
+                                            <span class="size-1.5 rounded-full" :class="statusDotClass(problem.status)" />
+                                            {{ statusLabel(problem.status) }}
+                                        </span>
+                                    </td>
+                                    <td class="whitespace-nowrap px-3 py-3 font-mono text-[12px] text-muted-foreground">
+                                        {{ relativeTime(problem.updatedAt) }}
+                                    </td>
+                                    <td class="whitespace-nowrap px-[18px] py-3 text-right">
+                                        <button
+                                            type="button"
+                                            class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            aria-label="Problem actions"
+                                        >
+                                            <MoreHorizontal class="size-4" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                </CardContent>
-            </Card>
+
+                    <!-- Footer -->
+                    <div class="flex items-center justify-between gap-3 border-t border-border p-[18px]">
+                        <p class="text-[12px] text-muted-foreground">
+                            Showing <span class="font-mono text-foreground">{{ shownCount }}</span> of
+                            <span class="font-mono text-foreground">{{ totalProblems ?? shownCount }}</span>
+                        </p>
+                        <div class="flex items-center gap-2">
+                            <Button variant="outline" size="sm" disabled>Previous</Button>
+                            <RouterLink :to="ROUTE_PATH.ADMIN_PROBLEMS">
+                                <Button variant="outline" size="sm">Next</Button>
+                            </RouterLink>
+                        </div>
+                    </div>
+                </template>
+            </div>
         </div>
     </div>
 </template>
@@ -154,14 +212,25 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { FileCode2, Users, Server, ArrowRight, TriangleAlert, RefreshCw, Plus } from 'lucide-vue-next'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import {
+    ListChecks,
+    Users,
+    Server,
+    ArrowRight,
+    TriangleAlert,
+    RefreshCw,
+    Plus,
+    MoreHorizontal,
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { useFetch } from '@/composables/useFetch'
 import problemService from '@/services/problemService'
+import { useAuthStore } from '@/stores/auth'
+import { getLevelInfo } from '@/types/problem'
 import { ROUTE_PATH } from '@/constants/routePath'
+
+const authStore = useAuthStore()
+const hasPermission = (permission: string) => authStore.hasPermission(permission)
 
 const { data, isLoading, error, execute } = useFetch(problemService.getProblems, { immediate: false })
 
@@ -169,9 +238,32 @@ const load = () => execute({ page: 0, size: 5 })
 
 const problems = computed(() => data.value?.data ?? [])
 const totalProblems = computed(() => data.value?.pagination?.totalElements ?? null)
+const shownCount = computed(() => problems.value.length)
 
+// Short mono ID from the real UUID: "#" + first 6 hex chars.
+const shortId = (id: string) => `#${(id ?? '').replace(/[^0-9a-fA-F]/g, '').slice(0, 6) || '------'}`
+
+// Difficulty: reuse the existing hardnessLevel↔label mapping (1→easy, 2→medium, 3→hard).
+const difficultyLabel = (level: number) => getLevelInfo(level).text.toLowerCase()
+
+// Status: active (1) → ok/emerald; otherwise → warn/amber.
 const statusLabel = (status: number) => (status === 1 ? 'Active' : 'Inactive')
-const statusDot = (status: number) => (status === 1 ? 'bg-emerald-500' : 'bg-muted-foreground')
+const statusDotClass = (status: number) => (status === 1 ? 'bg-ok' : 'bg-warn')
+
+const relativeTime = (iso?: string) => {
+    if (!iso) return '—'
+    const then = new Date(iso).getTime()
+    if (Number.isNaN(then)) return '—'
+    const seconds = Math.max(Math.round((Date.now() - then) / 1000), 0)
+    if (seconds < 60) return `${seconds}s`
+    const minutes = Math.round(seconds / 60)
+    if (minutes < 60) return `${minutes}m`
+    const hours = Math.round(minutes / 60)
+    if (hours < 24) return `${hours}h`
+    const days = Math.round(hours / 24)
+    if (days < 7) return `${days}d`
+    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
 
 onMounted(load)
 </script>

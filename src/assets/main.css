@@ -7,7 +7,7 @@
   /* Type: geometric sans (UI/body), editorial serif (display), mono (data/code) */
   --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-serif: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
-  --font-mono: "Geist Mono", ui-monospace, "SF Mono", "JetBrains Mono", monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
 
   /* Crisp, restrained radii (no giant pills on containers) */
   --radius-sm: calc(var(--radius) - 3px);
@@ -46,6 +46,11 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Status tokens — spent only on meaning (health/verdict signalling) */
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-err: var(--err);
 }
 
 /* Warm monochrome canvas — bone paper, charcoal ink, one near-black accent.
@@ -83,6 +88,9 @@
   --sidebar-accent-foreground: oklch(0.4 0.14 262);
   --sidebar-border: oklch(0.924 0.008 258);
   --sidebar-ring: oklch(0.62 0.15 262);
+  --ok: oklch(0.72 0.17 162);                 /* emerald — online/active */
+  --warn: oklch(0.77 0.16 70);                /* amber — stale/warning */
+  --err: oklch(0.62 0.24 27.3);               /* red — offline/error */
 }
 
 .dark {
@@ -117,6 +125,9 @@
   --sidebar-accent-foreground: oklch(0.97 0.005 255);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.6 0.15 262);
+  --ok: oklch(0.77 0.16 162);
+  --warn: oklch(0.83 0.15 78);
+  --err: oklch(0.7 0.19 22);
 }
 
 @layer base {
@@ -165,5 +176,24 @@
   }
   .animate-enter {
     animation: enter-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+/* Skeleton pulse for loading placeholders (opacity-only, reduced-motion safe). */
+@keyframes ojpulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.animate-ojpulse {
+  animation: ojpulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-ojpulse {
+    animation: none;
   }
 }
