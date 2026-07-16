@@ -25,4 +25,13 @@ describe('auth store hasPermission', () => {
     expect(store.hasPermission('problem:create')).toBe(true)
     expect(store.hasPermission('role:read')).toBe(false)
   })
+
+  it('ensureLoaded calls fetchUser only once across concurrent calls', async () => {
+    const authService = (await import('@/services/authService')).default as any
+    authService.getMe.mockResolvedValue({ data: { data: { username: 'a', permissions: [] } } })
+    const store = useAuthStore()
+    await Promise.all([store.ensureLoaded(), store.ensureLoaded()])
+    await store.ensureLoaded()
+    expect(authService.getMe).toHaveBeenCalledTimes(1)
+  })
 })

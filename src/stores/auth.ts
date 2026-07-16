@@ -59,12 +59,20 @@ export const useAuthStore = defineStore('auth', () => {
         return !!user.value?.permissions?.includes(permission)
     }
 
+    let loadPromise: Promise<void> | null = null
+    const ensureLoaded = (): Promise<void> => {
+        if (user.value) return Promise.resolve()
+        if (!loadPromise) loadPromise = fetchUser().finally(() => { loadPromise = null })
+        return loadPromise
+    }
+
     return {
         user,
         isAuthenticated,
         login,
         logout,
         fetchUser,
-        hasPermission
+        hasPermission,
+        ensureLoaded
     }
 })
