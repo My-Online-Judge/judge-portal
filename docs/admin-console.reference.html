@@ -1,0 +1,96 @@
+<!--
+  REFERENCE ONLY — imported from the user's Claude Design project "Admin Console Design Brief"
+  (file: Admin Console.dc.html). This is a static design mockup (x-dc/DCLogic), NOT runnable in
+  this app. Translate its LAYOUT, TOKENS, TYPE, and COMPONENT STRUCTURE into the real Vue admin
+  shell using the project's Tailwind v4 + shadcn-vue system. Do not copy the inline styles verbatim
+  where a token/utility exists; map them to the app's tokens.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<div class="oj-shell {{ themeClass }}" style="height:100vh;display:flex;font-family:var(--font-sans);background:var(--background);color:var(--foreground);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased">
+
+  <aside style="width:240px;flex-shrink:0;background:var(--sidebar);color:var(--sidebar-foreground);border-right:1px solid var(--sidebar-border);display:flex;flex-direction:column;height:100%">
+    <div style="height:56px;display:flex;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid var(--sidebar-border)">
+      <div style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center"><i data-lucide="binary"></i></div>
+      <div style="display:flex;flex-direction:column;line-height:1.1">
+        <span style="font-weight:600;font-size:13px">Judge Admin</span>
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground)">oj.console</span>
+      </div>
+    </div>
+
+    <nav style="flex:1;overflow-y:auto;padding:14px 10px;display:flex;flex-direction:column;gap:18px">
+      <!-- group label: 11px 600 uppercase letter-spacing .08em muted; items: gap10 padding 8px radius8 13px -->
+      <!-- Overview: Dashboard (layout-dashboard) [ACTIVE: bg sidebar-accent, color sidebar-accent-foreground, weight500] -->
+      <!-- Content: Problems (list-checks) -->
+      <!-- Infrastructure: Judge servers (server) -->
+      <!-- Access: Roles (shield-check), Users (users) -->
+    </nav>
+
+    <div style="border-top:1px solid var(--sidebar-border);padding:12px;display:flex;align-items:center;gap:10px">
+      <div style="width:32px;height:32px;border-radius:8px;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;font-family:var(--font-mono)">AV</div>
+      <div style="display:flex;flex-direction:column;line-height:1.2;min-width:0;flex:1">
+        <span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">An Vũ</span>
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground)">role:admin</span>
+      </div>
+      <i data-lucide="chevrons-up-down" style="color:var(--muted-foreground)"></i>
+    </div>
+  </aside>
+
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;height:100%">
+    <header style="height:56px;border-bottom:1px solid var(--border);background:var(--background);display:flex;align-items:center;gap:16px;padding:0 22px">
+      <!-- breadcrumb: "Admin" (muted) > chevron-right > "<page>" (foreground 500) -->
+      <div style="flex:1"></div>
+      <!-- search box: 220px, border input, radius8; search icon + "Search…" + kbd ⌘K (mono, bordered) -->
+      <!-- theme toggle button: 34x34 bordered, icon moon/sun, onClick toggleTheme -->
+      <!-- notifications button: 34x34 bordered, bell icon, red dot badge (top-right) -->
+    </header>
+
+    <main style="flex:1;overflow-y:auto;overflow-x:hidden;padding:26px 26px 40px">
+      <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:22px">
+
+        <!-- page header row: H1 "Dashboard" (24px 600 tracking -.02em) + subtitle muted;
+             right: primary button "Create problem" (plus icon, height38, radius8) -->
+
+        <!-- KPI row: grid 3 cols gap16. Card: bg card, border, radius12, padding 18px, gap12.
+             row: label(13 muted 500) + lucide icon(muted). Then: if pending -> pulse skeleton (88x20 muted, ojpulse);
+             else -> mono 30px 600 value. Then context line (12 muted).
+             KPIs: Problems / Judge servers / Users -->
+
+        <!-- two-col grid: minmax(0,340px) minmax(0,1fr) gap16 align start -->
+
+        <!-- LEFT card "Judge server health": header (title 16/500 + "<n> of <m> reporting" mono) + refresh btn.
+             rows: status dot 8px (ok/warn/err) with color-mix glow ring; mono host + mono ip; mono "seen" right -->
+
+        <!-- RIGHT card "Recent problems": header "Recent problems" + "View all" link.
+             table (min-width 640, overflow-x auto): cols ID(mono muted) | Title(500)+slug(mono 11 muted) |
+             Difficulty(mono 12 muted) | Status(pill: border, radius 9999, dot + label) | Updated(mono 12 muted) | actions(more-horizontal).
+             footer: "Showing <n> of <total>" (mono nums) + Previous(disabled)/Next buttons -->
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!--
+  DESIGN TOKENS (oklch) — add --ok/--warn/--err to the app theme (both modes); the rest map to
+  existing shadcn tokens. Light:
+    --ok: oklch(0.72 0.17 162)   --warn: oklch(0.77 0.16 70)   --err: oklch(0.62 0.24 27.3)
+  Dark:
+    --ok: oklch(0.77 0.16 162)   --warn: oklch(0.83 0.15 78)   --err: oklch(0.7 0.19 22)
+  Fonts: sans = system UI stack; mono = "JetBrains Mono" (add it). Status dot glow:
+    box-shadow: 0 0 0 3px color-mix(in oklch, <dot> 22%, transparent)
+  Pulse skeleton keyframes: @keyframes ojpulse {0%,100%{opacity:.55}50%{opacity:1}}
+
+  MOCK DATA the design showed (for structure reference only — wire REAL data instead):
+    kpis: Problems 342 "12 added this week"; Judge servers "3 / 4" "1 stale — needs a look";
+          Users "—" pending "Lands in Phase 4"
+    servers: judge-01 10.0.1.11 now (ok), judge-02 10.0.1.12 12s (ok), judge-03 4m (warn), judge-04 offline (err)
+    problems: #1042 Two Sum Trees two-sum-trees medium published 2m; ... (ID, Title, slug, difficulty, status, updated)
+-->
+</body>
+</html>
