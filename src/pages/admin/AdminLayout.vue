@@ -220,6 +220,8 @@ const navGroups = computed(() => {
 const titleMap: Record<string, string> = {
     AdminDashboard: 'Dashboard',
     AdminProblems: 'Problems',
+    AdminProblemCreate: 'Problems',
+    AdminProblemDetail: 'Problems',
     AdminJudgeServers: 'Judge servers',
     AdminRoles: 'Roles',
     AdminUsers: 'Users',
