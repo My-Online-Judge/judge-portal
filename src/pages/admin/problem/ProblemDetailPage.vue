@@ -1,5 +1,5 @@
 <template>
-    <div class="mx-auto flex w-full max-w-[900px] flex-col gap-[22px]">
+    <div class="flex w-full flex-col gap-[22px]">
         <!-- Back link -->
         <RouterLink
             :to="{ name: 'AdminProblems' }"
@@ -37,28 +37,30 @@
             </div>
         </div>
 
-        <!-- Edit mode -->
+        <!-- Edit mode — form constrained for readability; view mode stays full-width -->
         <template v-else-if="isEditing">
-            <div class="min-w-0">
-                <h1 class="text-[24px] font-semibold leading-tight tracking-tight text-foreground">Edit problem</h1>
-                <p class="mt-1 text-sm text-muted-foreground">
-                    Update this problem. The slug and test cases stay as they are.
-                </p>
-            </div>
-
-            <form class="flex flex-col gap-5" novalidate @submit.prevent="save">
-                <ProblemFormFields v-model="editPayload" mode="edit" :errors="errors" />
-
-                <div class="flex items-center justify-end gap-2 border-t border-border pt-4">
-                    <Button type="button" variant="outline" :disabled="submitting" @click="cancelEdit">
-                        Cancel
-                    </Button>
-                    <Button type="submit" :disabled="submitting">
-                        <Loader2 v-if="submitting" class="size-4 animate-spin" />
-                        Save changes
-                    </Button>
+            <div class="flex w-full max-w-[960px] flex-col gap-[22px]">
+                <div class="min-w-0">
+                    <h1 class="text-[24px] font-semibold leading-tight tracking-tight text-foreground">Edit problem</h1>
+                    <p class="mt-1 text-sm text-muted-foreground">
+                        Update this problem. The slug and test cases stay as they are.
+                    </p>
                 </div>
-            </form>
+
+                <form class="flex flex-col gap-5" novalidate @submit.prevent="save">
+                    <ProblemFormFields v-model="editPayload" mode="edit" :errors="errors" />
+
+                    <div class="flex items-center justify-end gap-2 border-t border-border pt-4">
+                        <Button type="button" variant="outline" :disabled="submitting" @click="cancelEdit">
+                            Cancel
+                        </Button>
+                        <Button type="submit" :disabled="submitting">
+                            <Loader2 v-if="submitting" class="size-4 animate-spin" />
+                            Save changes
+                        </Button>
+                    </div>
+                </form>
+            </div>
         </template>
 
         <!-- View mode -->

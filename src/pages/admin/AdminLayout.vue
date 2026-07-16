@@ -87,11 +87,26 @@
                     <Menu class="size-5" />
                 </button>
 
-                <!-- Breadcrumb -->
+                <!-- Breadcrumb trail -->
                 <nav class="flex min-w-0 items-center gap-1.5 text-sm" aria-label="Breadcrumb">
-                    <span class="text-muted-foreground">Admin</span>
-                    <ChevronRight class="size-4 shrink-0 text-muted-foreground/60" />
-                    <span class="truncate font-medium text-foreground">{{ pageTitle }}</span>
+                    <template v-for="(crumb, i) in crumbs" :key="i">
+                        <ChevronRight v-if="i > 0" class="size-4 shrink-0 text-muted-foreground/60" />
+                        <RouterLink
+                            v-if="crumb.to && i < crumbs.length - 1"
+                            :to="crumb.to"
+                            class="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            :class="{ 'font-mono': crumb.mono }"
+                        >
+                            {{ crumb.label }}
+                        </RouterLink>
+                        <span
+                            v-else
+                            class="truncate text-foreground"
+                            :class="[i === crumbs.length - 1 ? 'font-medium' : 'shrink-0 text-muted-foreground', { 'font-mono': crumb.mono }]"
+                        >
+                            {{ crumb.label }}
+                        </span>
+                    </template>
                 </nav>
 
                 <div class="flex-1"></div>
@@ -128,11 +143,9 @@
                 </button>
             </header>
 
-            <!-- Routed content -->
+            <!-- Routed content — full-width; pages own their own max-width -->
             <main class="flex-1 overflow-x-hidden overflow-y-auto bg-background p-6">
-                <div class="mx-auto max-w-[1180px]">
-                    <RouterView />
-                </div>
+                <RouterView />
             </main>
         </div>
     </div>
@@ -140,7 +153,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, type Component } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { RouterLink, RouterView, useRoute, type RouteLocationRaw } from 'vue-router'
 import {
     Binary,
     LayoutDashboard,
@@ -217,17 +230,37 @@ const navGroups = computed(() => {
         .filter((g) => g.items.length > 0)
 })
 
-const titleMap: Record<string, string> = {
-    AdminDashboard: 'Dashboard',
-    AdminProblems: 'Problems',
-    AdminProblemCreate: 'Problems',
-    AdminProblemDetail: 'Problems',
-    AdminJudgeServers: 'Judge servers',
-    AdminRoles: 'Roles',
-    AdminUsers: 'Users',
+// Breadcrumb trail keyed by route name. To add a page, add one entry below.
+// The root "Admin" crumb always links back to the dashboard.
+interface Crumb {
+    label: string
+    to?: RouteLocationRaw
+    mono?: boolean
 }
 
-const pageTitle = computed(() => titleMap[String(route.name ?? '')] ?? 'Dashboard')
+const adminCrumb: Crumb = { label: 'Admin', to: { name: 'AdminDashboard' } }
+const problemsCrumb: Crumb = { label: 'Problems', to: { name: 'AdminProblems' } }
+
+const crumbs = computed<Crumb[]>(() => {
+    switch (String(route.name ?? '')) {
+        case 'AdminDashboard':
+            return [adminCrumb, { label: 'Dashboard' }]
+        case 'AdminProblems':
+            return [adminCrumb, { label: 'Problems' }]
+        case 'AdminProblemCreate':
+            return [adminCrumb, problemsCrumb, { label: 'New' }]
+        case 'AdminProblemDetail':
+            return [adminCrumb, problemsCrumb, { label: String(route.params.slug ?? ''), mono: true }]
+        case 'AdminJudgeServers':
+            return [adminCrumb, { label: 'Judge servers' }]
+        case 'AdminRoles':
+            return [adminCrumb, { label: 'Roles' }]
+        case 'AdminUsers':
+            return [adminCrumb, { label: 'Users' }]
+        default:
+            return [adminCrumb]
+    }
+})
 
 const displayName = computed(() => user.value?.name || user.value?.username || 'Admin')
 
