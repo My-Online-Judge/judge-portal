@@ -20,9 +20,19 @@ const authStore = useAuthStore()
 
 onMounted(async () => {
     const code = route.query.code as string
+    const returnedState = (route.query.state as string) || ''
+    const savedState = sessionStorage.getItem('oauth_state') || ''
+    sessionStorage.removeItem('oauth_state')
 
     if (!code) {
         triggerToast('Login failed: No authorization code received', 'error')
+        router.push(ROUTE_PATH.PROBLEM)
+        return
+    }
+
+    // CSRF protection: the state returned by Google must match the one we stored before redirect.
+    if (!savedState || returnedState !== savedState) {
+        triggerToast('Login failed: invalid state (possible CSRF)', 'error')
         router.push(ROUTE_PATH.PROBLEM)
         return
     }

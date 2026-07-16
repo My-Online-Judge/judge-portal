@@ -11,6 +11,7 @@ export interface RegisterRequest {
 
 export interface GoogleAuthResponse {
     url: string
+    state?: string
 }
 
 export interface AuthResponse {
