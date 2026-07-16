@@ -178,6 +178,13 @@
                 </div>
             </section>
 
+            <!-- Test cases (live management panel; requires problem:update) -->
+            <TestCaseManager
+                v-if="canUpdate"
+                :slug="problem.problemSlug ?? String(route.params.slug)"
+                :can-manage="canUpdate"
+            />
+
             <!-- Hint -->
             <section v-if="hasHtml(problem.hint)" class="rounded-xl border border-border bg-card">
                 <div class="border-b border-border px-5 py-3.5">
@@ -232,6 +239,7 @@ import {
     DialogDescription,
 } from '@/components/ui/dialog'
 import ProblemFormFields, { type ProblemFormValue } from '@/components/admin/problem/ProblemFormFields.vue'
+import TestCaseManager from '@/components/admin/problem/TestCaseManager.vue'
 import RichTextEditor from '@/components/admin/editor/RichTextEditor.vue'
 import { useToast } from '@/composables/useToast'
 import problemService from '@/services/problemService'
