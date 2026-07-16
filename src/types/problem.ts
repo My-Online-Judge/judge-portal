@@ -25,6 +25,25 @@ export interface ProblemSearchParams extends BaseSearchParams {
     hardnessLevel?: number
 }
 
+export interface UpdateProblemPayload {
+    title: string
+    subject: string
+    description?: string
+    timeLimit: number
+    memoryLimit: number
+    hardnessLevel: number
+    inputDescription: string
+    outputDescription: string
+    sampleInput: string
+    sampleOutput: string
+    hint?: string
+    status?: number
+}
+
+export interface CreateProblemPayload extends UpdateProblemPayload {
+    problemSlug: string
+}
+
 export enum SubmissionStatus {
     COMPILE_ERROR = -2,
     WRONG_ANSWER = -1,
