@@ -6,7 +6,7 @@
                 <h1 class="text-[24px] font-semibold leading-tight tracking-tight text-foreground">Problems</h1>
                 <p class="mt-1 text-sm text-muted-foreground">Create, edit and remove problems.</p>
             </div>
-            <Button v-if="canCreate" class="h-[38px]" @click="openCreate">
+            <Button v-if="canCreate" class="h-[38px]" @click="goCreate">
                 <Plus class="size-4" />
                 Create problem
             </Button>
@@ -50,7 +50,7 @@
                     <p class="text-sm font-medium text-foreground">
                         {{ search ? 'No problems match your search.' : 'No problems yet — create one.' }}
                     </p>
-                    <Button v-if="canCreate && !search" variant="outline" size="sm" @click="openCreate">
+                    <Button v-if="canCreate && !search" variant="outline" size="sm" @click="goCreate">
                         <Plus class="size-4" />
                         Create problem
                     </Button>
@@ -75,14 +75,15 @@
                             <tr
                                 v-for="problem in problems"
                                 :key="problem.id"
-                                class="border-b border-border last:border-b-0 transition-colors hover:bg-muted/40"
+                                class="group cursor-pointer border-b border-border last:border-b-0 transition-colors hover:bg-muted/40"
+                                @click="goDetail(problem.problemSlug)"
                             >
                                 <td class="whitespace-nowrap px-[18px] py-3 font-mono text-[12px] text-muted-foreground">
                                     {{ shortId(problem.id) }}
                                 </td>
                                 <td class="px-3 py-3">
                                     <div class="flex min-w-0 flex-col">
-                                        <span class="truncate font-medium text-foreground">{{ problem.title }}</span>
+                                        <span class="truncate font-medium text-foreground group-hover:underline">{{ problem.title }}</span>
                                         <span class="truncate font-mono text-[11px] text-muted-foreground">{{ problem.problemSlug }}</span>
                                     </div>
                                 </td>
@@ -98,18 +99,20 @@
                                 <td class="whitespace-nowrap px-3 py-3 font-mono text-[12px] text-muted-foreground">
                                     {{ relativeTime(problem.updatedAt) }}
                                 </td>
-                                <td class="whitespace-nowrap px-[18px] py-3 text-right">
-                                    <DropdownMenu v-if="hasRowActions">
+                                <td class="whitespace-nowrap px-[18px] py-3 text-right" @click.stop>
+                                    <DropdownMenu>
                                         <DropdownMenuTrigger
                                             class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-                                            :disabled="editLoadingSlug === problem.problemSlug"
                                             aria-label="Problem actions"
                                         >
-                                            <Loader2 v-if="editLoadingSlug === problem.problemSlug" class="size-4 animate-spin" />
-                                            <MoreHorizontal v-else class="size-4" />
+                                            <MoreHorizontal class="size-4" />
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" class="w-36">
-                                            <DropdownMenuItem v-if="canUpdate" @select="openEdit(problem)">
+                                            <DropdownMenuItem @select="goDetail(problem.problemSlug)">
+                                                <Eye class="size-4" />
+                                                View
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem v-if="canUpdate" @select="goEdit(problem.problemSlug)">
                                                 <Pencil class="size-4" />
                                                 Edit
                                             </DropdownMenuItem>
@@ -123,7 +126,6 @@
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
-                                    <span v-else class="text-muted-foreground/60">—</span>
                                 </td>
                             </tr>
                         </tbody>
@@ -143,14 +145,6 @@
                 </div>
             </template>
         </div>
-
-        <!-- Create / edit dialog -->
-        <ProblemFormDialog
-            v-model:open="dialogOpen"
-            :mode="dialogMode"
-            :problem="editingProblem"
-            @saved="onSaved"
-        />
 
         <!-- Delete confirm -->
         <Dialog v-model:open="deleteOpen">
@@ -181,6 +175,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { watchDebounced } from '@vueuse/core'
 import {
     Plus,
@@ -189,6 +184,7 @@ import {
     TriangleAlert,
     RefreshCw,
     MoreHorizontal,
+    Eye,
     Pencil,
     Trash2,
     Loader2,
@@ -209,7 +205,6 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
-import ProblemFormDialog from '@/components/admin/problem/ProblemFormDialog.vue'
 import { useFetch } from '@/composables/useFetch'
 import { useToast } from '@/composables/useToast'
 import problemService from '@/services/problemService'
@@ -217,13 +212,13 @@ import { useAuthStore } from '@/stores/auth'
 import type { Problem } from '@/types/problem'
 import { shortId, difficultyLabel, statusLabel, statusDotClass, relativeTime } from '@/lib/problemDisplay'
 
+const router = useRouter()
 const authStore = useAuthStore()
 const { triggerToast } = useToast()
 
 const canCreate = computed(() => authStore.hasPermission('problem:create'))
 const canUpdate = computed(() => authStore.hasPermission('problem:update'))
 const canDelete = computed(() => authStore.hasPermission('problem:delete'))
-const hasRowActions = computed(() => canUpdate.value || canDelete.value)
 
 const { data, isLoading, error, execute } = useFetch(problemService.getProblems, { immediate: false })
 
@@ -261,37 +256,10 @@ watchDebounced(
     { debounce: 350 },
 )
 
-// --- Create / edit dialog ---
-const dialogOpen = ref(false)
-const dialogMode = ref<'create' | 'edit'>('create')
-const editingProblem = ref<Problem | undefined>(undefined)
-const editLoadingSlug = ref<string | null>(null)
-
-const openCreate = () => {
-    dialogMode.value = 'create'
-    editingProblem.value = undefined
-    dialogOpen.value = true
-}
-
-const openEdit = async (p: Problem) => {
-    // Fetch the full record so every field is prefilled; fall back to the
-    // list row if the detail request fails so the admin isn't blocked.
-    editLoadingSlug.value = p.problemSlug
-    try {
-        const controller = new AbortController()
-        const res = await problemService.getProblemBySlug(controller.signal, p.problemSlug)
-        editingProblem.value = res.data.data
-    } catch (err: any) {
-        triggerToast(err?.response?.data?.message || 'Could not load the full problem — editing with basic details.', 'error')
-        editingProblem.value = p
-    } finally {
-        editLoadingSlug.value = null
-    }
-    dialogMode.value = 'edit'
-    dialogOpen.value = true
-}
-
-const onSaved = () => load()
+// --- Navigation to the create / detail pages ---
+const goCreate = () => router.push({ name: 'AdminProblemCreate' })
+const goDetail = (slug: string) => router.push({ name: 'AdminProblemDetail', params: { slug } })
+const goEdit = (slug: string) => router.push({ name: 'AdminProblemDetail', params: { slug }, query: { edit: '1' } })
 
 // --- Delete confirm ---
 const deleteOpen = ref(false)

@@ -7,6 +7,8 @@ import ForbiddenPage from '@/pages/ForbiddenPage.vue'
 import AdminLayout from '@/pages/admin/AdminLayout.vue'
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage.vue'
 import AdminProblemsPage from '@/pages/admin/AdminProblemsPage.vue'
+import AdminProblemCreatePage from '@/pages/admin/problem/ProblemCreatePage.vue'
+import AdminProblemDetailPage from '@/pages/admin/problem/ProblemDetailPage.vue'
 import AdminJudgeServersPage from '@/pages/admin/AdminJudgeServersPage.vue'
 import AdminRolesPage from '@/pages/admin/AdminRolesPage.vue'
 import AdminUsersPage from '@/pages/admin/AdminUsersPage.vue'
@@ -44,6 +46,8 @@ const router = createRouter({
       children: [
         { path: '', name: 'AdminDashboard', component: AdminDashboardPage, meta: { permissions: ADMIN_ANY } },
         { path: 'problems', name: 'AdminProblems', component: AdminProblemsPage, meta: { permissions: ['problem:create', 'problem:update', 'problem:delete'] } },
+        { path: 'problems/new', name: 'AdminProblemCreate', component: AdminProblemCreatePage, meta: { permissions: ['problem:create'] } },
+        { path: 'problems/:slug', name: 'AdminProblemDetail', component: AdminProblemDetailPage, meta: { permissions: ['problem:create', 'problem:update', 'problem:delete'] } },
         { path: 'judge-servers', name: 'AdminJudgeServers', component: AdminJudgeServersPage, meta: { permissions: ['judgeserver:read'] } },
         { path: 'roles', name: 'AdminRoles', component: AdminRolesPage, meta: { permissions: ['role:read'] } },
         { path: 'users', name: 'AdminUsers', component: AdminUsersPage, meta: { permissions: ['user:read'] } },
