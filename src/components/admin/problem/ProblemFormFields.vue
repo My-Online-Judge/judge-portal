@@ -24,7 +24,6 @@ export interface ProblemFormValue {
 </script>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -39,7 +38,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: 'update:modelValue', value: ProblemFormValue): void
-    (e: 'update:file', value: File | null): void
 }>()
 
 // Emit a shallow-merged copy so the parent's v-model stays the source of truth.
@@ -49,15 +47,6 @@ const set = <K extends keyof ProblemFormValue>(key: K, value: ProblemFormValue[K
 
 const errorFor = (key: string) => props.errors?.[key]
 const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
-
-const fileName = ref('')
-
-const onFileChange = (event: Event) => {
-    const target = event.target as HTMLInputElement
-    const file = target.files?.[0] ?? null
-    fileName.value = file?.name ?? ''
-    emit('update:file', file)
-}
 </script>
 
 <template>
@@ -268,31 +257,6 @@ const onFileChange = (event: Event) => {
                         @update:model-value="(v) => set('hint', v)"
                     />
                     <p v-if="errorFor('hint')" class="text-xs text-destructive">{{ errorFor('hint') }}</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Test cases (create only) -->
-        <section v-if="mode === 'create'" class="rounded-xl border border-border bg-card">
-            <div class="border-b border-border px-5 py-3.5">
-                <h3 class="text-base font-medium text-foreground">Test cases</h3>
-                <p class="mt-0.5 text-xs text-muted-foreground">The archive that judges submissions.</p>
-            </div>
-            <div class="p-5">
-                <div class="space-y-1.5">
-                    <Label for="pf-file">Test cases (file) <span class="text-destructive">*</span></Label>
-                    <input
-                        id="pf-file"
-                        type="file"
-                        :aria-invalid="invalid('file')"
-                        class="block w-full rounded-md border border-input bg-transparent text-sm text-muted-foreground shadow-xs transition-[color,box-shadow] outline-none file:mr-3 file:cursor-pointer file:border-0 file:border-r file:border-input file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20"
-                        @change="onFileChange"
-                    >
-                    <p v-if="fileName" class="text-xs text-muted-foreground">
-                        Selected: <span class="font-mono text-foreground">{{ fileName }}</span>
-                    </p>
-                    <p v-if="errorFor('file')" class="text-xs text-destructive">{{ errorFor('file') }}</p>
-                    <p v-else-if="!fileName" class="text-xs text-muted-foreground">An archive of test cases. Required to create a problem.</p>
                 </div>
             </div>
         </section>

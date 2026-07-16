@@ -21,8 +21,34 @@
                 v-model="payload"
                 mode="create"
                 :errors="errors"
-                @update:file="file = $event"
             />
+
+            <!-- Test cases -->
+            <section class="rounded-xl border border-border bg-card">
+                <div class="border-b border-border px-5 py-3.5">
+                    <h3 class="text-base font-medium text-foreground">Test cases <span class="text-destructive">*</span></h3>
+                    <p class="mt-0.5 text-xs text-muted-foreground">Add at least one input/output pair. These become the judge's test data.</p>
+                </div>
+                <div class="space-y-3 p-5">
+                    <TestCaseEditor v-model="testCases" />
+                    <p v-if="errors.testCases" class="text-xs text-destructive">{{ errors.testCases }}</p>
+                </div>
+            </section>
+
+            <!-- Import problem (placeholder) -->
+            <section class="rounded-xl border border-border bg-card">
+                <div class="border-b border-border px-5 py-3.5">
+                    <h3 class="text-base font-medium text-foreground">Import problem</h3>
+                    <p class="mt-0.5 text-xs text-muted-foreground">Create a problem from an exported package instead of filling the form.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 p-5">
+                    <Button type="button" variant="outline" disabled>
+                        <Upload class="size-4" />
+                        Import from package
+                    </Button>
+                    <span class="text-xs text-muted-foreground">Coming soon</span>
+                </div>
+            </section>
 
             <!-- Footer actions -->
             <div class="flex items-center justify-end gap-2 border-t border-border pt-4">
@@ -41,9 +67,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
-import { ArrowLeft, Loader2 } from 'lucide-vue-next'
+import { ArrowLeft, Loader2, Upload } from 'lucide-vue-next'
+import JSZip from 'jszip'
 import { Button } from '@/components/ui/button'
 import ProblemFormFields, { type ProblemFormValue } from '@/components/admin/problem/ProblemFormFields.vue'
+import TestCaseEditor, { type TestCasePair } from '@/components/admin/problem/TestCaseEditor.vue'
 import { useToast } from '@/composables/useToast'
 import problemService, { buildProblemFormData } from '@/services/problemService'
 import type { CreateProblemPayload } from '@/types/problem'
@@ -68,7 +96,7 @@ const emptyPayload = (): ProblemFormValue => ({
 })
 
 const payload = ref<ProblemFormValue>(emptyPayload())
-const file = ref<File | null>(null)
+const testCases = ref<TestCasePair[]>([{ input: '', output: '' }])
 const errors = ref<Record<string, string>>({})
 const submitting = ref(false)
 
@@ -92,7 +120,12 @@ const validate = (): boolean => {
     if (isBlank(p.outputDescription)) e.outputDescription = 'Output description is required.'
     if (isBlank(p.sampleInput)) e.sampleInput = 'Sample input is required.'
     if (isBlank(p.sampleOutput)) e.sampleOutput = 'Sample output is required.'
-    if (!file.value) e.file = 'A test-case file is required.'
+    const completeCases = testCases.value.filter(
+        (tc) => tc.input.trim() !== '' && tc.output.trim() !== '',
+    )
+    if (completeCases.length === 0) {
+        e.testCases = 'Add at least one complete test case (input and output).'
+    }
     errors.value = e
     return Object.keys(e).length === 0
 }
@@ -123,7 +156,21 @@ const onSubmit = async () => {
             hint: p.hint || undefined,
             status: Number(p.status),
         }
-        await problemService.create(buildProblemFormData(dto, file.value as File))
+
+        // Zip the input/output pairs client-side as 1.in/1.out, 2.in/2.out, …
+        // (1-based) — the format the create endpoint's extractor pairs by base name.
+        const zip = new JSZip()
+        testCases.value
+            .filter((tc) => tc.input.trim() !== '' && tc.output.trim() !== '')
+            .forEach((tc, i) => {
+                const n = i + 1
+                zip.file(`${n}.in`, tc.input)
+                zip.file(`${n}.out`, tc.output)
+            })
+        const blob = await zip.generateAsync({ type: 'blob' })
+        const file = new File([blob], `${dto.problemSlug || 'testcases'}.zip`, { type: 'application/zip' })
+
+        await problemService.create(buildProblemFormData(dto, file))
         triggerToast('Problem created', 'success')
         router.push({ name: 'AdminProblemDetail', params: { slug: dto.problemSlug } })
     } catch (err: any) {
