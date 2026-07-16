@@ -226,8 +226,8 @@ import { Button } from '@/components/ui/button'
 import { useFetch } from '@/composables/useFetch'
 import problemService from '@/services/problemService'
 import { useAuthStore } from '@/stores/auth'
-import { getLevelInfo } from '@/types/problem'
 import { ROUTE_PATH } from '@/constants/routePath'
+import { shortId, difficultyLabel, statusLabel, statusDotClass, relativeTime } from '@/lib/problemDisplay'
 
 const authStore = useAuthStore()
 const hasPermission = (permission: string) => authStore.hasPermission(permission)
@@ -239,31 +239,6 @@ const load = () => execute({ page: 0, size: 5 })
 const problems = computed(() => data.value?.data ?? [])
 const totalProblems = computed(() => data.value?.pagination?.totalElements ?? null)
 const shownCount = computed(() => problems.value.length)
-
-// Short mono ID from the real UUID: "#" + first 6 hex chars.
-const shortId = (id: string) => `#${(id ?? '').replace(/[^0-9a-fA-F]/g, '').slice(0, 6) || '------'}`
-
-// Difficulty: reuse the existing hardnessLevel↔label mapping (1→easy, 2→medium, 3→hard).
-const difficultyLabel = (level: number) => getLevelInfo(level).text.toLowerCase()
-
-// Status: active (1) → ok/emerald; otherwise → warn/amber.
-const statusLabel = (status: number) => (status === 1 ? 'Active' : 'Inactive')
-const statusDotClass = (status: number) => (status === 1 ? 'bg-ok' : 'bg-warn')
-
-const relativeTime = (iso?: string) => {
-    if (!iso) return '—'
-    const then = new Date(iso).getTime()
-    if (Number.isNaN(then)) return '—'
-    const seconds = Math.max(Math.round((Date.now() - then) / 1000), 0)
-    if (seconds < 60) return `${seconds}s`
-    const minutes = Math.round(seconds / 60)
-    if (minutes < 60) return `${minutes}m`
-    const hours = Math.round(minutes / 60)
-    if (hours < 24) return `${hours}h`
-    const days = Math.round(hours / 24)
-    if (days < 7) return `${days}d`
-    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
 
 onMounted(load)
 </script>
