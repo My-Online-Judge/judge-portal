@@ -1,17 +1,19 @@
 import axiosClient from '@/api/axiosClient'
 import { API_ROUTES } from '@/constants/apiPath'
-import type { AuthResponse, GoogleAuthResponse, LoginRequest, RegisterRequest } from '@/types/auth'
+import type { GoogleAuthResponse } from '@/types/auth'
 import type { ApiResponse } from '@/types/common'
 
 import type { UserResponse } from '@/types/user'
 
 class AuthService {
-    async getGoogleAuthUrl() {
-        return axiosClient.get<ApiResponse<GoogleAuthResponse>>(API_ROUTES.AUTH.GOOGLE_URL)
+    /** Username + password login (admin accounts). The API sets HttpOnly session cookies. */
+    async login(username: string, password: string) {
+        return axiosClient.post<ApiResponse<void>>(API_ROUTES.AUTH.LOGIN, { username, password })
     }
 
-    async authenticateGoogleUser(code: string) {
-        return axiosClient.post<ApiResponse<AuthResponse>>(API_ROUTES.AUTH.GOOGLE_AUTH, { code })
+    /** Returns the Google login URL. The API handles the callback and sets the session cookies. */
+    async getGoogleAuthUrl() {
+        return axiosClient.get<ApiResponse<GoogleAuthResponse>>(API_ROUTES.AUTH.GOOGLE_URL)
     }
 
     async getMe() {

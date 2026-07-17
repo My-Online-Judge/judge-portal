@@ -2,8 +2,8 @@ import { ROUTE_PATH } from '@/constants/routePath'
 import ProblemDetailPage from '@/pages/user/problem/ProblemDetailPage.vue'
 import ProblemListPage from '@/pages/user/problem/ProblemListPage.vue'
 import { createRouter, createWebHistory } from 'vue-router'
-import GoogleCallbackPage from '@/components/auth/GoogleCallback.vue'
 import ForbiddenPage from '@/pages/ForbiddenPage.vue'
+import AdminLoginPage from '@/pages/admin/AdminLoginPage.vue'
 import AdminLayout from '@/pages/admin/AdminLayout.vue'
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage.vue'
 import AdminProblemsPage from '@/pages/admin/AdminProblemsPage.vue'
@@ -31,14 +31,14 @@ const router = createRouter({
       component: ProblemDetailPage
     },
     {
-      path: ROUTE_PATH.GOOGLE_CALLBACK,
-      name: 'GoogleCallback',
-      component: GoogleCallbackPage
-    },
-    {
       path: ROUTE_PATH.FORBIDDEN,
       name: 'Forbidden',
       component: ForbiddenPage
+    },
+    {
+      path: ROUTE_PATH.ADMIN_LOGIN,
+      name: 'AdminLogin',
+      component: AdminLoginPage
     },
     {
       path: ROUTE_PATH.ADMIN,
@@ -63,7 +63,7 @@ router.beforeEach(async (to) => {
   if (!authStore.user) await authStore.ensureLoaded()
   const access = resolveAdminAccess(meta, { isAuthenticated: authStore.isAuthenticated, hasPermission: authStore.hasPermission })
   if (access === 'allow') return true
-  if (access === 'login') return { path: ROUTE_PATH.PROBLEM }
+  if (access === 'login') return { path: ROUTE_PATH.ADMIN_LOGIN, query: { redirect: to.fullPath } }
   return { path: ROUTE_PATH.FORBIDDEN }
 })
 

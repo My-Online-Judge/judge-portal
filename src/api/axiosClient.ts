@@ -1,6 +1,9 @@
 
-import axios, { type InternalAxiosRequestConfig, type AxiosError, type AxiosResponse } from 'axios'
+import axios, { type AxiosError, type AxiosResponse } from 'axios'
 
+// Auth rides on the HttpOnly accessToken cookie the API sets during the Google
+// callback. JS cannot read it (that is the point), so there is no token to attach
+// by hand — withCredentials sends it and the API reads it off the cookie.
 const axiosClient = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
     timeout: 10000,
@@ -9,26 +12,6 @@ const axiosClient = axios.create({
     },
     withCredentials: true,
 })
-
-// Request Interceptor
-axiosClient.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
-        const getCookie = (name: string) => {
-            const value = `; ${document.cookie}`
-            const parts = value.split(`; ${name}=`)
-            if (parts.length === 2) return parts.pop()?.split(';').shift()
-        }
-
-        const accessToken = getCookie('accessToken')
-        if (accessToken) {
-            config.headers.Authorization = `Bearer ${accessToken}`
-        }
-        return config
-    },
-    (error: AxiosError) => {
-        return Promise.reject(error)
-    }
-)
 
 // Response Interceptor
 axiosClient.interceptors.response.use(
