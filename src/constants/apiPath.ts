@@ -28,4 +28,7 @@ export const API_ROUTES = {
         BY_USER_PROBLEM: (userId: string | number, problemSlug: string) =>
             `/submissions/user/${userId}/problem/${problemSlug}`,
     },
+    JUDGE_SERVERS: {
+        ROOT: '/judge-servers',
+    },
 }
