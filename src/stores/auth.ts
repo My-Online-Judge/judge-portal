@@ -26,16 +26,8 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = null
         isAuthenticated.value = false
 
-        const cookies = ['accessToken', 'refreshToken']
-        const paths = ['/']
-
-        cookies.forEach(cookie => {
-            paths.forEach(path => {
-                document.cookie = `${cookie}=; Max-Age=0; path=${path}; SameSite=Lax; Secure`
-                document.cookie = `${cookie}=; Max-Age=0; path=${path}; SameSite=Lax`
-                document.cookie = `${cookie}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}`
-            })
-        })
+        // The auth cookies are HttpOnly — only the server can clear them, which
+        // POST /auth/logout above does.
 
         if (reload) {
             window.location.href = '/'

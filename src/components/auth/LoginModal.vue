@@ -57,9 +57,9 @@ const handleGoogleLogin = async () => {
         if (data && data.url) {
             // Store the CSRF state to verify on the OAuth callback (sessionStorage survives
             // the same-tab redirect to Google and back).
-            if (data.state) sessionStorage.setItem('oauth_state', data.state)
-            // Save current URL to redirect back after login
-            localStorage.setItem('loginRedirectUrl', window.location.href)
+            // The API owns the OAuth callback now and verifies the CSRF state itself,
+            // so the SPA only has to remember where to send the user back to.
+            localStorage.setItem('loginRedirectUrl', window.location.pathname + window.location.search)
             window.location.href = data.url
         } else {
             throw new Error("Invalid response from server")

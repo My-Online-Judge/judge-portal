@@ -1,8 +1,8 @@
 export const API_ROUTES = {
     AUTH: {
+        LOGIN: '/auth/login',
         REFRESH_TOKEN: '/auth/refresh',
         GOOGLE_URL: '/auth/outbound/google',
-        GOOGLE_AUTH: '/auth/outbound/authentication',
         ME: '/auth/me',
         LOGOUT: '/auth/logout',
     },

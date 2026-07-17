@@ -19,11 +19,40 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { RouterView, useRoute } from 'vue-router'
+import { computed, onMounted } from 'vue'
+import { RouterView, useRoute, useRouter } from 'vue-router'
 import Header from '@/components/layout/Header.vue'
 import Toaster from '@/components/ui/toast/Toaster.vue'
+import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
+const router = useRouter()
+const { triggerToast } = useToast()
 const isAdmin = computed(() => route.path.startsWith('/admin'))
+
+// The API completes the Google login server-side and sends the browser back here
+// with ?login=ok|failed. Report the outcome, drop the marker so a refresh doesn't
+// repeat it, then return the user to the page they signed in from.
+onMounted(() => {
+    const params = new URLSearchParams(window.location.search)
+    const login = params.get('login')
+    if (!login) return
+
+    params.delete('login')
+    const query = params.toString()
+    window.history.replaceState({}, '', window.location.pathname + (query ? `?${query}` : ''))
+
+    const back = localStorage.getItem('loginRedirectUrl')
+    localStorage.removeItem('loginRedirectUrl')
+
+    if (login !== 'ok') {
+        triggerToast('Login failed. Please try again.', 'error')
+        return
+    }
+
+    triggerToast('Signed in', 'success')
+    if (back && back !== window.location.pathname + window.location.search) {
+        router.replace(back)
+    }
+})
 </script>
