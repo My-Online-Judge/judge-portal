@@ -34,16 +34,20 @@
                 </p>
             </div>
 
-            <!-- Judge servers (pending — Phase 2) -->
+            <!-- Judge servers (live) -->
             <div class="rounded-xl border border-border bg-card p-[18px]">
                 <div class="flex items-start justify-between gap-3">
                     <span class="text-[13px] font-medium text-muted-foreground">Judge servers</span>
                     <Server class="size-[18px] shrink-0 text-muted-foreground" />
                 </div>
                 <div class="mt-3 flex h-[30px] items-center">
-                    <p class="font-mono text-[30px] font-semibold leading-none text-muted-foreground/60">—</p>
+                    <div v-if="canReadJudgeServers && judgeLoading" class="h-5 w-[88px] rounded bg-muted animate-ojpulse" />
+                    <p v-else-if="!canReadJudgeServers || judgeError" class="font-mono text-[30px] font-semibold leading-none text-muted-foreground/60">—</p>
+                    <p v-else class="font-mono text-[30px] font-semibold leading-none tracking-tight text-foreground">
+                        {{ judgeOnline }} / {{ judgeTotal }}
+                    </p>
                 </div>
-                <p class="mt-2 text-[12px] text-muted-foreground">Wired up in the Judge servers section.</p>
+                <p class="mt-2 text-[12px] text-muted-foreground">{{ judgeKpiContext }}</p>
             </div>
 
             <!-- Users (pending — Phase 4) -->
@@ -66,25 +70,73 @@
                 <div class="flex items-start justify-between gap-3 border-b border-border p-[18px]">
                     <div class="min-w-0">
                         <h2 class="text-base font-medium text-foreground">Judge server health</h2>
-                        <p class="mt-0.5 text-[12px] text-muted-foreground">Connect in the Judge servers section.</p>
+                        <p class="mt-0.5 text-[12px] text-muted-foreground">
+                            <template v-if="canReadJudgeServers && !judgeError && judgeTotal > 0">
+                                <span class="font-mono text-foreground">{{ judgeOnline }}</span> of
+                                <span class="font-mono text-foreground">{{ judgeTotal }}</span> reporting
+                            </template>
+                            <template v-else>Connect in the Judge servers section.</template>
+                        </p>
                     </div>
                     <button
                         type="button"
-                        class="flex size-8 shrink-0 items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        class="flex size-8 shrink-0 items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
                         aria-label="Refresh judge server health"
+                        :disabled="!canReadJudgeServers || judgeLoading"
+                        @click="loadJudgeServers"
                     >
-                        <RefreshCw class="size-4" />
+                        <RefreshCw class="size-4" :class="canReadJudgeServers && judgeLoading && 'animate-spin'" />
                     </button>
                 </div>
                 <div class="p-[18px]">
-                    <!-- Phase 2 fills status rows here: dot (bg-ok/warn/err) + mono host/ip + mono "seen". -->
-                    <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-10 text-center">
-                        <Server class="size-6 text-muted-foreground" />
-                        <p class="text-sm font-medium text-foreground">No judge servers reporting yet.</p>
-                        <p class="max-w-[15rem] text-xs text-muted-foreground">
-                            They'll show up here once a judge server checks in.
-                        </p>
+                    <!-- Loading -->
+                    <div v-if="canReadJudgeServers && judgeLoading" class="space-y-2.5">
+                        <div v-for="n in 4" :key="n" class="h-10 w-full rounded bg-muted animate-ojpulse" />
                     </div>
+
+                    <!-- Error -->
+                    <div v-else-if="canReadJudgeServers && judgeError">
+                        <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-err/40 bg-err/5 px-6 py-10 text-center">
+                            <TriangleAlert class="size-6 text-err" />
+                            <p class="text-sm font-medium text-foreground">Couldn't load judge servers.</p>
+                            <p class="max-w-[15rem] text-xs text-muted-foreground">
+                                The request failed. Check your connection and try again.
+                            </p>
+                            <Button variant="outline" size="sm" @click="loadJudgeServers">
+                                <RefreshCw class="size-4" />
+                                Retry
+                            </Button>
+                        </div>
+                    </div>
+
+                    <!-- Empty (no permission or nothing reporting) -->
+                    <div v-else-if="judgeTopServers.length === 0">
+                        <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-10 text-center">
+                            <Server class="size-6 text-muted-foreground" />
+                            <p class="text-sm font-medium text-foreground">No judge servers reporting yet.</p>
+                            <p class="max-w-[15rem] text-xs text-muted-foreground">
+                                They'll show up here once a judge server checks in.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Data -->
+                    <ul v-else class="flex flex-col gap-0.5">
+                        <li
+                            v-for="server in judgeTopServers"
+                            :key="`${server.hostname}-${server.ip}`"
+                            class="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/40"
+                        >
+                            <span class="size-2 shrink-0 rounded-full" :class="healthDotClass[serverHealth(server)]" />
+                            <div class="flex min-w-0 flex-col leading-tight">
+                                <span class="truncate font-mono text-[13px] text-foreground">{{ server.hostname }}</span>
+                                <span class="truncate font-mono text-[11px] text-muted-foreground">{{ server.ip }}</span>
+                            </div>
+                            <span class="ml-auto shrink-0 font-mono text-[12px] text-muted-foreground">
+                                {{ relativeTime(server.lastHeartbeat) }}
+                            </span>
+                        </li>
+                    </ul>
                 </div>
             </div>
 
@@ -225,13 +277,17 @@ import {
 import { Button } from '@/components/ui/button'
 import { useFetch } from '@/composables/useFetch'
 import problemService from '@/services/problemService'
+import judgeServerService from '@/services/judgeServerService'
 import { useAuthStore } from '@/stores/auth'
 import { ROUTE_PATH } from '@/constants/routePath'
 import { shortId, difficultyLabel, statusLabel, statusDotClass, relativeTime } from '@/lib/problemDisplay'
+import { serverHealth, healthDotClass } from '@/lib/judgeServerDisplay'
+import type { JudgeServer } from '@/types/judgeServer'
 
 const authStore = useAuthStore()
 const hasPermission = (permission: string) => authStore.hasPermission(permission)
 
+// --- Problems (Recent problems card + Problems KPI) ---
 const { data, isLoading, error, execute } = useFetch(problemService.getProblems, { immediate: false })
 
 const load = () => execute({ page: 0, size: 5 })
@@ -240,5 +296,36 @@ const problems = computed(() => data.value?.data ?? [])
 const totalProblems = computed(() => data.value?.pagination?.totalElements ?? null)
 const shownCount = computed(() => problems.value.length)
 
-onMounted(load)
+// --- Judge servers (health card + Judge servers KPI) ---
+// Independent fetch, gated on the read permission so a user without it
+// gets the graceful pending/empty treatment rather than an error.
+const canReadJudgeServers = computed(() => hasPermission('judgeserver:read'))
+
+const {
+    data: judgeData,
+    isLoading: judgeLoading,
+    error: judgeError,
+    execute: judgeExecute,
+} = useFetch(judgeServerService.getJudgeServers, { immediate: false })
+
+const loadJudgeServers = () => judgeExecute()
+
+const judgeServers = computed<JudgeServer[]>(() => judgeData.value?.data ?? [])
+const judgeTotal = computed(() => judgeServers.value.length)
+const judgeOnline = computed(() => judgeServers.value.filter((s) => serverHealth(s) === 'online').length)
+const judgeStale = computed(() => judgeTotal.value - judgeOnline.value)
+const judgeTopServers = computed(() => judgeServers.value.slice(0, 5))
+
+const judgeKpiContext = computed(() => {
+    if (!canReadJudgeServers.value) return 'Wired up in the Judge servers section.'
+    if (judgeError.value) return "Couldn't load"
+    if (judgeLoading.value) return 'Checking in…'
+    if (judgeTotal.value === 0) return 'None reporting'
+    return judgeStale.value > 0 ? `${judgeStale.value} stale/offline` : 'All reporting'
+})
+
+onMounted(() => {
+    load()
+    if (canReadJudgeServers.value) loadJudgeServers()
+})
 </script>
