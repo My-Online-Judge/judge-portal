@@ -33,6 +33,7 @@ export const API_ROUTES = {
     },
     ROLES: {
         ROOT: '/roles',
+        DETAIL: (id: string) => `/roles/${id}`,
         PERMISSIONS: (id: string) => `/roles/${id}/permissions`,
     },
     PERMISSIONS: {
