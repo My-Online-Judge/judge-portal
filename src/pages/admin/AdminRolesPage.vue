@@ -282,6 +282,7 @@ import roleService from '@/services/roleService'
 import permissionService from '@/services/permissionService'
 import { groupByResource } from '@/lib/permissionDisplay'
 import { isValidRoleName } from '@/lib/roleName'
+import { getErrorMessage } from '@/lib/errorMessage'
 import type { Role } from '@/types/role'
 import type { Permission } from '@/types/permission'
 
@@ -371,8 +372,8 @@ const save = async () => {
         triggerToast('Permissions updated', 'success')
         dialogOpen.value = false
         await loadRoles()
-    } catch (err: any) {
-        triggerToast(err?.response?.data?.message || 'Could not update permissions.', 'error')
+    } catch (err) {
+        triggerToast(getErrorMessage(err, 'Could not update permissions.'), 'error')
     } finally {
         saving.value = false
     }
@@ -400,8 +401,8 @@ const submitCreate = async () => {
         triggerToast('Role created', 'success')
         createOpen.value = false
         await loadRoles()
-    } catch (err: any) {
-        triggerToast(err?.response?.data?.message || 'Could not create role.', 'error')
+    } catch (err) {
+        triggerToast(getErrorMessage(err, 'Could not create role.'), 'error')
     } finally {
         creating.value = false
     }
@@ -425,8 +426,8 @@ const confirmDelete = async () => {
         triggerToast('Role deleted', 'success')
         deleteOpen.value = false
         await loadRoles()
-    } catch (err: any) {
-        triggerToast(err?.response?.data?.message || 'Could not delete role.', 'error')
+    } catch (err) {
+        triggerToast(getErrorMessage(err, 'Could not delete role.'), 'error')
     } finally {
         deleting.value = false
     }

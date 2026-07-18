@@ -120,6 +120,7 @@ import LoginModal from '@/components/auth/LoginModal.vue'
 
 import { ref, watch, computed } from 'vue'
 import { useToast } from '@/composables/useToast'
+import { getErrorMessage } from '@/lib/errorMessage'
 import submissionService from '@/services/submissionService'
 import type { Submission, SubmissionRequest } from '@/types/submission'
 import { getMonacoLanguage } from '@/utils/editorUtils'
@@ -190,8 +191,8 @@ const handleSubmit = async () => {
         sourceCode.value = ''
 
         emit('success', res.data.data)
-    } catch (error: any) {
-        triggerToast(error.response?.data?.message || 'An error occurred', 'error')
+    } catch (error) {
+        triggerToast(getErrorMessage(error, 'An error occurred'), 'error')
     } finally {
         isSubmitting.value = false
     }

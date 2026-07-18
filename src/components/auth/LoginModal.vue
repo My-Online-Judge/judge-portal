@@ -40,11 +40,11 @@ import { Button } from '@/components/ui/button'
 import authService from '@/services/authService'
 import { useToast } from '@/composables/useToast'
 
-const props = defineProps<{
+defineProps<{
     open: boolean
 }>()
 
-const emit = defineEmits(['update:open', 'close'])
+defineEmits(['update:open', 'close'])
 const { triggerToast } = useToast()
 
 const loading = ref(false)

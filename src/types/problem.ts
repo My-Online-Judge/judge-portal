@@ -17,7 +17,7 @@ export interface Problem extends BaseModel {
     totalSubmission: number
     acceptedSubmission: number
     tags?: string[]
-    statisticInfo?: Record<string, any>
+    statisticInfo?: Record<string, unknown>
 }
 
 export interface ProblemSearchParams extends BaseSearchParams {
