@@ -242,6 +242,7 @@ import ProblemFormFields, { type ProblemFormValue } from '@/components/admin/pro
 import TestCaseManager from '@/components/admin/problem/TestCaseManager.vue'
 import RichTextEditor from '@/components/admin/editor/RichTextEditor.vue'
 import { useToast } from '@/composables/useToast'
+import { getErrorMessage } from '@/lib/errorMessage'
 import problemService from '@/services/problemService'
 import { useAuthStore } from '@/stores/auth'
 import type { Problem, UpdateProblemPayload } from '@/types/problem'
@@ -305,7 +306,7 @@ const fetchProblem = async () => {
         if (controller !== ac) return
         problem.value = res.data.data
         editPayload.value = fromProblem(res.data.data)
-    } catch (err: any) {
+    } catch (err) {
         if (controller !== ac || axios.isCancel(err)) return
         problem.value = null
         loadError.value = true
@@ -369,8 +370,8 @@ const save = async () => {
         triggerToast('Problem updated', 'success')
         await fetchProblem()
         isEditing.value = false
-    } catch (err: any) {
-        triggerToast(err?.response?.data?.message || 'Could not save changes.', 'error')
+    } catch (err) {
+        triggerToast(getErrorMessage(err, 'Could not save changes.'), 'error')
     } finally {
         submitting.value = false
     }
@@ -383,8 +384,8 @@ const confirmDelete = async () => {
         triggerToast('Problem deleted', 'success')
         deleteOpen.value = false
         router.push({ name: 'AdminProblems' })
-    } catch (err: any) {
-        triggerToast(err?.response?.data?.message || 'Could not delete the problem.', 'error')
+    } catch (err) {
+        triggerToast(getErrorMessage(err, 'Could not delete the problem.'), 'error')
     } finally {
         deleting.value = false
     }

@@ -90,7 +90,6 @@ const {
     data: problem,
     isLoading,
     error,
-    execute: fetchProblem,
 } = useFetch(problemService.getProblemBySlug, {
     params: slug,
     transform: (res) => res.data,

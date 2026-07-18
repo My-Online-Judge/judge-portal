@@ -73,6 +73,7 @@ import { Button } from '@/components/ui/button'
 import ProblemFormFields, { type ProblemFormValue } from '@/components/admin/problem/ProblemFormFields.vue'
 import TestCaseEditor, { type TestCasePair } from '@/components/admin/problem/TestCaseEditor.vue'
 import { useToast } from '@/composables/useToast'
+import { getErrorMessage } from '@/lib/errorMessage'
 import problemService, { buildProblemFormData } from '@/services/problemService'
 import type { CreateProblemPayload } from '@/types/problem'
 
@@ -173,8 +174,8 @@ const onSubmit = async () => {
         await problemService.create(buildProblemFormData(dto, file))
         triggerToast('Problem created', 'success')
         router.push({ name: 'AdminProblemDetail', params: { slug: dto.problemSlug } })
-    } catch (err: any) {
-        triggerToast(err?.response?.data?.message || 'Could not create the problem.', 'error')
+    } catch (err) {
+        triggerToast(getErrorMessage(err, 'Could not create the problem.'), 'error')
     } finally {
         submitting.value = false
     }

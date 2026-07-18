@@ -20,4 +20,35 @@ export default defineConfigWithVueTs(
   vueTsConfigs.recommended,
 
   skipFormatting,
+
+  {
+    // Allow intentionally-unused bindings prefixed with `_` (destructure holes,
+    // ignored callback args, caught errors we don't inspect).
+    name: 'app/unused-vars',
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+    },
+  },
+
+  {
+    // shadcn-vue / reka-ui primitives are intentionally single-word (Button, Card…),
+    // matching their upstream names. The multi-word rule doesn't apply to them.
+    name: 'app/components',
+    files: ['src/components/**/*.vue'],
+    rules: {
+      'vue/multi-word-component-names': 'off',
+    },
+  },
+
+  {
+    // Test doubles and mocks legitimately need `any`.
+    name: 'app/tests',
+    files: ['**/__tests__/**', '**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
 )

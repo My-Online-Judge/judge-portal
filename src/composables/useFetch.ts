@@ -3,7 +3,7 @@ import axios, { type AxiosResponse, type AxiosError } from 'axios'
 
 interface UseFetchOptions<T, R = T> {
     immediate?: boolean
-    params?: any // Can be array of args or single arg
+    params?: unknown // Can be array of args or single arg
     transform?: (data: T) => R
 }
 
@@ -11,7 +11,7 @@ interface UseFetchState<R> {
     data: Ref<R | null>
     error: Ref<AxiosError | null>
     isLoading: Ref<boolean>
-    execute: (...args: any[]) => Promise<void>
+    execute: (...args: unknown[]) => Promise<void>
     abort: () => void
 }
 
@@ -21,7 +21,10 @@ interface UseFetchState<R> {
  * 
  * Example: serviceFn(signal, param1, param2)
  */
-export function useFetch<T = any, R = T>(
+export function useFetch<T = unknown, R = T>(
+    // Service functions have varied, concretely-typed trailing args (slug, id, …);
+    // `any[]` is the only signature every real service stays assignable to here.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     serviceFn: (signal: AbortSignal, ...args: any[]) => Promise<AxiosResponse<T>>,
     options: UseFetchOptions<T, R> = {}
 ): UseFetchState<R> {
@@ -34,7 +37,7 @@ export function useFetch<T = any, R = T>(
     // AbortController to cancel requests
     let abortController: AbortController | null = null
 
-    const execute = async (...args: any[]) => {
+    const execute = async (...args: unknown[]) => {
         // Cancel previous request if it exists
         if (abortController) {
             abortController.abort()
@@ -48,14 +51,13 @@ export function useFetch<T = any, R = T>(
             // Pass signal as the FIRST argument
             const response = await serviceFn(abortController.signal, ...args)
             if (transform) {
-                // @ts-ignore
                 data.value = transform(response.data as T)
             } else {
                 data.value = response.data as unknown as R
             }
-        } catch (err: any) {
+        } catch (err) {
             if (axios.isCancel(err)) {
-                console.log('Request canceled', err.message)
+                console.log('Request canceled')
             } else {
                 error.value = err as AxiosError
             }

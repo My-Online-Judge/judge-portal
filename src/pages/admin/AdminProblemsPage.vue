@@ -207,6 +207,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useFetch } from '@/composables/useFetch'
 import { useToast } from '@/composables/useToast'
+import { getErrorMessage } from '@/lib/errorMessage'
 import problemService from '@/services/problemService'
 import { useAuthStore } from '@/stores/auth'
 import type { Problem } from '@/types/problem'
@@ -282,8 +283,8 @@ const confirmDelete = async () => {
         deleteOpen.value = false
         deleteTarget.value = null
         load()
-    } catch (err: any) {
-        triggerToast(err?.response?.data?.message || 'Could not delete the problem.', 'error')
+    } catch (err) {
+        triggerToast(getErrorMessage(err, 'Could not delete the problem.'), 'error')
     } finally {
         deleting.value = false
     }
