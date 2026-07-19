@@ -9,13 +9,13 @@
 <script setup lang="ts">
 
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
     modelValue: string
     language?: string
     theme?: string
     height?: string
     disabled?: boolean
-    options?: Record<string, any>
+    options?: Record<string, unknown>
 }>(), {
     language: 'plaintext',
     theme: 'vs-light',
@@ -30,7 +30,7 @@ const props = withDefaults(defineProps<{
     })
 })
 
-const emit = defineEmits<{
+defineEmits<{
     (e: 'update:modelValue', value: string): void
 }>()
 </script>

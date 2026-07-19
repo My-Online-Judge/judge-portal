@@ -109,7 +109,7 @@ const handlePageChange = (page: number) => {
     emit('change-page', page - 1)
 }
 
-const handleSizeChange = (value: any) => {
+const handleSizeChange = (value: unknown) => {
     if (value) {
         emit('update:size', Number(value))
     }

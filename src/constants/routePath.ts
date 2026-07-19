@@ -7,5 +7,6 @@ export const ROUTE_PATH = {
     ADMIN_PROBLEMS: '/admin/problems',
     ADMIN_JUDGE_SERVERS: '/admin/judge-servers',
     ADMIN_ROLES: '/admin/roles',
+    ADMIN_PERMISSIONS: '/admin/permissions',
     ADMIN_USERS: '/admin/users',
 }
