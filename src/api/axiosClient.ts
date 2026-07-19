@@ -1,5 +1,6 @@
 
 import axios, { type AxiosError, type AxiosResponse } from 'axios'
+import { getDeviceId } from '@/lib/deviceId'
 
 // Auth rides on the HttpOnly accessToken cookie the API sets during the Google
 // callback. JS cannot read it (that is the point), so there is no token to attach
@@ -11,6 +12,12 @@ const axiosClient = axios.create({
         'Content-Type': 'application/json',
     },
     withCredentials: true,
+})
+
+// Tag every request with a stable device id so the API can record login/token origin.
+axiosClient.interceptors.request.use((config) => {
+    config.headers['X-Device-Id'] = getDeviceId()
+    return config
 })
 
 // Response Interceptor
