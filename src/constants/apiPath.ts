@@ -10,6 +10,9 @@ export const API_ROUTES = {
         ROOT: '/users',
         ME: '/users/me',
         PROFILE: (id: number | string) => `/users/${id}`,
+        STATUS: (id: string) => `/users/${id}/status`,
+        ROLES: (id: string) => `/users/${id}/roles`,
+        RESET_PASSWORD: (id: string) => `/users/${id}/reset-password`,
     },
     PROBLEMS: {
         ROOT: '/problems',
@@ -30,5 +33,13 @@ export const API_ROUTES = {
     },
     JUDGE_SERVERS: {
         ROOT: '/judge-servers',
+    },
+    ROLES: {
+        ROOT: '/roles',
+        DETAIL: (id: string) => `/roles/${id}`,
+        PERMISSIONS: (id: string) => `/roles/${id}/permissions`,
+    },
+    PERMISSIONS: {
+        ROOT: '/permissions',
     },
 }

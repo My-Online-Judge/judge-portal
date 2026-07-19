@@ -160,6 +160,7 @@ import {
     ListChecks,
     Server,
     ShieldCheck,
+    KeyRound,
     Users,
     Menu,
     X,
@@ -220,6 +221,7 @@ const navGroups = computed(() => {
             label: 'Access',
             items: [
                 { label: 'Roles', to: ROUTE_PATH.ADMIN_ROLES, icon: ShieldCheck, show: can('role:read') },
+                { label: 'Permissions', to: ROUTE_PATH.ADMIN_PERMISSIONS, icon: KeyRound, show: can('permission:read') },
                 { label: 'Users', to: ROUTE_PATH.ADMIN_USERS, icon: Users, show: can('user:read') },
             ],
         },
@@ -255,6 +257,8 @@ const crumbs = computed<Crumb[]>(() => {
             return [adminCrumb, { label: 'Judge servers' }]
         case 'AdminRoles':
             return [adminCrumb, { label: 'Roles' }]
+        case 'AdminPermissions':
+            return [adminCrumb, { label: 'Permissions' }]
         case 'AdminUsers':
             return [adminCrumb, { label: 'Users' }]
         default:
