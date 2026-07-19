@@ -14,7 +14,7 @@
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger as-child>
-                                <span class="tabular max-w-[120px] truncate font-medium text-foreground">
+                                <span class="tabular max-w-[120px] truncate text-muted-foreground">
                                     {{ problem.id }}
                                 </span>
                             </TooltipTrigger>
@@ -32,15 +32,11 @@
                     <span class="text-muted-foreground">Memory Limit</span>
                     <span class="tabular font-medium text-foreground">{{ problem.memoryLimit }} MB</span>
                 </div>
-                <div class="flex justify-between border-b border-border py-1">
+                <div class="flex justify-between py-1">
                     <span class="text-muted-foreground">Created By</span>
-                    <span class="font-medium text-foreground">{{ problem.createdBy }}</span>
-                </div>
-                <div class="flex items-center justify-between py-1">
-                    <span class="text-muted-foreground">Level</span>
-                    <Badge :class="getLevelInfo(problem.hardnessLevel).class" class="rounded-md border-0 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">
-                        {{ getLevelInfo(problem.hardnessLevel).text }}
-                    </Badge>
+                    <span :class="problem.createdBy ? 'font-medium text-foreground' : 'text-muted-foreground'">
+                        {{ problem.createdBy || '—' }}
+                    </span>
                 </div>
             </CardContent>
         </Card>
@@ -125,10 +121,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Info, PieChart } from 'lucide-vue-next'
-import { type Problem, getLevelInfo, SubmissionStatus, STATUS_CONFIG } from '@/types/problem'
+import { type Problem, SubmissionStatus, STATUS_CONFIG } from '@/types/problem'
 import {
     Tooltip,
     TooltipContent,
