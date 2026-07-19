@@ -65,7 +65,7 @@
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import ProblemHeader from '@/components/problem/detail/ProblemHeader.vue'
@@ -82,7 +82,9 @@ import { storeToRefs } from 'pinia'
 import type { Submission } from '@/types/submission'
 
 const route = useRoute()
-const slug = route.params.slug as string
+// Reactive so the value stays correct (and flows to child props) across
+// client-side navigation between two problems, which reuses this component.
+const slug = computed(() => route.params.slug as string)
 const activeTab = ref('description')
 const pendingSubmission = ref<Submission | null>(null)
 
@@ -90,15 +92,32 @@ const {
     data: problem,
     isLoading,
     error,
+    execute,
 } = useFetch(problemService.getProblemBySlug, {
-    params: slug,
+    params: slug.value,
     transform: (res) => res.data,
 })
+
+// Navigating problem → problem reuses this component, so setup() does not re-run
+// and the mount-time fetch never fires again. Refetch (and reset the tab + any
+// pending submission) whenever the slug changes.
+watch(
+    () => route.params.slug,
+    (newSlug) => {
+        activeTab.value = 'description'
+        pendingSubmission.value = null
+        execute(newSlug as string)
+    },
+)
 
 const languageStore = useLanguageStore()
 const { languages } = storeToRefs(languageStore)
 
-languageStore.fetchLanguages()
+// Languages are only needed by the Submit tab, so fetch them lazily on first
+// visit instead of on page load. The store caches, so this stays idempotent.
+watch(activeTab, (tab) => {
+    if (tab === 'submit') languageStore.fetchLanguages()
+})
 
 const handleSubmissionSuccess = (submission: Submission) => {
     activeTab.value = 'submissions'
