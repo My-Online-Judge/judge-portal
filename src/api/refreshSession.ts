@@ -30,21 +30,20 @@ export interface RefreshOn401Deps {
 export function createRefreshOn401(deps: RefreshOn401Deps) {
     const isExcluded = deps.isExcluded ?? isRefreshExcluded
     let inFlight: Promise<unknown> | null = null
-    let gaveUpThisRound = false
+    // Identity of the last round that already called onGiveUp, not a boolean:
+    // a boolean flag lives at module scope and gets reset the moment the NEXT
+    // round starts, so a still-awaiting waiter of the PREVIOUS (failed) round
+    // could see it cleared and call onGiveUp a second time for that same
+    // round. Comparing against the specific round's promise means a new
+    // round starting can never affect a different round's dedupe.
+    let gaveUpForRound: Promise<unknown> | null = null
 
     // Single-flight: N requests failing at once wait on one /auth/refresh.
     const refreshOnce = (): Promise<unknown> => {
         if (!inFlight) {
-            gaveUpThisRound = false
             inFlight = deps.refresh().finally(() => { inFlight = null })
         }
         return inFlight
-    }
-
-    const giveUpOnce = async (): Promise<void> => {
-        if (gaveUpThisRound) return
-        gaveUpThisRound = true
-        await deps.onGiveUp()
     }
 
     return async (error: AxiosError): Promise<AxiosResponse> => {
@@ -53,18 +52,26 @@ export function createRefreshOn401(deps: RefreshOn401Deps) {
         if (isExcluded(config.url)) throw error
 
         // Already retried once: a second refresh would not help, so stop here
-        // rather than ping-ponging between refresh and retry.
+        // rather than ping-ponging between refresh and retry. This request
+        // already went through its own refreshOnce()/onGiveUp cycle above, so
+        // there is no "round" left to dedupe against here -- it always gives
+        // up, exactly once, for itself.
         if (config._retry) {
-            gaveUpThisRound = true
             await deps.onGiveUp()
             throw error
         }
 
         config._retry = true
+        // Capture this round's identity before awaiting it: by the time the
+        // catch below runs, `inFlight` may already belong to a *new* round.
+        const round = refreshOnce()
         try {
-            await refreshOnce()
+            await round
         } catch {
-            await giveUpOnce()
+            if (gaveUpForRound !== round) {
+                gaveUpForRound = round
+                await deps.onGiveUp()
+            }
             throw error
         }
         return deps.retry(config)

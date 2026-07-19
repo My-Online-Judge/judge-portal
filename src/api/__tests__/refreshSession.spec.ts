@@ -119,4 +119,69 @@ describe('createRefreshOn401', () => {
 
         expect(onGiveUp).toHaveBeenCalledTimes(1)
     })
+
+    it('scopes the give-up dedupe to its own round: a second waiter of the SAME failed round must not re-fire onGiveUp even if a new round starts while the first waiter is still inside onGiveUp — and a genuinely new failing round still gets its own call', async () => {
+        // A macrotask boundary drains every pending microtask (including ones
+        // scheduled *during* this flush), unlike a fixed number of
+        // `await Promise.resolve()` hops, which would be one race away from
+        // flaky depending on exactly how many microtask turns the promise
+        // chain inside the module takes.
+        const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
+
+        let rejectRound1!: (reason: Error) => void
+        let rejectRound2!: (reason: Error) => void
+        refresh = vi
+            .fn()
+            .mockImplementationOnce(() => new Promise((_, reject) => { rejectRound1 = reject }))
+            .mockImplementationOnce(() => new Promise((_, reject) => { rejectRound2 = reject }))
+
+        let c!: Promise<AxiosResponse>
+        let round2Started = false
+        const releaseGiveUp: Array<() => void> = []
+        onGiveUp = vi.fn(() => {
+            // Mirrors the real onGiveUp: genuinely async (dynamic import of a
+            // Pinia store + logout()), so it does NOT resolve immediately.
+            // While round 1's onGiveUp is still pending, fire off an
+            // unrelated request that also 401s -- this is exactly what
+            // starts round 2 mid-flight, before every round-1 waiter has
+            // finished handling round 1's failure.
+            if (!round2Started) {
+                round2Started = true
+                c = handle(err(401, '/problems'))
+            }
+            return new Promise<void>((resolve) => releaseGiveUp.push(resolve))
+        })
+
+        const handle = build()
+
+        // Two requests share round 1. `b` settles (rejects) well before it's
+        // awaited below, so give it an immediate no-op catch -- otherwise
+        // Node's unhandled-rejection detector fires before `Promise.allSettled`
+        // gets a chance to attach its own handler.
+        const a = handle(err(401, '/users'))
+        const b = handle(err(401, '/roles'))
+        a.catch(() => {})
+        b.catch(() => {})
+
+        rejectRound1(new Error('round1 failed'))
+        await flush()
+
+        // Round 1 had two waiters sharing the same failed round: exactly one
+        // give-up, even though round 2 has already started in the meantime.
+        expect(onGiveUp).toHaveBeenCalledTimes(1)
+
+        releaseGiveUp[0]()
+        await Promise.allSettled([a, b])
+        expect(onGiveUp).toHaveBeenCalledTimes(1)
+
+        // Round 2 is a genuinely new, later round -- when it fails too, it
+        // must get its own give-up call rather than being swallowed by the
+        // round-1 dedupe.
+        rejectRound2(new Error('round2 failed'))
+        await flush()
+        expect(onGiveUp).toHaveBeenCalledTimes(2)
+
+        releaseGiveUp[1]()
+        await c.catch(() => {})
+    })
 })
