@@ -1,97 +1,101 @@
 <template>
-    <Card>
-        <CardContent class="p-6 space-y-6">
-            <div class="flex items-end justify-between gap-3">
-                <div class="w-30">
-                    <Label class="mb-2 block text-sm font-medium text-slate-700">Language</Label>
-                    <Select v-model="selectedLanguage">
+    <div class="flex h-full min-h-0 flex-col">
+        <!-- Toolbar -->
+        <div class="flex items-end justify-between gap-3 border-b border-border px-4 py-3">
+            <div class="w-32">
+                <Label class="mb-1.5 block text-xs font-medium text-muted-foreground">Language</Label>
+                <Select v-model="selectedLanguage">
+                    <SelectTrigger class="w-full">
+                        <SelectValue>
+                            {{ selectedLanguage ? selectedLanguage.name : 'Select a language' }}
+                        </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem v-for="lang in languages" :key="lang.id" :value="lang">
+                            {{ lang.name }}
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            <div class="flex items-end gap-3">
+                <div class="flex w-[110px] flex-col">
+                    <Label class="mb-1.5 block text-xs font-medium text-muted-foreground">Theme</Label>
+                    <Select v-model="selectedTheme">
                         <SelectTrigger class="w-full">
-                            <SelectValue>
-                                {{ selectedLanguage ? selectedLanguage.name : 'Select a language' }}
-                            </SelectValue>
+                            <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem v-for="lang in languages" :key="lang.id" :value="lang">
-                                {{ lang.name }}
-                            </SelectItem>
+                            <SelectItem value="vs-light">Light</SelectItem>
+                            <SelectItem value="vs-dark">Dark</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
 
-                <div class="flex items-end gap-4">
-                    <div class="flex flex-col w-[120px]">
-                        <Label class="mb-2 block font-medium">Theme</Label>
-                        <Select v-model="selectedTheme">
-                            <SelectTrigger class="w-full">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="vs-light">Light</SelectItem>
-                                <SelectItem value="vs-dark">Dark</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <Dialog>
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger as-child>
-                                    <DialogTrigger as-child>
-                                        <Button variant="outline" size="icon" class="h-9 w-9 shrink-0 cursor-pointer"
-                                            :disabled="!sourceCode">
-                                            <RotateCcw class="h-2 w-2" />
-                                        </Button>
-                                    </DialogTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Reset to default code definition</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Reset Code?</DialogTitle>
-                                <DialogDescription>
-                                    This action will clear your current code in the editor. This action cannot be
-                                    undone.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <DialogFooter>
-                                <DialogClose as-child>
-                                    <Button variant="outline" class="cursor-pointer">Cancel</Button>
-                                </DialogClose>
-                                <DialogClose as-child>
-                                    <Button variant="destructive" class="cursor-pointer" @click="handleReset">Reset</Button>
-                                </DialogClose>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-                </div>
+                <Dialog>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger as-child>
+                                <DialogTrigger as-child>
+                                    <Button variant="outline" size="icon" class="h-9 w-9 shrink-0 cursor-pointer"
+                                        :disabled="!sourceCode">
+                                        <RotateCcw class="h-2 w-2" />
+                                    </Button>
+                                </DialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Reset to default code definition</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Reset Code?</DialogTitle>
+                            <DialogDescription>
+                                This action will clear your current code in the editor. This action cannot be
+                                undone.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <DialogClose as-child>
+                                <Button variant="outline" class="cursor-pointer">Cancel</Button>
+                            </DialogClose>
+                            <DialogClose as-child>
+                                <Button variant="destructive" class="cursor-pointer" @click="handleReset">Reset</Button>
+                            </DialogClose>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
+        </div>
 
-            <CodeEditor v-model="sourceCode" :language="editorLanguage" :theme="selectedTheme" height="450px" :disabled="isSubmitting" />
+        <!-- Editor fills the remaining height -->
+        <div class="min-h-0 flex-1 p-3">
+            <CodeEditor v-model="sourceCode" :language="editorLanguage" :theme="selectedTheme" height="100%"
+                :disabled="isSubmitting" />
+        </div>
 
-            <div class="flex items-center justify-end gap-3">
-                <template v-if="authStore.isAuthenticated">
-                    <Button class="cursor-pointer px-6" @click="handleSubmit"
-                        :disabled="isSubmitting || sourceCode.trim() === ''">
-                        <Send class="h-4 w-4" />
-                        {{ isSubmitting ? 'Submitting...' : 'Submit' }}
-                    </Button>
-                </template>
-                <template v-else>
-                    <Button class="cursor-pointer px-6" @click="isLoginOpen = true">
-                        Login to Submit
-                    </Button>
-                </template>
-            </div>
-        </CardContent>
+        <!-- Submit bar -->
+        <div class="flex items-center justify-end gap-3 border-t border-border px-4 py-3">
+            <template v-if="authStore.isAuthenticated">
+                <Button class="cursor-pointer px-6" @click="handleSubmit"
+                    :disabled="isSubmitting || sourceCode.trim() === ''">
+                    <Send class="h-4 w-4" />
+                    {{ isSubmitting ? 'Submitting...' : 'Submit' }}
+                </Button>
+            </template>
+            <template v-else>
+                <Button class="cursor-pointer px-6" @click="isLoginOpen = true">
+                    Login to Submit
+                </Button>
+            </template>
+        </div>
+
         <LoginModal v-model:open="isLoginOpen" />
-    </Card>
+    </div>
 </template>
 
 <script setup lang="ts">
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { RotateCcw, Send } from 'lucide-vue-next'
