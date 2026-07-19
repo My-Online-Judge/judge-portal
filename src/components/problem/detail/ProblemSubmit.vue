@@ -191,8 +191,9 @@ const handleSubmit = async () => {
 
         const res = await submissionService.submit(data)
 
+        // Keep the code in the editor after submitting so the user can tweak and
+        // resubmit without retyping.
         triggerToast('Submitted', 'success')
-        sourceCode.value = ''
 
         emit('success', res.data.data)
     } catch (error) {
