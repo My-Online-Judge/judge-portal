@@ -160,6 +160,7 @@ import {
     ListChecks,
     Server,
     ShieldCheck,
+    ShieldAlert,
     KeyRound,
     Users,
     Menu,
@@ -223,6 +224,7 @@ const navGroups = computed(() => {
                 { label: 'Roles', to: ROUTE_PATH.ADMIN_ROLES, icon: ShieldCheck, show: can('role:read') },
                 { label: 'Permissions', to: ROUTE_PATH.ADMIN_PERMISSIONS, icon: KeyRound, show: can('permission:read') },
                 { label: 'Users', to: ROUTE_PATH.ADMIN_USERS, icon: Users, show: can('user:read') },
+                { label: 'Security', to: ROUTE_PATH.ADMIN_SECURITY, icon: ShieldAlert, show: can('ban:read') },
             ],
         },
     ]
@@ -261,6 +263,8 @@ const crumbs = computed<Crumb[]>(() => {
             return [adminCrumb, { label: 'Permissions' }]
         case 'AdminUsers':
             return [adminCrumb, { label: 'Users' }]
+        case 'AdminSecurity':
+            return [adminCrumb, { label: 'Security' }]
         default:
             return [adminCrumb]
     }
