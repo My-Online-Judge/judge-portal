@@ -86,6 +86,11 @@
                     </div>
                 </div>
                 <div class="flex shrink-0 items-center gap-2">
+                    <Button v-if="canUpdate" variant="outline" :disabled="exporting" @click="runExport">
+                        <Loader2 v-if="exporting" class="size-4 animate-spin" />
+                        <Download v-else class="size-4" />
+                        Export
+                    </Button>
                     <Button v-if="canUpdate" variant="outline" @click="startEdit">
                         <Pencil class="size-4" />
                         Edit
@@ -227,7 +232,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import axios from 'axios'
-import { ArrowLeft, Pencil, Trash2, Loader2, TriangleAlert, RefreshCw } from 'lucide-vue-next'
+import { ArrowLeft, Pencil, Trash2, Loader2, TriangleAlert, RefreshCw, Download } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -243,6 +248,7 @@ import TestCaseManager from '@/components/admin/problem/TestCaseManager.vue'
 import RichTextEditor from '@/components/admin/editor/RichTextEditor.vue'
 import { useToast } from '@/composables/useToast'
 import { getErrorMessage } from '@/lib/errorMessage'
+import { downloadBlob } from '@/lib/download'
 import problemService from '@/services/problemService'
 import { useAuthStore } from '@/stores/auth'
 import type { Problem, UpdateProblemPayload } from '@/types/problem'
@@ -286,6 +292,8 @@ const submitting = ref(false)
 
 const deleteOpen = ref(false)
 const deleting = ref(false)
+
+const exporting = ref(false)
 
 // Rich-text presence check: an "empty" editor still holds <p></p>.
 const hasHtml = (value?: string): boolean =>
@@ -388,6 +396,19 @@ const confirmDelete = async () => {
         triggerToast(getErrorMessage(err, 'Could not delete the problem.'), 'error')
     } finally {
         deleting.value = false
+    }
+}
+
+const runExport = async () => {
+    if (!problem.value) return
+    exporting.value = true
+    try {
+        const res = await problemService.exportProblem(problem.value.problemSlug)
+        downloadBlob(res.data, `${problem.value.problemSlug}.zip`)
+    } catch (err) {
+        triggerToast(getErrorMessage(err, 'Could not export the problem.'), 'error')
+    } finally {
+        exporting.value = false
     }
 }
 
