@@ -38,8 +38,11 @@ export async function parseProblemPackage(file: File | Blob): Promise<ProblemPac
     for (const entry of entries) {
         const m = TEST_CASE_RE.exec(entry.name)
         if (!m) continue
-        if (m[3] === 'in') ins.add(m[2])
-        else outs.add(m[2])
+        const name = m[2]
+        const kind = m[3]
+        if (!name || !kind) continue
+        if (kind === 'in') ins.add(name)
+        else outs.add(name)
     }
     const testCaseCount = [...ins].filter((name) => outs.has(name)).length
 

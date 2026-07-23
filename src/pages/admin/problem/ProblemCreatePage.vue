@@ -35,20 +35,7 @@
                 </div>
             </section>
 
-            <!-- Import problem (placeholder) -->
-            <section class="rounded-xl border border-border bg-card">
-                <div class="border-b border-border px-5 py-3.5">
-                    <h3 class="text-base font-medium text-foreground">Import problem</h3>
-                    <p class="mt-0.5 text-xs text-muted-foreground">Create a problem from an exported package instead of filling the form.</p>
-                </div>
-                <div class="flex flex-wrap items-center gap-3 p-5">
-                    <Button type="button" variant="outline" disabled>
-                        <Upload class="size-4" />
-                        Import from package
-                    </Button>
-                    <span class="text-xs text-muted-foreground">Coming soon</span>
-                </div>
-            </section>
+            <ImportProblemCard />
 
             <!-- Footer actions -->
             <div class="flex items-center justify-end gap-2 border-t border-border pt-4">
@@ -67,9 +54,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
-import { ArrowLeft, Loader2, Upload } from 'lucide-vue-next'
+import { ArrowLeft, Loader2 } from 'lucide-vue-next'
 import JSZip from 'jszip'
 import { Button } from '@/components/ui/button'
+import ImportProblemCard from '@/components/admin/problem/ImportProblemCard.vue'
 import ProblemFormFields, { type ProblemFormValue } from '@/components/admin/problem/ProblemFormFields.vue'
 import TestCaseEditor, { type TestCasePair } from '@/components/admin/problem/TestCaseEditor.vue'
 import { useToast } from '@/composables/useToast'
