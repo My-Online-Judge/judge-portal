@@ -80,6 +80,8 @@ async function onFileChosen(event: Event) {
     const chosen = (event.target as HTMLInputElement).files?.[0]
     if (!chosen) return
 
+    (event.target as HTMLInputElement).value = ''
+
     file.value = chosen
     fileName.value = chosen.name
     preview.value = null
