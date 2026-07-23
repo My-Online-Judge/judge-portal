@@ -16,7 +16,9 @@ export const API_ROUTES = {
     },
     PROBLEMS: {
         ROOT: '/problems',
+        IMPORT: '/problems/import',
         DETAIL: (slug: string) => `/problems/${slug}`,
+        EXPORT: (slug: string) => `/problems/${slug}/export`,
         TEST_CASES: (slug: string) => `/problems/${slug}/test-cases`,
         TEST_CASES_IMPORT: (slug: string) => `/problems/${slug}/test-cases/import`,
         TEST_CASE: (slug: string, id: string) => `/problems/${slug}/test-cases/${id}`,

@@ -45,6 +45,21 @@ class ProblemService {
     remove(slug: string): Promise<AxiosResponse<ApiResponse<void>>> {
         return axiosClient.delete<ApiResponse<void>>(API_ROUTES.PROBLEMS.DETAIL(slug))
     }
+
+    // Import a problem from a package zip; slugOverride replaces the slug inside the package
+    importProblem(file: File, slugOverride?: string): Promise<AxiosResponse<ApiResponse<Problem>>> {
+        const fd = new FormData()
+        fd.append('file', file)
+        return axiosClient.post<ApiResponse<Problem>>(API_ROUTES.PROBLEMS.IMPORT, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            params: slugOverride ? { slugOverride } : undefined,
+        })
+    }
+
+    // Download a problem as a package zip (admin only)
+    exportProblem(slug: string): Promise<AxiosResponse<Blob>> {
+        return axiosClient.get<Blob>(API_ROUTES.PROBLEMS.EXPORT(slug), { responseType: 'blob' })
+    }
 }
 
 export default new ProblemService()
