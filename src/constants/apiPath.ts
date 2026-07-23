@@ -44,4 +44,9 @@ export const API_ROUTES = {
     PERMISSIONS: {
         ROOT: '/permissions',
     },
+    SECURITY: {
+        ATTEMPTS: '/security/attempts',
+        BANS: '/security/bans',
+        BAN: (id: string) => `/security/bans/${id}`,
+    },
 }

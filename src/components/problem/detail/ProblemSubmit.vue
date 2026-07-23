@@ -74,9 +74,9 @@
             <div class="flex items-center justify-end gap-3">
                 <template v-if="authStore.isAuthenticated">
                     <Button class="cursor-pointer px-6" @click="handleSubmit"
-                        :disabled="isSubmitting || sourceCode.trim() === ''">
+                        :disabled="isSubmitting || cooldownActive || sourceCode.trim() === ''">
                         <Send class="h-4 w-4" />
-                        {{ isSubmitting ? 'Submitting...' : 'Submit' }}
+                        {{ isSubmitting ? 'Submitting...' : cooldownActive ? `Submit (${cooldownRemaining}s)` : 'Submit' }}
                     </Button>
                 </template>
                 <template v-else>
@@ -119,7 +119,9 @@ import { useAuthStore } from '@/stores/auth'
 import LoginModal from '@/components/auth/LoginModal.vue'
 
 import { ref, watch, computed } from 'vue'
+import { isAxiosError } from 'axios'
 import { useToast } from '@/composables/useToast'
+import { useCooldown } from '@/composables/useCooldown'
 import { getErrorMessage } from '@/lib/errorMessage'
 import submissionService from '@/services/submissionService'
 import type { Submission, SubmissionRequest } from '@/types/submission'
@@ -143,6 +145,10 @@ const selectedLanguage = ref<Language>()
 const selectedTheme = ref('vs-light')
 const sourceCode = ref('')
 const isSubmitting = ref(false)
+
+// Matches the API's oj.submission.cooldown-seconds (10s); a 429's Retry-After overrides it.
+const COOLDOWN_SECONDS = 10
+const { remaining: cooldownRemaining, active: cooldownActive, start: startCooldown } = useCooldown()
 
 const editorLanguage = computed(() => {
     if (!selectedLanguage.value) return 'plaintext'
@@ -188,11 +194,18 @@ const handleSubmit = async () => {
         const res = await submissionService.submit(data)
 
         triggerToast('Submitted', 'success')
+        startCooldown(COOLDOWN_SECONDS)
         sourceCode.value = ''
 
         emit('success', res.data.data)
     } catch (error) {
-        triggerToast(getErrorMessage(error, 'An error occurred'), 'error')
+        if (isAxiosError(error) && error.response?.status === 429) {
+            const ra = Number(error.response.headers?.['retry-after'])
+            startCooldown(Number.isFinite(ra) && ra > 0 ? ra : COOLDOWN_SECONDS)
+            triggerToast(getErrorMessage(error, 'You are submitting too fast'), 'error')
+        } else {
+            triggerToast(getErrorMessage(error, 'An error occurred'), 'error')
+        }
     } finally {
         isSubmitting.value = false
     }
