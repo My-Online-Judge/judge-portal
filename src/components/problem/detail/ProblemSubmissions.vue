@@ -41,7 +41,7 @@
                             <TableCell class="tabular text-sm text-muted-foreground">#{{ sub.id.substring(0, 8) }}</TableCell>
                             <TableCell class="text-sm text-muted-foreground">{{ formatDateTime(sub.createdAt) }}</TableCell>
                             <TableCell>
-                                <Badge :class="getStatusClass(sub.status)">
+                                <Badge :class="getStatusChipClass(sub.status)">
                                     <Loader2 v-if="!isTerminalStatus(sub.status)" class="mr-1 inline h-3 w-3 animate-spin" />
                                     {{ getSubmissionStatus(sub.status) }}
                                 </Badge>
@@ -89,7 +89,8 @@ import { formatDateTime } from '@/utils/dateTimeUtils'
 import { Loader2 } from 'lucide-vue-next'
 import { useSubmissionStream } from '@/composables/useSubmissionStream'
 import type { Submission } from '@/types/submission'
-import { SubmissionResult, getSubmissionStatus, isTerminalStatus } from '@/types/submission'
+import { getSubmissionStatus, isTerminalStatus } from '@/types/submission'
+import { getStatusChipClass } from '@/lib/submissionDisplay'
 
 const props = defineProps<{
     problemSlug: string
@@ -183,30 +184,5 @@ const onSizeChange = (newSize: number) => {
     size.value = newSize
     page.value = 0
     fetchSubmissions()
-}
-
-// Muted pastel status chips (warm-monochrome palette) — semantic color only,
-// square-ish, uppercase, tracked. No saturated fills, no pill.
-const CHIP = 'rounded-md border-0 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide'
-const getStatusClass = (status: number) => {
-    switch (status) {
-        case SubmissionResult.SUCCESS:
-            return `${CHIP} bg-[#EAF3EA] text-[#356635]`
-        case SubmissionResult.WRONG_ANSWER:
-            return `${CHIP} bg-[#FBEBEC] text-[#9E2F2D]`
-        case SubmissionResult.COMPILE_ERROR:
-            return `${CHIP} bg-[#F1EDF9] text-[#5B3E9F]`
-        case SubmissionResult.PARTIALLY_ACCEPTED:
-            return `${CHIP} bg-[#E6F1F0] text-[#2C6E68]`
-        case SubmissionResult.TIME_LIMIT_EXCEEDED:
-        case SubmissionResult.REAL_TIME_LIMIT_EXCEEDED:
-        case SubmissionResult.MEMORY_LIMIT_EXCEEDED:
-            return `${CHIP} bg-[#FBF2D8] text-[#8A5A00]`
-        case SubmissionResult.RUNTIME_ERROR:
-        case SubmissionResult.SYSTEM_ERROR:
-            return `${CHIP} bg-[#FBEADF] text-[#9A4A1F]`
-        default:
-            return `${CHIP} bg-[#F0EFEC] text-[#6B6862]`
-    }
 }
 </script>
