@@ -29,7 +29,7 @@
                     </ResizablePanel>
                     <ResizableHandle with-handle />
                     <ResizablePanel :default-size="54" :min-size="30">
-                        <SolvePane :slug="slug" @success="handleSubmissionSuccess" />
+                        <SolvePane :slug="slug" @success="handleSubmissionSuccess" @judged="refreshStats" />
                     </ResizablePanel>
                 </ResizablePanelGroup>
             </div>
@@ -46,7 +46,7 @@
                 <div class="h-[70vh] min-h-[520px]">
                     <StatementPane v-if="mobileView === 'problem'" :problem="problem" :slug="slug"
                         :pending-submission="pendingSubmission" @consumed="pendingSubmission = null" />
-                    <SolvePane v-else :slug="slug" @success="handleSubmissionSuccess" />
+                    <SolvePane v-else :slug="slug" @success="handleSubmissionSuccess" @judged="refreshStats" />
                 </div>
             </div>
         </template>
@@ -62,6 +62,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import ProblemHeader from '@/components/problem/detail/ProblemHeader.vue'
 import ProblemMetaBar from '@/components/problem/detail/ProblemMetaBar.vue'
 import StatementPane from '@/components/problem/detail/StatementPane.vue'
+import { refreshStatsUntilChanged } from '@/lib/problemStats'
 import SolvePane from '@/components/problem/detail/SolvePane.vue'
 import Loading from '@/components/common/Loading.vue'
 import { ROUTE_PATH } from '@/constants/routePath'
@@ -105,5 +106,20 @@ watch(
 
 const handleSubmissionSuccess = (submission: Submission) => {
     pendingSubmission.value = submission
+}
+
+// The statistics (meta-bar chips, stats dialog) come with the problem, fetched once on load. Once a submission has its
+// verdict, fetch them again in the background — no loading state — and replace only those fields.
+const refreshStats = async () => {
+    if (!problem.value) return
+    const fresh = await refreshStatsUntilChanged(
+        async () => (await problemService.getProblemBySlug(new AbortController().signal, slug.value)).data.data,
+        problem.value.totalSubmission ?? 0,
+    )
+    if (fresh && problem.value) {
+        problem.value.totalSubmission = fresh.totalSubmission
+        problem.value.acceptedSubmission = fresh.acceptedSubmission
+        problem.value.statisticInfo = fresh.statisticInfo
+    }
 }
 </script>

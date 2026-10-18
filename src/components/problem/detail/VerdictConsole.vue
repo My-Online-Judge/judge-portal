@@ -32,6 +32,8 @@ import { getSubmissionStatus, isTerminalStatus, type Submission } from '@/types/
 import { useSubmissionStream } from '@/composables/useSubmissionStream'
 
 const props = defineProps<{ submission?: Submission | null }>()
+// Fired once a watched submission has its final verdict, so the page can refresh the problem's statistics.
+const emit = defineEmits<{ (e: 'judged', submission: Submission): void }>()
 
 const current = ref<Submission | null>(props.submission ?? null)
 const { watch: watchVerdict } = useSubmissionStream()
@@ -46,6 +48,7 @@ watch(
         if (!isTerminalStatus(sub.status)) {
             watchVerdict(sub.id, (verdict) => {
                 current.value = verdict
+                if (isTerminalStatus(verdict.status)) emit('judged', verdict)
             })
         }
     },
