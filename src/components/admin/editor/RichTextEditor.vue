@@ -19,6 +19,12 @@
             <button type="button" :class="btnClass(editor.isActive('strike'))" aria-label="Strikethrough" title="Strikethrough" @click="editor.chain().focus().toggleStrike().run()">
                 <Strikethrough class="size-4" />
             </button>
+            <button type="button" :class="btnClass(editor.isActive('superscript'))" aria-label="Superscript" title="Superscript (10⁹)" @click="editor.chain().focus().toggleSuperscript().run()">
+                <SuperscriptIcon class="size-4" />
+            </button>
+            <button type="button" :class="btnClass(editor.isActive('subscript'))" aria-label="Subscript" title="Subscript (aᵢ)" @click="editor.chain().focus().toggleSubscript().run()">
+                <SubscriptIcon class="size-4" />
+            </button>
 
             <span class="mx-0.5 h-5 w-px shrink-0 bg-border" aria-hidden="true" />
 
@@ -70,13 +76,13 @@
 <script setup lang="ts">
 import { watch, onBeforeUnmount } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
-import StarterKit from '@tiptap/starter-kit'
-import Link from '@tiptap/extension-link'
-import Placeholder from '@tiptap/extension-placeholder'
+import { richTextExtensions } from './extensions'
 import {
     Bold,
     Italic,
     Strikethrough,
+    Superscript as SuperscriptIcon,
+    Subscript as SubscriptIcon,
     Heading2,
     Heading3,
     List,
@@ -109,11 +115,7 @@ const emit = defineEmits<{
 const editor = useEditor({
     content: props.modelValue,
     editable: props.editable,
-    extensions: [
-        StarterKit,
-        Link.configure({ openOnClick: false }),
-        Placeholder.configure({ placeholder: props.placeholder }),
-    ],
+    extensions: richTextExtensions(props.placeholder),
     onUpdate: ({ editor }) => emit('update:modelValue', editor.getHTML()),
 })
 
