@@ -3,7 +3,7 @@
         <div class="min-h-0 flex-1">
             <ProblemSubmit :languages="languages || undefined" :problem-slug="slug" @success="onSubmit" />
         </div>
-        <VerdictConsole :submission="latest" />
+        <VerdictConsole :submission="latest" @judged="(s) => emit('judged', s)" />
     </div>
 </template>
 
@@ -16,7 +16,10 @@ import { useLanguageStore } from '@/stores/language'
 import type { Submission } from '@/types/submission'
 
 defineProps<{ slug: string }>()
-const emit = defineEmits<{ (e: 'success', submission: Submission): void }>()
+const emit = defineEmits<{
+    (e: 'success', submission: Submission): void
+    (e: 'judged', submission: Submission): void
+}>()
 
 // This pane owns language loading: it fetches on mount, which is naturally lazy —
 // the pane only mounts when the solve view is visible (always on desktop, on the
