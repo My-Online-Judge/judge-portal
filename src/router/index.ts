@@ -13,6 +13,7 @@ import AdminJudgeServersPage from '@/pages/admin/AdminJudgeServersPage.vue'
 import AdminRolesPage from '@/pages/admin/AdminRolesPage.vue'
 import AdminPermissionsPage from '@/pages/admin/AdminPermissionsPage.vue'
 import AdminUsersPage from '@/pages/admin/AdminUsersPage.vue'
+import AdminSecurityPage from '@/pages/admin/AdminSecurityPage.vue'
 import { resolveAdminAccess } from '@/router/adminGuard'
 import { useAuthStore } from '@/stores/auth'
 
@@ -52,6 +53,7 @@ const router = createRouter({
         { path: 'judge-servers', name: 'AdminJudgeServers', component: AdminJudgeServersPage, meta: { permissions: ['judgeserver:read'] } },
         { path: 'roles', name: 'AdminRoles', component: AdminRolesPage, meta: { permissions: ['role:read'] } },
         { path: 'permissions', name: 'AdminPermissions', component: AdminPermissionsPage, meta: { permissions: ['permission:read'] } },
+        { path: 'security', name: 'AdminSecurity', component: AdminSecurityPage, meta: { permissions: ['ban:read'] } },
         { path: 'users', name: 'AdminUsers', component: AdminUsersPage, meta: { permissions: ['user:read'] } },
       ]
     }

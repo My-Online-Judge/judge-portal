@@ -16,6 +16,11 @@ class AuthService {
         return axiosClient.get<ApiResponse<GoogleAuthResponse>>(API_ROUTES.AUTH.GOOGLE_URL)
     }
 
+    /** Exchange the HttpOnly refresh cookie for a new access token. The API re-sets the cookie. */
+    async refresh() {
+        return axiosClient.post<ApiResponse<void>>(API_ROUTES.AUTH.REFRESH_TOKEN)
+    }
+
     async getMe() {
         return axiosClient.get<ApiResponse<UserResponse>>(API_ROUTES.AUTH.ME)
     }

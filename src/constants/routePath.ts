@@ -9,4 +9,5 @@ export const ROUTE_PATH = {
     ADMIN_ROLES: '/admin/roles',
     ADMIN_PERMISSIONS: '/admin/permissions',
     ADMIN_USERS: '/admin/users',
+    ADMIN_SECURITY: '/admin/security',
 }
