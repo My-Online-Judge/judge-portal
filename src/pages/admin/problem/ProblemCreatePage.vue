@@ -1,21 +1,17 @@
 <template>
-    <div class="flex w-full flex-col gap-[22px]">
-        <!-- Header -->
-        <div class="flex flex-col gap-3">
-            <Button as-child variant="ghost" class="w-fit">
-                <RouterLink :to="{ name: 'AdminProblems' }">
-                    <ArrowLeft class="size-4" />
-                    Problems
-                </RouterLink>
-            </Button>
-            <div class="min-w-0">
-                <h1 class="text-[24px] font-semibold leading-tight tracking-tight text-foreground">Create problem</h1>
-                <p class="mt-1 text-sm text-muted-foreground">Add a problem to the catalog. Fields marked * are required.</p>
-            </div>
-        </div>
+    <div class="flex w-full flex-col gap-[18px]">
+        <PageHeader
+            title="Create problem"
+            description="Add a problem to the catalog. Fields marked * are required."
+            :breadcrumbs="[
+                { label: 'Admin', to: { name: 'AdminDashboard' } },
+                { label: 'Problems', to: { name: 'AdminProblems' } },
+                { label: 'New' },
+            ]"
+        />
 
         <!-- Form -->
-        <form class="flex flex-col gap-5" novalidate @submit.prevent="onSubmit">
+        <form class="flex flex-col gap-4" novalidate @submit.prevent="onSubmit">
             <ProblemFormFields
                 v-model="payload"
                 mode="create"
@@ -23,25 +19,25 @@
             />
 
             <!-- Test cases -->
-            <section class="rounded-xl border border-border bg-card">
-                <div class="border-b border-border px-5 py-3.5">
-                    <h3 class="text-base font-medium text-foreground">Test cases <span class="text-destructive">*</span></h3>
-                    <p class="mt-0.5 text-xs text-muted-foreground">Add at least one input/output pair. These become the judge's test data.</p>
+            <section class="min-w-0 overflow-hidden rounded-xl border border-border bg-card" aria-labelledby="create-tc">
+                <div class="border-b border-border px-3.5 py-3">
+                    <h3 id="create-tc" class="text-sm font-semibold text-foreground">Test cases <span class="text-destructive-ink">*</span></h3>
+                    <p class="mt-0.5 text-xs text-muted-foreground">Add at least one input and output pair. These become the judge's test data.</p>
                 </div>
-                <div class="space-y-3 p-5">
+                <div class="flex flex-col gap-3 p-4">
                     <TestCaseEditor v-model="testCases" />
-                    <p v-if="errors.testCases" class="text-xs text-destructive">{{ errors.testCases }}</p>
+                    <p v-if="errors.testCases" class="text-xs text-destructive-ink">{{ errors.testCases }}</p>
                 </div>
             </section>
 
-            <!-- Import problem (placeholder) -->
-            <section class="rounded-xl border border-border bg-card">
-                <div class="border-b border-border px-5 py-3.5">
-                    <h3 class="text-base font-medium text-foreground">Import problem</h3>
+            <!-- Import problem (not built yet) -->
+            <section class="min-w-0 overflow-hidden rounded-xl border border-border bg-card" aria-labelledby="create-import">
+                <div class="border-b border-border px-3.5 py-3">
+                    <h3 id="create-import" class="text-sm font-semibold text-foreground">Import problem</h3>
                     <p class="mt-0.5 text-xs text-muted-foreground">Create a problem from an exported package instead of filling the form.</p>
                 </div>
-                <div class="flex flex-wrap items-center gap-3 p-5">
-                    <Button type="button" variant="outline" disabled>
+                <div class="flex flex-wrap items-center gap-3 p-4">
+                    <Button type="button" variant="secondary" disabled>
                         <Upload class="size-4" />
                         Import from package
                     </Button>
@@ -51,7 +47,7 @@
 
             <!-- Footer actions -->
             <div class="flex items-center justify-end gap-2 border-t border-border pt-4">
-                <Button type="button" variant="outline" :disabled="submitting" @click="cancel">
+                <Button type="button" variant="secondary" :disabled="submitting" @click="cancel">
                     Cancel
                 </Button>
                 <Button type="submit" :disabled="submitting">
@@ -61,11 +57,21 @@
             </div>
         </form>
 
+        <UnsavedChangesBar
+            :dirty="dirty"
+            :summary="dirtySummary"
+            :saving="submitting"
+            @save="onSubmit"
+            @discard="discard"
+        />
+
         <ConfirmDialog
             v-model:open="confirmOpen"
-            title="Discard unsaved changes?"
-            description="Your edits to this problem are lost."
-            confirm-label="Discard"
+            title="Leave without saving?"
+            description="This problem hasn't been created yet. What you've entered is lost."
+            confirm-label="Leave"
+            cancel-label="Stay"
+            tone="neutral"
             @confirm="confirmLeave"
             @update:open="(v: boolean) => { if (!v) cancelLeave() }"
         />
@@ -73,12 +79,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
-import { ArrowLeft, Loader2, Upload } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { Loader2, Upload } from 'lucide-vue-next'
 import JSZip from 'jszip'
 import { Button } from '@/components/ui/button'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
+import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
 import { useDiscardGuard } from '@/composables/useDiscardGuard'
 import ProblemFormFields, { type ProblemFormValue } from '@/components/admin/problem/ProblemFormFields.vue'
 import TestCaseEditor, { type TestCasePair } from '@/components/admin/problem/TestCaseEditor.vue'
@@ -113,11 +121,24 @@ const errors = ref<Record<string, string>>({})
 const submitting = ref(false)
 const created = ref(false)
 
-const snapshot = () => JSON.stringify([payload.value, testCases.value])
-const initialSnapshot = snapshot()
-const { confirmOpen, confirmLeave, cancelLeave } = useDiscardGuard(
-    () => !created.value && snapshot() !== initialSnapshot,
-)
+const initialTestCases = (): TestCasePair[] => [{ input: '', output: '' }]
+const initialPayloadJson = JSON.stringify(payload.value)
+const initialCasesJson = JSON.stringify(testCases.value)
+const formDirty = computed(() => JSON.stringify(payload.value) !== initialPayloadJson)
+const casesDirty = computed(() => JSON.stringify(testCases.value) !== initialCasesJson)
+const dirty = computed(() => !created.value && (formDirty.value || casesDirty.value))
+const dirtySummary = computed(() => {
+    if (formDirty.value && casesDirty.value) return 'in the problem and its test cases'
+    if (casesDirty.value) return 'in the test cases'
+    return 'in the problem'
+})
+const { confirmOpen, confirmLeave, cancelLeave } = useDiscardGuard(() => dirty.value)
+
+const discard = () => {
+    payload.value = emptyPayload()
+    testCases.value = initialTestCases()
+    errors.value = {}
+}
 
 // Rich-text fields carry HTML; an "empty" editor still emits <p></p>, so strip
 // tags before checking. Plain fields have no tags, so this is a no-op for them.
@@ -152,6 +173,7 @@ const validate = (): boolean => {
 const cancel = () => router.push({ name: 'AdminProblems' })
 
 const onSubmit = async () => {
+    if (submitting.value) return
     if (!validate()) {
         triggerToast('Fix the highlighted fields', 'error')
         return
@@ -178,7 +200,7 @@ const onSubmit = async () => {
         }
 
         // Zip the input/output pairs client-side as 1.in/1.out, 2.in/2.out, …
-        // (1-based) — the format the create endpoint's extractor pairs by base name.
+        // (1-based): the format the create endpoint's extractor pairs by base name.
         const zip = new JSZip()
         testCases.value
             .filter((tc) => tc.input.trim() !== '' && tc.output.trim() !== '')

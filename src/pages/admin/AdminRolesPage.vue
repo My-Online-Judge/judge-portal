@@ -1,113 +1,93 @@
 <template>
-    <div class="flex flex-col gap-[22px]">
-        <PageHeader title="Roles" description="Roles and the permissions attached to them.">
+    <div class="flex flex-col gap-[18px]">
+        <PageHeader title="Roles" description="Roles and the permissions they grant. ADMIN and SYS_ROOT always have every permission.">
             <template #actions>
+                <Button variant="secondary" :disabled="isLoading" @click="reload">
+                    <RefreshCw :class="isLoading && 'animate-spin motion-reduce:animate-none'" />
+                    Refresh
+                </Button>
                 <Button v-if="canCreate" @click="openCreate">
                     <Plus class="size-4" />
                     New role
                 </Button>
-                <Button variant="outline" :disabled="isLoading" @click="reload">
-                    <RefreshCw class="size-4" :class="isLoading && 'animate-spin'" />
-                    Refresh
-                </Button>
             </template>
         </PageHeader>
 
-        <Card>
-            <CardContent class="pt-6">
-                <!-- Loading -->
-                <div v-if="isLoading" class="space-y-2.5">
-                    <div v-for="n in 4" :key="n" class="h-16 w-full rounded bg-muted animate-ojpulse" />
-                </div>
-
-                <!-- Error -->
-                <div v-else-if="error">
-                    <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-destructive/40 bg-destructive/5 px-6 py-10 text-center">
-                        <TriangleAlert class="size-6 text-destructive" />
-                        <p class="text-sm font-medium text-foreground">Couldn't load roles.</p>
-                        <p class="max-w-xs text-xs text-muted-foreground">The request failed. Check your connection and try again.</p>
-                        <Button variant="outline" size="sm" @click="reload">
-                            <RefreshCw class="size-4" />
-                            Retry
-                        </Button>
-                    </div>
-                </div>
-
-                <!-- Empty -->
-                <div v-else-if="roles.length === 0">
-                    <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-10 text-center">
-                        <ShieldCheck class="size-6 text-muted-foreground" />
-                        <p class="text-sm font-medium text-foreground">No roles found.</p>
-                        <p class="max-w-sm text-xs text-muted-foreground">Roles are seeded by the server — they will appear here once available.</p>
-                    </div>
-                </div>
-
-                <!-- Data -->
-                <div v-else class="overflow-hidden rounded-lg border border-border">
-                    <Table class="min-w-[720px]">
-                        <TableHeader>
-                            <TableRow class="hover:bg-transparent">
-                                <TableHead class="px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Role</TableHead>
-                                <TableHead class="px-4 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Permissions</TableHead>
-                                <TableHead class="px-4 py-2.5 text-right text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            <TableRow
-                                v-for="role in roles"
-                                :key="role.id"
-                                class="border-b border-border last:border-b-0 hover:bg-muted/40"
-                            >
+        <div class="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
+            <ListStateShell
+                :loading="isLoading"
+                :error="error ? 'The request failed. Check your connection and try again.' : null"
+                :has-data="rolesData !== null && permsData !== null"
+                :empty="roles.length === 0"
+                :rows="4"
+                empty-title="No roles found"
+                empty-hint="The server seeds the roles. They appear here once they're available."
+                @retry="reload"
+            >
+                <div class="overflow-x-auto">
+                    <table class="dt min-w-[720px]">
+                        <thead>
+                            <tr>
+                                <th class="pl-4">Role</th>
+                                <th>Permissions</th>
+                                <th><span class="sr-only">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="role in roles" :key="role.id">
                                 <!-- Role name + description -->
-                                <TableCell class="px-4 py-3 align-top">
+                                <td class="py-3 pl-4 align-top">
                                     <div class="flex min-w-0 flex-col">
-                                        <span class="font-mono text-[13px] font-medium text-foreground">{{ role.name }}</span>
-                                        <span v-if="role.description" class="mt-0.5 max-w-xs text-[12px] text-muted-foreground">{{ role.description }}</span>
-                                    </div>
-                                </TableCell>
-
-                                <!-- Permission badges -->
-                                <TableCell class="px-4 py-3 align-top">
-                                    <div v-if="role.permissions.length" class="flex flex-col gap-1.5">
-                                        <span class="text-[11px] text-muted-foreground">
-                                            <span class="font-mono text-foreground">{{ role.permissions.length }}</span>
-                                            permission{{ role.permissions.length === 1 ? '' : 's' }}
+                                        <span class="flex items-center gap-1.5 font-mono text-[13px] font-semibold text-foreground">
+                                            <Lock v-if="isLocked(role)" class="size-3 text-muted-foreground" aria-hidden="true" />
+                                            {{ role.name }}
                                         </span>
-                                        <div class="flex flex-wrap gap-1">
-                                            <Badge
-                                                v-for="name in visibleChips(role)"
-                                                :key="name"
-                                                variant="secondary"
-                                                class="font-mono text-[11px] font-normal"
-                                            >
-                                                {{ name }}
-                                            </Badge>
-                                            <Badge v-if="extraChips(role) > 0" variant="outline" class="text-[11px] font-normal">
-                                                +{{ extraChips(role) }} more
-                                            </Badge>
-                                        </div>
+                                        <span v-if="role.description" class="mt-0.5 max-w-xs text-xs text-muted-foreground">{{ role.description }}</span>
                                     </div>
-                                    <span v-else class="text-[12px] text-muted-foreground">No permissions</span>
-                                </TableCell>
+                                </td>
+
+                                <!-- Count (or save state) + permission chips -->
+                                <td class="py-3 align-top">
+                                    <div class="flex flex-col gap-1.5">
+                                        <span class="flex h-4 items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
+                                            <template v-if="isLocked(role)">
+                                                <Lock class="size-3" aria-hidden="true" />
+                                                All, locked
+                                            </template>
+                                            <template v-else-if="saveState[role.id] === 'saving'">
+                                                <Loader2 class="size-3 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                                                Saving…
+                                            </template>
+                                            <template v-else-if="saveState[role.id] === 'saved'">
+                                                <span class="flex items-center gap-1 text-success-ink">
+                                                    <Check class="size-3" aria-hidden="true" />
+                                                    Saved
+                                                </span>
+                                            </template>
+                                            <template v-else>
+                                                <span class="font-mono text-foreground">{{ role.permissions.length }}</span> of
+                                                <span class="font-mono text-foreground">{{ permissions.length }}</span>
+                                            </template>
+                                        </span>
+                                        <div v-if="role.permissions.length" class="flex flex-wrap gap-1">
+                                            <Badge v-for="name in visibleChips(role)" :key="name" variant="mono">{{ name }}</Badge>
+                                            <Badge v-if="extraChips(role) > 0" variant="outline">{{ extraChips(role) }} more</Badge>
+                                        </div>
+                                        <span v-else class="text-xs text-muted-foreground">No permissions</span>
+                                    </div>
+                                </td>
 
                                 <!-- Actions -->
-                                <TableCell class="px-4 py-3 text-right align-top">
-                                    <span
-                                        v-if="isLocked(role)"
-                                        class="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[12px] text-muted-foreground"
-                                        title="This role always holds every permission and cannot be changed."
-                                    >
-                                        <Lock class="size-3.5" />
-                                        Locked
-                                    </span>
+                                <td class="act py-3 align-top">
+                                    <span v-if="isLocked(role)" class="sr-only">Locked</span>
                                     <RowActionsMenu v-else-if="rowActions(role).length" :items="rowActions(role)" :label="role.name" />
-                                </TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-            </CardContent>
-        </Card>
+            </ListStateShell>
+        </div>
 
         <!-- Edit permissions dialog -->
         <Dialog v-model:open="dialogOpen">
@@ -133,8 +113,8 @@
                                 @update:model-value="(v) => toggleGroup(group.names, v)"
                             />
                             <span class="text-sm font-medium text-foreground">{{ group.label }}</span>
-                            <span class="ml-auto font-mono text-[11px] text-muted-foreground">
-                                {{ selectedInGroup(group.names) }}/{{ group.names.length }}
+                            <span class="ml-auto text-[11px] text-muted-foreground">
+                                <span class="font-mono">{{ selectedInGroup(group.names) }}</span> of <span class="font-mono">{{ group.names.length }}</span>
                             </span>
                         </label>
                         <div>
@@ -162,10 +142,10 @@
                         <span class="font-mono text-foreground">{{ selectedCount }}</span> selected
                     </span>
                     <div class="flex items-center gap-2">
-                        <Button variant="outline" :disabled="saving" @click="dialogOpen = false">Cancel</Button>
+                        <Button variant="secondary" :disabled="saving" @click="dialogOpen = false">Cancel</Button>
                         <Button :disabled="saving" @click="save">
                             <Loader2 v-if="saving" class="size-4 animate-spin" />
-                            Save
+                            Save permissions
                         </Button>
                     </div>
                 </DialogFooter>
@@ -178,7 +158,7 @@
                 <DialogHeader>
                     <DialogTitle>New role</DialogTitle>
                     <DialogDescription>
-                        Add a new role. It starts with no permissions — grant them afterwards with "Permissions".
+                        Add a new role. It starts with no permissions. Grant them afterwards from its Permissions menu item.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -193,10 +173,10 @@
                             class="font-mono"
                             @keydown.enter.prevent="createValid && submitCreate()"
                         />
-                        <p class="text-[11px] text-muted-foreground">
-                            Uppercase letters, digits, and underscores. Must start with a letter.
+                        <p class="text-xs text-muted-foreground">
+                            Capital letters, digits and underscores, starting with a letter.
                         </p>
-                        <p v-if="createName.trim() && !createValid" class="text-xs text-destructive">
+                        <p v-if="createName.trim() && !createValid" class="text-xs text-destructive-ink">
                             Not a valid role name.
                         </p>
                     </div>
@@ -207,10 +187,10 @@
                 </div>
 
                 <DialogFooter class="gap-2">
-                    <Button variant="outline" :disabled="creating" @click="createOpen = false">Cancel</Button>
+                    <Button variant="secondary" :disabled="creating" @click="createOpen = false">Cancel</Button>
                     <Button :disabled="creating || !createValid" @click="submitCreate">
                         <Loader2 v-if="creating" class="size-4 animate-spin" />
-                        Create
+                        Create role
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -220,8 +200,8 @@
         <ConfirmDialog
             :open="deleteOpen"
             :title="`Delete role “${deletingRole?.name ?? ''}”?`"
-            description="This cannot be undone. A role that is still assigned to users cannot be deleted."
-            confirm-label="Delete"
+            description="This can't be undone. A role that users still hold can't be deleted."
+            confirm-label="Delete role"
             :busy="deleting"
             @update:open="(v) => (deleteOpen = v)"
             @confirm="confirmDelete"
@@ -230,11 +210,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { RefreshCw, TriangleAlert, ShieldCheck, Lock, KeyRound, Loader2, Plus, Trash2 } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, reactive, ref } from 'vue'
+import { Check, RefreshCw, Lock, KeyRound, Loader2, Plus, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
@@ -242,6 +220,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import PageHeader from '@/components/common/PageHeader.vue'
+import ListStateShell from '@/components/common/ListStateShell.vue'
 import RowActionsMenu from '@/components/common/RowActionsMenu.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import type { RowAction } from '@/components/common/rowActions'
@@ -281,7 +260,7 @@ const reload = () => {
 const canUpdate = computed(() => authStore.hasPermission('role:update'))
 const canCreate = computed(() => authStore.hasPermission('role:create'))
 const canDelete = computed(() => authStore.hasPermission('role:delete'))
-// SYS_ROOT and ADMIN always hold every permission, so they show a Locked badge instead of a menu.
+// SYS_ROOT and ADMIN always hold every permission, so they read "All, locked" and have no menu.
 const isLocked = (role: Role) => role.name === 'SYS_ROOT' || role.name === 'ADMIN'
 // USER is protected from deletion by the API (ROLE_PROTECTED) but its permissions can be edited.
 const isProtectedFromDelete = (role: Role) => role.name === 'USER'
@@ -343,15 +322,32 @@ const toggleGroup = (names: string[], value: boolean | 'indeterminate') => {
     selected.value = next
 }
 
+// The role's row says "Saving…" while the PUT runs, then "Saved" for a moment.
+const saveState = reactive<Record<string, 'saving' | 'saved'>>({})
+const savedTimers = new Map<string, ReturnType<typeof setTimeout>>()
+const markSaved = (id: string) => {
+    saveState[id] = 'saved'
+    clearTimeout(savedTimers.get(id))
+    savedTimers.set(id, setTimeout(() => {
+        delete saveState[id]
+        savedTimers.delete(id)
+    }, 1400))
+}
+onBeforeUnmount(() => savedTimers.forEach((t) => clearTimeout(t)))
+
 const save = async () => {
     if (!editingRole.value) return
+    const id = editingRole.value.id
     saving.value = true
+    saveState[id] = 'saving'
     try {
-        await roleService.updatePermissions(editingRole.value.id, Array.from(selected.value))
+        await roleService.updatePermissions(id, Array.from(selected.value))
         triggerToast('Permissions updated', 'success')
         dialogOpen.value = false
         await loadRoles()
+        markSaved(id)
     } catch (err) {
+        delete saveState[id]
         triggerToast(getErrorMessage(err, 'Could not update permissions.'), 'error')
     } finally {
         saving.value = false

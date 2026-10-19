@@ -1,27 +1,27 @@
 <template>
-    <div class="flex flex-col gap-[22px]">
-        <PageHeader title="Users" description="Manage accounts and the roles assigned to them.">
+    <div class="flex flex-col gap-[18px]">
+        <PageHeader title="Users" description="Accounts, roles and access. Disabled users can't sign in.">
             <template v-if="canCreate" #actions>
                 <Button @click="openCreate">
-                    <Plus class="size-4" />
+                    <UserPlus class="size-4" />
                     New user
                 </Button>
             </template>
         </PageHeader>
 
         <!-- List card -->
-        <div class="min-w-0 rounded-xl border border-border bg-card">
+        <div class="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
             <!-- Filters -->
-            <div class="flex flex-wrap items-end gap-3 border-b border-border p-[18px]">
-                <div class="relative w-full sm:w-[240px]">
-                    <Search class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input v-model="search" placeholder="Search username, email, name…" class="h-9 pl-8" aria-label="Search users" />
+            <div class="flex flex-wrap items-end gap-2 border-b border-border px-3 py-2.5">
+                <div class="relative w-full sm:w-[280px]">
+                    <Search class="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                    <Input v-model="search" type="search" placeholder="Name, username or email" class="pl-8" aria-label="Search users" />
                 </div>
                 <div class="w-[140px]">
                     <Select v-model="statusFilter">
-                        <SelectTrigger class="h-9"><SelectValue placeholder="Status" /></SelectTrigger>
+                        <SelectTrigger aria-label="Status"><SelectValue placeholder="Status" /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All statuses</SelectItem>
+                            <SelectItem value="all">Any status</SelectItem>
                             <SelectItem value="1">Active</SelectItem>
                             <SelectItem value="0">Disabled</SelectItem>
                             <SelectItem value="2">Deleted</SelectItem>
@@ -30,106 +30,109 @@
                 </div>
                 <div class="w-[160px]">
                     <Select v-model="roleFilter">
-                        <SelectTrigger class="h-9"><SelectValue placeholder="Role" /></SelectTrigger>
+                        <SelectTrigger aria-label="Role"><SelectValue placeholder="Role" /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All roles</SelectItem>
+                            <SelectItem value="all">Any role</SelectItem>
                             <SelectItem v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
                 <div class="flex items-end gap-2">
                     <div class="flex flex-col gap-1">
-                        <label class="text-[11px] text-muted-foreground">Created from</label>
-                        <Input v-model="createdFrom" type="date" class="h-9 w-[150px]" aria-label="Created from" />
+                        <label for="users-from" class="text-xs text-muted-foreground">Created from</label>
+                        <Input id="users-from" v-model="createdFrom" type="date" class="w-[150px]" />
                     </div>
                     <div class="flex flex-col gap-1">
-                        <label class="text-[11px] text-muted-foreground">to</label>
-                        <Input v-model="createdTo" type="date" class="h-9 w-[150px]" aria-label="Created to" />
+                        <label for="users-to" class="text-xs text-muted-foreground">Created to</label>
+                        <Input id="users-to" v-model="createdTo" type="date" class="w-[150px]" />
                     </div>
                     <Button v-if="hasFilters" variant="ghost" size="sm" class="h-9" @click="clearFilters">
                         <X class="size-4" />
                         Clear filters
                     </Button>
                 </div>
-                <p v-if="!rangeValid" class="w-full text-xs text-destructive" role="alert">Start date must be before end date</p>
+                <span v-if="pagination" class="ml-auto self-center text-xs text-muted-foreground tabular-nums">
+                    {{ pagination.totalElements.toLocaleString('en-US') }} {{ pagination.totalElements === 1 ? 'user' : 'users' }}
+                </span>
+                <p v-if="!rangeValid" class="w-full text-xs text-destructive-ink" role="alert">The start date must be before the end date.</p>
             </div>
 
-            <ListStateShell :loading="isLoading" :error="error ? 'error' : null" :has-data="data !== null" :empty="users.length === 0" @retry="load">
-                <template #empty>
-                    <div class="p-[18px]">
-                        <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-12 text-center">
-                            <UsersIcon class="size-6 text-muted-foreground" />
-                            <p class="text-sm font-medium text-foreground">
-                                {{ hasFilters ? 'No users match these filters.' : 'No users yet.' }}
-                            </p>
-                            <Button v-if="hasFilters" variant="outline" size="sm" @click="clearFilters">
-                                <X class="size-4" />
-                                Clear filters
-                            </Button>
-                        </div>
-                    </div>
-                </template>
-                    <div class="overflow-x-auto">
-                        <table class="w-full min-w-[820px] border-collapse text-sm">
-                            <thead>
-                                <tr class="border-b border-border text-left">
-                                    <th class="px-[18px] py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">User</th>
-                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Email</th>
-                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Roles</th>
-                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Status</th>
-                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Created</th>
-                                    <th class="px-[18px] py-2.5 text-right"><span class="sr-only">Actions</span></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="u in users" :key="u.id" class="border-b border-border last:border-b-0 hover:bg-muted/40">
-                                    <td class="px-[18px] py-3">
-                                        <div class="flex min-w-0 flex-col">
-                                            <span class="font-medium text-foreground">
+            <ListStateShell
+                :loading="isLoading"
+                :error="error ? 'The request failed. Check your connection and try again.' : null"
+                :has-data="data !== null"
+                :empty="users.length === 0"
+                :filtered="hasFilters"
+                empty-title="No users yet"
+                empty-hint="Create an account with New user."
+                @retry="load"
+                @clear-filters="clearFilters"
+            >
+                <div class="overflow-x-auto">
+                    <table class="dt min-w-[860px]">
+                        <thead>
+                            <tr>
+                                <th class="pl-4">User</th>
+                                <th>Email</th>
+                                <th>Roles</th>
+                                <th>Status</th>
+                                <th class="num">Created</th>
+                                <th><span class="sr-only">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="u in users" :key="u.id">
+                                <td class="pl-4">
+                                    <span class="flex min-w-0 items-center gap-2.5">
+                                        <Avatar size="sm">
+                                            <AvatarImage v-if="u.avatar" :src="u.avatar" :alt="u.username" />
+                                            <AvatarFallback class="bg-primary-soft text-[10.5px] font-semibold text-info-ink">{{ initialsOf(u) }}</AvatarFallback>
+                                        </Avatar>
+                                        <span class="flex min-w-0 flex-col leading-[1.3]">
+                                            <b class="truncate text-[13px] font-semibold">
                                                 {{ u.name || u.username }}
-                                                <span v-if="isSelf(u)" class="ml-1 text-[11px] font-normal text-muted-foreground">(you)</span>
-                                            </span>
-                                            <span class="font-mono text-[11px] text-muted-foreground">{{ u.username }}</span>
-                                        </div>
-                                    </td>
-                                    <td class="px-3 py-3 text-[13px] text-muted-foreground">{{ u.email }}</td>
-                                    <td class="px-3 py-3">
-                                        <div v-if="u.roles?.length" class="flex flex-wrap gap-1">
-                                            <Badge
-                                                v-for="r in u.roles"
-                                                :key="r.id"
-                                                :variant="r.name === 'SYS_ROOT' ? 'default' : 'secondary'"
-                                                class="font-mono text-[11px] font-normal"
-                                            >
-                                                {{ r.name }}
-                                            </Badge>
-                                        </div>
-                                        <span v-else class="text-[12px] text-muted-foreground">No roles</span>
-                                    </td>
-                                    <td class="whitespace-nowrap px-3 py-3">
-                                        <span class="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-[12px] text-foreground">
-                                            <span class="size-1.5 rounded-full" :class="statusDot(u.status)" />
-                                            {{ statusLabel(u.status) }}
+                                                <span v-if="isSelf(u)" class="ml-1 text-xs font-normal text-muted-foreground">(you)</span>
+                                            </b>
+                                            <span class="slug truncate">{{ u.username }}</span>
                                         </span>
-                                    </td>
-                                    <td class="whitespace-nowrap px-3 py-3 font-mono text-[12px] text-muted-foreground">{{ formatDate(u.createdAt) }}</td>
-                                    <td class="whitespace-nowrap px-[18px] py-3 text-right">
-                                        <span
-                                            v-if="isSysRoot(u)"
-                                            class="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[12px] text-muted-foreground"
-                                            title="Protected system account — cannot be modified."
-                                        >
-                                            <Lock class="size-3.5" />
+                                    </span>
+                                </td>
+                                <td class="text-[13px] text-muted-foreground">{{ u.email }}</td>
+                                <td>
+                                    <div v-if="u.roles?.length" class="flex flex-wrap gap-1">
+                                        <Badge v-for="r in u.roles" :key="r.id" variant="mono">{{ r.name }}</Badge>
+                                    </div>
+                                    <span v-else class="text-xs text-muted-foreground">No roles</span>
+                                </td>
+                                <td>
+                                    <span class="flex flex-wrap items-center gap-1">
+                                        <Badge v-if="u.status === USER_STATUS.ACTIVE" variant="success">Active</Badge>
+                                        <Badge v-else-if="u.status === USER_STATUS.DISABLED" variant="neutral">
+                                            <UserX aria-hidden="true" />
+                                            Disabled
+                                        </Badge>
+                                        <Badge v-else variant="danger">
+                                            <Trash2 aria-hidden="true" />
+                                            Deleted
+                                        </Badge>
+                                        <Badge v-if="isSysRoot(u)" variant="outline">
+                                            <Lock aria-hidden="true" />
                                             Protected
-                                        </span>
-                                        <RowActionsMenu v-else-if="rowActions(u).length" :items="rowActions(u)" :label="u.name || u.username" />
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                                        </Badge>
+                                    </span>
+                                </td>
+                                <td class="num font-sans text-[13px] text-muted-foreground">{{ formatDate(u.createdAt) }}</td>
+                                <td class="act">
+                                    <RowActionsMenu v-if="rowActions(u).length" :items="rowActions(u)" :label="u.name || u.username" />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </ListStateShell>
-            <PaginationFooter :pagination="pagination ?? undefined" @change-page="onPageChange" @update:size="onSizeChange" />
+            <div class="px-4">
+                <PaginationFooter :pagination="pagination ?? undefined" @change-page="onPageChange" @update:size="onSizeChange" />
+            </div>
         </div>
 
         <!-- Create user dialog -->
@@ -144,7 +147,7 @@
                         <div class="space-y-1.5">
                             <Label for="cu-username">Username</Label>
                             <Input id="cu-username" v-model="createForm.username" autocomplete="off" class="font-mono" placeholder="jdoe" />
-                            <p v-if="createForm.username && !isValidUsername(createForm.username)" class="text-xs text-destructive">3-32 chars: letters, digits, underscore.</p>
+                            <p v-if="createForm.username && !isValidUsername(createForm.username)" class="text-xs text-destructive-ink">3 to 32 characters: letters, digits and underscores.</p>
                         </div>
                         <div class="space-y-1.5">
                             <Label for="cu-name">Display name</Label>
@@ -154,12 +157,12 @@
                     <div class="space-y-1.5">
                         <Label for="cu-email">Email</Label>
                         <Input id="cu-email" v-model="createForm.email" type="email" placeholder="jane@example.com" />
-                        <p v-if="createForm.email && !isValidEmail(createForm.email)" class="text-xs text-destructive">Enter a valid email.</p>
+                        <p v-if="createForm.email && !isValidEmail(createForm.email)" class="text-xs text-destructive-ink">Enter a valid email.</p>
                     </div>
                     <div class="space-y-1.5">
                         <Label for="cu-password">Password</Label>
                         <Input id="cu-password" v-model="createForm.password" type="password" autocomplete="new-password" />
-                        <p v-if="createForm.password && !isValidPassword(createForm.password)" class="text-xs text-destructive">At least 8 characters with letters and digits.</p>
+                        <p v-if="createForm.password && !isValidPassword(createForm.password)" class="text-xs text-destructive-ink">At least 8 characters with letters and digits.</p>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-1.5">
@@ -185,10 +188,10 @@
                     </div>
                 </div>
                 <DialogFooter class="gap-2">
-                    <Button variant="outline" :disabled="creating" @click="createOpen = false">Cancel</Button>
+                    <Button variant="secondary" :disabled="creating" @click="createOpen = false">Cancel</Button>
                     <Button :disabled="creating || !createValid" @click="submitCreate">
                         <Loader2 v-if="creating" class="size-4 animate-spin" />
-                        Create
+                        Create user
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -200,7 +203,7 @@
                 <DialogHeader>
                     <DialogTitle>Edit user</DialogTitle>
                     <DialogDescription>
-                        <span class="font-mono text-foreground">{{ editingUser?.username }}</span> — username can't be changed.
+                        <span class="font-mono text-foreground">{{ editingUser?.username }}</span>. The username can't be changed.
                     </DialogDescription>
                 </DialogHeader>
                 <div class="space-y-4 py-1">
@@ -211,7 +214,7 @@
                     <div class="space-y-1.5">
                         <Label for="eu-email">Email</Label>
                         <Input id="eu-email" v-model="editForm.email" type="email" />
-                        <p v-if="editForm.email && !isValidEmail(editForm.email)" class="text-xs text-destructive">Enter a valid email.</p>
+                        <p v-if="editForm.email && !isValidEmail(editForm.email)" class="text-xs text-destructive-ink">Enter a valid email.</p>
                     </div>
                     <div v-if="!editingSelf" class="space-y-1.5">
                         <Label>Status</Label>
@@ -225,10 +228,10 @@
                     </div>
                 </div>
                 <DialogFooter class="gap-2">
-                    <Button variant="outline" :disabled="saving" @click="editOpen = false">Cancel</Button>
+                    <Button variant="secondary" :disabled="saving" @click="editOpen = false">Cancel</Button>
                     <Button :disabled="saving || !editValid" @click="submitEdit">
                         <Loader2 v-if="saving" class="size-4 animate-spin" />
-                        Save
+                        Save user
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -238,7 +241,7 @@
         <Dialog v-model:open="rolesOpen">
             <DialogContent class="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Manage roles</DialogTitle>
+                    <DialogTitle>Assign roles</DialogTitle>
                     <DialogDescription>
                         Choose roles for <span class="font-mono text-foreground">{{ rolesUser?.username }}</span>. Saving replaces the whole set.
                     </DialogDescription>
@@ -256,10 +259,10 @@
                 <DialogFooter class="items-center gap-2 sm:justify-between">
                     <span class="text-xs text-muted-foreground"><span class="font-mono text-foreground">{{ rolesSelected.size }}</span> selected</span>
                     <div class="flex items-center gap-2">
-                        <Button variant="outline" :disabled="savingRoles" @click="rolesOpen = false">Cancel</Button>
+                        <Button variant="secondary" :disabled="savingRoles" @click="rolesOpen = false">Cancel</Button>
                         <Button :disabled="savingRoles" @click="submitRoles">
                             <Loader2 v-if="savingRoles" class="size-4 animate-spin" />
-                            Save
+                            Save roles
                         </Button>
                     </div>
                 </DialogFooter>
@@ -278,13 +281,13 @@
                 <div class="space-y-1.5 py-1">
                     <Label for="rp-pwd">New password</Label>
                     <Input id="rp-pwd" v-model="pwdValue" type="password" autocomplete="new-password" @keydown.enter.prevent="pwdValid && submitReset()" />
-                    <p v-if="pwdValue && !pwdValid" class="text-xs text-destructive">At least 8 characters with letters and digits.</p>
+                    <p v-if="pwdValue && !pwdValid" class="text-xs text-destructive-ink">At least 8 characters with letters and digits.</p>
                 </div>
                 <DialogFooter class="gap-2">
-                    <Button variant="outline" :disabled="savingPwd" @click="pwdOpen = false">Cancel</Button>
+                    <Button variant="secondary" :disabled="savingPwd" @click="pwdOpen = false">Cancel</Button>
                     <Button :disabled="savingPwd || !pwdValid" @click="submitReset">
                         <Loader2 v-if="savingPwd" class="size-4 animate-spin" />
-                        Reset
+                        Set new password
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -295,7 +298,7 @@
             :open="deleteOpen"
             :title="`Delete user “${deleteTarget?.username ?? ''}”?`"
             description="They can no longer sign in. Their submissions stay."
-            confirm-label="Delete"
+            confirm-label="Delete user"
             :busy="deleting"
             @update:open="(v) => (deleteOpen = v)"
             @confirm="confirmDelete"
@@ -304,8 +307,8 @@
         <ConfirmDialog
             :open="disableOpen"
             :title="`Disable user “${disableTarget?.username ?? ''}”?`"
-            description="They are signed out everywhere and cannot sign in until enabled again."
-            confirm-label="Disable"
+            description="They're signed out everywhere and can't sign in until you enable them again."
+            confirm-label="Disable user"
             :busy="disabling"
             @update:open="(v) => (disableOpen = v)"
             @confirm="confirmDisable"
@@ -317,13 +320,14 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { watchDebounced } from '@vueuse/core'
 import {
-    Plus, Search, X, Users as UsersIcon, Lock,
-    Pencil, Shield, KeyRound, Ban, CheckCircle2, Trash2, Loader2,
+    Search, X, Lock, UserPlus, UserX,
+    Pencil, Shield, KeyRound, CheckCircle2, Trash2, Loader2,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -345,7 +349,7 @@ import { USER_STATUS, type UserResponse } from '@/types/user'
 import type { Role } from '@/types/role'
 
 const authStore = useAuthStore()
-const { triggerToast } = useToast()
+const { triggerToast, undo, error: errorToast } = useToast()
 
 const canCreate = computed(() => authStore.hasPermission('user:create'))
 const canUpdate = computed(() => authStore.hasPermission('user:update'))
@@ -354,7 +358,13 @@ const selfId = computed(() => authStore.user?.id ?? null)
 
 // --- List + filters ---
 const { data, isLoading, error, execute } = useFetch(userService.list, { immediate: false })
-const users = computed<UserResponse[]>(() => data.value?.data ?? [])
+// Optimistic status per user id (a disable waiting out its undo window), laid over the fetched rows.
+const statusOverride = ref(new Map<string, number>())
+const users = computed<UserResponse[]>(() =>
+    (data.value?.data ?? []).map((u) =>
+        statusOverride.value.has(u.id) ? { ...u, status: statusOverride.value.get(u.id)! } : u,
+    ),
+)
 const pagination = computed(() => data.value?.pagination ?? null)
 
 const page = ref(0)
@@ -419,10 +429,13 @@ const assignableRoles = computed(() => roles.value.filter((r) => r.name !== 'SYS
 const isSysRoot = (u: UserResponse) => u.roles?.some((r) => r.name === 'SYS_ROOT') ?? false
 const isSelf = (u: UserResponse) => !!selfId.value && u.id === selfId.value
 
-const statusLabel = (s: number) => (s === USER_STATUS.ACTIVE ? 'Active' : s === USER_STATUS.DISABLED ? 'Disabled' : 'Deleted')
-const statusDot = (s: number) =>
-    s === USER_STATUS.ACTIVE ? 'bg-emerald-500' : s === USER_STATUS.DISABLED ? 'bg-amber-500' : 'bg-rose-500'
-const formatDate = (d: string) => (d ? new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—')
+const formatDate = (d: string) => (d ? new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '-')
+const initialsOf = (u: UserResponse) => {
+    const parts = (u.name || u.username || '?').trim().split(/\s+/).filter(Boolean)
+    const first = parts[0] ?? '?'
+    const last = parts.length > 1 ? parts[parts.length - 1]! : ''
+    return (last ? `${first.charAt(0)}${last.charAt(0)}` : first.slice(0, 2)).toUpperCase()
+}
 
 // --- Create dialog ---
 const createOpen = ref(false)
@@ -514,9 +527,9 @@ const sendEdit = async () => {
 
 const submitEdit = async () => {
     if (!editingUser.value || !editValid.value) return
-    // Switching an active user to Disabled has the same consequence as the menu action: confirm first.
+    // Switching an active user to Disabled signs them out everywhere: confirm first.
     if (!editingSelf.value && editForm.status === String(USER_STATUS.DISABLED) && editingUser.value.status !== USER_STATUS.DISABLED) {
-        askDisable(editingUser.value, 'edit')
+        askDisable(editingUser.value)
         return
     }
     await sendEdit()
@@ -583,7 +596,7 @@ const submitReset = async () => {
     }
 }
 
-// --- Enable (direct) / Disable (confirmed) ---
+// --- Enable (direct) / Disable (undo toast from the menu, confirmed from the edit dialog) ---
 const enableUser = async (u: UserResponse) => {
     try {
         await userService.updateStatus(u.id, USER_STATUS.ACTIVE)
@@ -594,14 +607,47 @@ const enableUser = async (u: UserResponse) => {
     }
 }
 
+const setOverride = (id: string, status: number) => {
+    statusOverride.value = new Map(statusOverride.value).set(id, status)
+}
+const clearOverride = (id: string) => {
+    const next = new Map(statusOverride.value)
+    next.delete(id)
+    statusOverride.value = next
+}
+
+// The row reads Disabled at once; the status change is sent when the undo window closes.
+const startDisable = (u: UserResponse) => {
+    if (statusOverride.value.has(u.id)) return
+    setOverride(u.id, USER_STATUS.DISABLED)
+    const name = u.name || u.username
+    undo('User disabled', {
+        description: `${name} can't sign in until you enable them again.`,
+        onUndo: () => clearOverride(u.id),
+        // Catches its own errors, so the toast engine never sees a rejection.
+        commit: async () => {
+            try {
+                await userService.updateStatus(u.id, USER_STATUS.DISABLED)
+                await load()
+            } catch (err) {
+                errorToast("Couldn't disable the user", {
+                    description: getErrorMessage(err, `${name} can still sign in.`),
+                    action: { label: 'Retry', onClick: () => startDisable(u) },
+                })
+            } finally {
+                clearOverride(u.id)
+            }
+        },
+    })
+}
+
 const disableOpen = ref(false)
 const disabling = ref(false)
 const disableTarget = ref<UserResponse | null>(null)
-const disableFrom = ref<'menu' | 'edit'>('menu')
 
-const askDisable = (u: UserResponse, from: 'menu' | 'edit') => {
+// Only the edit dialog asks: switching its status to Disabled saves the whole form.
+const askDisable = (u: UserResponse) => {
     disableTarget.value = u
-    disableFrom.value = from
     disableOpen.value = true
 }
 
@@ -609,31 +655,28 @@ const confirmDisable = async () => {
     if (!disableTarget.value || disabling.value) return
     disabling.value = true
     try {
-        if (disableFrom.value === 'edit') {
-            if (await sendEdit()) disableOpen.value = false
-            return
-        }
-        await userService.updateStatus(disableTarget.value.id, USER_STATUS.DISABLED)
-        triggerToast('User disabled', 'success')
-        disableOpen.value = false
-        load()
-    } catch (err) {
-        triggerToast(getErrorMessage(err, 'Could not update status.'), 'error')
+        if (await sendEdit()) disableOpen.value = false
     } finally {
         disabling.value = false
     }
 }
 
+// The protected system account gets one disabled item that says why.
+const protectedActions: RowAction[] = [
+    { label: "Can't be changed", icon: Lock, disabled: true, hint: 'Protected system account', onSelect: () => {} },
+]
+
 const rowActions = (u: UserResponse): RowAction[] => {
+    if (isSysRoot(u)) return protectedActions
     const items: RowAction[] = []
     if (canUpdate.value) {
         items.push({ label: 'Edit', icon: Pencil, onSelect: () => openEdit(u) })
-        if (!isSelf(u)) items.push({ label: 'Roles', icon: Shield, onSelect: () => openRoles(u) })
-        items.push({ label: 'Password', icon: KeyRound, onSelect: () => openReset(u) })
+        if (!isSelf(u)) items.push({ label: 'Assign roles', icon: Shield, onSelect: () => openRoles(u) })
+        items.push({ label: 'Reset password', icon: KeyRound, onSelect: () => openReset(u) })
         if (!isSelf(u) && u.status === USER_STATUS.DISABLED)
             items.push({ label: 'Enable', icon: CheckCircle2, onSelect: () => enableUser(u) })
         if (!isSelf(u) && u.status === USER_STATUS.ACTIVE)
-            items.push({ label: 'Disable…', icon: Ban, destructive: true, onSelect: () => askDisable(u, 'menu') })
+            items.push({ label: 'Disable', icon: UserX, onSelect: () => startDisable(u) })
     }
     if (canDelete.value && !isSelf(u) && u.status !== USER_STATUS.DELETED)
         items.push({ label: 'Delete…', icon: Trash2, destructive: true, onSelect: () => openDelete(u) })

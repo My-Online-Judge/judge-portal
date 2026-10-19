@@ -10,17 +10,25 @@ const h = vi.hoisted(() => ({
   updateStatus: vi.fn(),
   remove: vi.fn(),
   getRoles: vi.fn(),
+  undo: vi.fn(),
+  error: vi.fn(),
 }))
 
 vi.mock('@/services/userService', () => ({
   default: { list: h.list, update: h.update, updateStatus: h.updateStatus, remove: h.remove },
 }))
 vi.mock('@/services/roleService', () => ({ default: { getRoles: h.getRoles } }))
-vi.mock('@/composables/useToast', () => ({ useToast: () => ({ triggerToast: vi.fn() }) }))
+vi.mock('@/composables/useToast', () => ({
+  useToast: () => ({ triggerToast: vi.fn(), undo: h.undo, error: h.error }),
+}))
 
 import AdminUsersPage from '../AdminUsersPage.vue'
 import PaginationFooter from '@/components/common/PaginationFooter.vue'
 import { useAuthStore } from '@/stores/auth'
+
+type UndoOpts = { description?: string; commit: () => Promise<void>; onUndo: () => void }
+const undoOpts = () => h.undo.mock.calls[0][1] as UndoOpts
+const statusCell = () => wrapper!.findAll('tbody tr')[0]!.findAll('td')[3]!.text()
 
 const user = {
   id: 'u2', username: 'bob', name: 'Bob', email: 'bob@x.io', status: 1,
@@ -68,17 +76,41 @@ afterEach(() => {
 })
 
 describe('AdminUsersPage', () => {
-  it('disableAsksThenCallsOnce', async () => {
+  it('disableUsesUndoAndCommitsOnce', async () => {
     await mountPage()
-    await pickMenu('Disable…')
+    await pickMenu('Disable')
+    // Optimistic: the row reads Disabled at once, and nothing is sent until the window closes.
+    expect(h.undo).toHaveBeenCalledTimes(1)
+    expect(h.undo.mock.calls[0][0]).toBe('User disabled')
     expect(h.updateStatus).not.toHaveBeenCalled()
-    expect(document.body.textContent).toContain('Disable user “bob”?')
-    const confirm = bodyButton('Disable')!
-    confirm.click()
-    confirm.click()
+    expect(statusCell()).toContain('Disabled')
+    // The window closes: the status change goes out once, then the list reloads.
+    h.list.mockResolvedValue({ data: { data: [{ ...user, status: 0 }], pagination } })
+    await undoOpts().commit()
     await flushPromises()
     expect(h.updateStatus).toHaveBeenCalledTimes(1)
     expect(h.updateStatus).toHaveBeenCalledWith('u2', 0)
+    expect(statusCell()).toContain('Disabled')
+  })
+
+  it('disableUndoRestoresRow', async () => {
+    await mountPage()
+    await pickMenu('Disable')
+    expect(statusCell()).toContain('Disabled')
+    undoOpts().onUndo()
+    await nextTick()
+    expect(statusCell()).toContain('Active')
+    expect(h.updateStatus).not.toHaveBeenCalled()
+  })
+
+  it('disableFailureRestoresRowWithErrorToast', async () => {
+    h.updateStatus.mockRejectedValue(new Error('boom'))
+    await mountPage()
+    await pickMenu('Disable')
+    await expect(undoOpts().commit()).resolves.toBeUndefined()
+    await flushPromises()
+    expect(statusCell()).toContain('Active')
+    expect(h.error).toHaveBeenCalledWith("Couldn't disable the user", expect.objectContaining({ action: expect.any(Object) }))
   })
 
   it('editStatusToDisabledAsks', async () => {
@@ -88,11 +120,11 @@ describe('AdminUsersPage', () => {
     const vm = wrapper!.vm as unknown as { $: { setupState: { editForm: { status: string } } } }
     vm.$.setupState.editForm.status = '0'
     await nextTick()
-    bodyButton('Save')!.click()
+    bodyButton('Save user')!.click()
     await flushPromises()
     expect(h.update).not.toHaveBeenCalled()
     expect(document.body.textContent).toContain('Disable user “bob”?')
-    bodyButton('Disable')!.click()
+    bodyButton('Disable user')!.click()
     await flushPromises()
     expect(h.update).toHaveBeenCalledTimes(1)
     expect(h.update.mock.calls[0][1]).toMatchObject({ status: 0 })
@@ -103,12 +135,27 @@ describe('AdminUsersPage', () => {
     await pickMenu('Delete…')
     expect(h.remove).not.toHaveBeenCalled()
     expect(document.body.textContent).toContain('Delete user “bob”?')
-    const confirm = bodyButton('Delete')!
+    const confirm = bodyButton('Delete user')!
     confirm.click()
     confirm.click()
     await flushPromises()
     expect(h.remove).toHaveBeenCalledTimes(1)
     expect(h.remove).toHaveBeenCalledWith('u2')
+  })
+
+  it('protectedAccountHasOneDisabledItem', async () => {
+    h.list.mockResolvedValue({
+      data: { data: [{ ...user, id: 'root', name: 'Root', roles: [{ id: 'r0', name: 'SYS_ROOT' }] }], pagination },
+    })
+    await mountPage()
+    expect(statusCell()).toContain('Protected')
+    await wrapper!.get('button[aria-label="Actions for Root"]').trigger('click')
+    await nextTick()
+    await nextTick()
+    const items = [...document.body.querySelectorAll('[role="menuitem"]')]
+    expect(items).toHaveLength(1)
+    expect(items[0]!.hasAttribute('data-disabled')).toBe(true)
+    expect(items[0]!.getAttribute('aria-label')).toContain('Protected system account')
   })
 
   it('usesPaginationFooter', async () => {

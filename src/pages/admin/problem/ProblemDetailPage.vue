@@ -1,211 +1,179 @@
 <template>
-    <div class="flex w-full flex-col gap-[22px]">
-        <!-- Back link -->
-        <Button as-child variant="ghost" class="w-fit">
-            <RouterLink :to="{ name: 'AdminProblems' }">
-                <ArrowLeft class="size-4" />
-                Problems
-            </RouterLink>
-        </Button>
-
+    <div class="flex w-full flex-col gap-[18px]">
         <!-- Loading -->
-        <div v-if="loading" class="flex flex-col gap-[22px]">
-            <div class="h-8 w-1/2 rounded bg-muted animate-ojpulse" />
-            <div class="h-[72px] w-full rounded-xl bg-muted animate-ojpulse" />
-            <div class="h-40 w-full rounded-xl bg-muted animate-ojpulse" />
-            <div class="h-40 w-full rounded-xl bg-muted animate-ojpulse" />
+        <div v-if="loading" class="flex flex-col gap-[18px]" aria-busy="true">
+            <span class="sk h-3 w-48" />
+            <span class="sk h-7 w-1/2" />
+            <span class="sk h-[72px] w-full rounded-xl" />
+            <span class="sk h-40 w-full rounded-xl" />
+            <span class="sk h-40 w-full rounded-xl" />
         </div>
 
         <!-- Error / not found -->
-        <div v-else-if="loadError || !problem" class="rounded-xl border border-border bg-card p-[18px]">
-            <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-err/40 bg-err/5 px-6 py-12 text-center">
-                <TriangleAlert class="size-6 text-err" />
-                <p class="text-sm font-medium text-foreground">Couldn't load this problem.</p>
-                <p class="max-w-xs text-xs text-muted-foreground">
-                    It may have been removed, or the request failed. Try again or head back to the list.
-                </p>
-                <div class="flex items-center gap-2">
-                    <Button variant="outline" size="sm" @click="fetchProblem">
-                        <RefreshCw class="size-4" />
-                        Retry
-                    </Button>
-                    <Button as-child size="sm">
-                        <RouterLink :to="{ name: 'AdminProblems' }">Problems</RouterLink>
-                    </Button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Edit mode — form constrained for readability; view mode stays full-width -->
-        <template v-else-if="isEditing">
-            <div class="flex w-full flex-col gap-[22px]">
-                <div class="min-w-0">
-                    <h1 class="text-[24px] font-semibold leading-tight tracking-tight text-foreground">Edit problem</h1>
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Update this problem. The slug and test cases stay as they are.
+        <template v-else-if="loadError || !problem">
+            <PageHeader title="Problem" :breadcrumbs="crumbs" />
+            <div class="rounded-xl border border-border bg-card p-[18px]">
+                <div role="alert" class="flex min-h-60 flex-col items-center justify-center gap-2.5 px-5 py-10 text-center">
+                    <span class="grid size-10 place-items-center rounded-xl bg-destructive-soft text-destructive-ink">
+                        <CloudOff class="size-5" aria-hidden="true" />
+                    </span>
+                    <h2 class="text-sm font-semibold text-foreground">Couldn't load this problem</h2>
+                    <p class="max-w-xs text-sm text-muted-foreground">
+                        It may have been removed, or the request failed. Try again, or go back to the list.
                     </p>
-                </div>
-
-                <form class="flex flex-col gap-5" novalidate @submit.prevent="save">
-                    <ProblemFormFields v-model="editPayload" mode="edit" :errors="errors" />
-
-                    <div class="flex items-center justify-end gap-2 border-t border-border pt-4">
-                        <Button type="button" variant="outline" :disabled="submitting" @click="requestCancelEdit">
-                            Cancel
+                    <div class="flex items-center gap-2">
+                        <Button variant="secondary" size="sm" @click="fetchProblem">
+                            <RotateCw class="size-4" />
+                            Retry
                         </Button>
-                        <Button type="submit" :disabled="submitting">
-                            <Loader2 v-if="submitting" class="size-4 animate-spin" />
-                            Save changes
+                        <Button as-child size="sm">
+                            <RouterLink :to="{ name: 'AdminProblems' }">Back to problems</RouterLink>
                         </Button>
                     </div>
-                </form>
+                </div>
             </div>
         </template>
 
-        <!-- View mode -->
         <template v-else>
-            <!-- Header -->
-            <div class="flex flex-wrap items-start justify-between gap-4">
-                <div class="min-w-0 space-y-2">
-                    <div class="flex flex-wrap items-center gap-2.5">
-                        <h1 class="text-[24px] font-semibold leading-tight tracking-tight text-foreground">
-                            {{ problem.title }}
-                        </h1>
-                        <Badge variant="outline" class="gap-1.5">
-                            <span class="size-1.5 rounded-full" :class="statusDotClass(problem.status)" />
-                            {{ statusLabel(problem.status) }}
-                        </Badge>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
-                        <span class="font-mono text-foreground">{{ problem.problemSlug }}</span>
-                        <span aria-hidden="true">·</span>
-                        <span class="font-mono">{{ shortId(problem.id) }}</span>
-                        <span aria-hidden="true">·</span>
-                        <span class="capitalize">{{ difficultyLabel(problem.hardnessLevel) }}</span>
-                    </div>
-                </div>
-                <div class="flex shrink-0 items-center gap-2">
-                    <Button v-if="canUpdate" variant="outline" @click="startEdit">
+            <PageHeader :title="problem.title" :breadcrumbs="crumbs">
+                <template v-if="!isEditing" #actions>
+                    <Button variant="secondary" as-child>
+                        <RouterLink :to="`/problems/${problem.problemSlug}`">
+                            <ExternalLink class="size-4" />
+                            View as student
+                        </RouterLink>
+                    </Button>
+                    <Button v-if="canUpdate" variant="secondary" @click="startEdit">
                         <Pencil class="size-4" />
                         Edit
                     </Button>
-                    <Button v-if="canDelete" variant="outline" @click="deleteOpen = true">
+                    <Button v-if="canDelete" variant="secondary" @click="deleteOpen = true">
                         <Trash2 class="size-4" />
-                        Delete
+                        Delete problem
+                    </Button>
+                </template>
+            </PageHeader>
+
+            <!-- Facts under the title -->
+            <div class="meta-strip text-[13px] text-muted-foreground">
+                <span><DifficultyBadge :level="problem.hardnessLevel" /></span>
+                <span>
+                    <Badge v-if="problem.status === 1" variant="success">Active</Badge>
+                    <Badge v-else variant="neutral">
+                        <EyeOff aria-hidden="true" />
+                        Inactive
+                    </Badge>
+                </span>
+                <span>Time limit <b class="font-mono font-medium text-foreground">{{ problem.timeLimit }} ms</b></span>
+                <span>Memory limit <b class="font-mono font-medium text-foreground">{{ problem.memoryLimit }} MB</b></span>
+                <span>Updated <span class="text-foreground">{{ relativeTime(problem.updatedAt) }}</span></span>
+            </div>
+
+            <!-- Edit mode -->
+            <form v-if="isEditing" class="flex flex-col gap-4" novalidate @submit.prevent="save">
+                <ProblemFormFields v-model="editPayload" mode="edit" :errors="errors" />
+
+                <div class="flex items-center justify-end gap-2 border-t border-border pt-4">
+                    <Button type="button" variant="secondary" :disabled="submitting" @click="requestCancelEdit">
+                        Cancel
+                    </Button>
+                    <Button type="submit" :disabled="submitting">
+                        <Loader2 v-if="submitting" class="size-4 animate-spin" />
+                        Save changes
                     </Button>
                 </div>
-            </div>
+            </form>
 
-            <!-- Metadata strip -->
-            <div class="flex flex-wrap gap-x-10 gap-y-3 rounded-xl border border-border bg-card p-[18px]">
-                <div>
-                    <p class="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Time limit</p>
-                    <p class="mt-0.5 font-mono text-sm text-foreground">{{ problem.timeLimit }} ms</p>
-                </div>
-                <div>
-                    <p class="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Memory limit</p>
-                    <p class="mt-0.5 font-mono text-sm text-foreground">{{ problem.memoryLimit }} MB</p>
-                </div>
-                <div>
-                    <p class="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Updated</p>
-                    <p class="mt-0.5 font-mono text-sm text-foreground">{{ relativeTime(problem.updatedAt) }}</p>
-                </div>
-            </div>
-
-            <!-- Subject -->
-            <section v-if="hasText(problem.subject)" class="rounded-xl border border-border bg-card">
-                <div class="border-b border-border px-5 py-3.5">
-                    <h3 class="text-base font-medium text-foreground">Subject</h3>
-                </div>
-                <div class="p-5">
-                    <p class="text-sm leading-relaxed text-foreground">{{ problem.subject }}</p>
-                </div>
-            </section>
-
-            <!-- Description -->
-            <section v-if="hasHtml(problem.description)" class="rounded-xl border border-border bg-card">
-                <div class="border-b border-border px-5 py-3.5">
-                    <h3 class="text-base font-medium text-foreground">Description</h3>
-                </div>
-                <div class="p-5">
-                    <RichTextEditor :model-value="problem.description" :editable="false" />
-                </div>
-            </section>
-
-            <!-- Input -->
-            <section v-if="hasHtml(problem.inputDescription)" class="rounded-xl border border-border bg-card">
-                <div class="border-b border-border px-5 py-3.5">
-                    <h3 class="text-base font-medium text-foreground">Input</h3>
-                </div>
-                <div class="p-5">
-                    <RichTextEditor :model-value="problem.inputDescription" :editable="false" />
-                </div>
-            </section>
-
-            <!-- Output -->
-            <section v-if="hasHtml(problem.outputDescription)" class="rounded-xl border border-border bg-card">
-                <div class="border-b border-border px-5 py-3.5">
-                    <h3 class="text-base font-medium text-foreground">Output</h3>
-                </div>
-                <div class="p-5">
-                    <RichTextEditor :model-value="problem.outputDescription" :editable="false" />
-                </div>
-            </section>
-
-            <!-- Samples -->
-            <section
-                v-if="hasText(problem.sampleInput) || hasText(problem.sampleOutput)"
-                class="rounded-xl border border-border bg-card"
-            >
-                <div class="border-b border-border px-5 py-3.5">
-                    <h3 class="text-base font-medium text-foreground">Samples</h3>
-                </div>
-                <div class="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
-                    <div v-if="hasText(problem.sampleInput)" class="space-y-1.5">
-                        <p class="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Sample input</p>
-                        <pre class="overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-border bg-muted/40 p-3 font-mono text-xs text-foreground">{{ problem.sampleInput }}</pre>
+            <!-- View mode -->
+            <template v-else>
+                <section v-if="hasText(problem.subject)" :class="cardClass">
+                    <h3 :class="cardHeadClass">Subject</h3>
+                    <div class="p-4">
+                        <p class="text-sm leading-relaxed text-foreground">{{ problem.subject }}</p>
                     </div>
-                    <div v-if="hasText(problem.sampleOutput)" class="space-y-1.5">
-                        <p class="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Sample output</p>
-                        <pre class="overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-border bg-muted/40 p-3 font-mono text-xs text-foreground">{{ problem.sampleOutput }}</pre>
+                </section>
+
+                <section v-if="hasHtml(problem.description)" :class="cardClass">
+                    <h3 :class="cardHeadClass">Statement</h3>
+                    <div class="p-4">
+                        <RichTextEditor :model-value="problem.description" :editable="false" />
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <!-- Test cases (live management panel; requires problem:update) -->
-            <TestCaseManager
-                v-if="canUpdate"
-                :slug="problem.problemSlug ?? String(route.params.slug)"
-                :can-manage="canUpdate"
-            />
+                <div
+                    v-if="hasHtml(problem.inputDescription) || hasHtml(problem.outputDescription)"
+                    class="grid grid-cols-1 gap-4 md:grid-cols-2"
+                >
+                    <section v-if="hasHtml(problem.inputDescription)" :class="cardClass">
+                        <h3 :class="cardHeadClass">Input</h3>
+                        <div class="p-4">
+                            <RichTextEditor :model-value="problem.inputDescription" :editable="false" />
+                        </div>
+                    </section>
+                    <section v-if="hasHtml(problem.outputDescription)" :class="cardClass">
+                        <h3 :class="cardHeadClass">Output</h3>
+                        <div class="p-4">
+                            <RichTextEditor :model-value="problem.outputDescription" :editable="false" />
+                        </div>
+                    </section>
+                </div>
 
-            <!-- Hint -->
-            <section v-if="hasHtml(problem.hint)" class="rounded-xl border border-border bg-card">
-                <div class="border-b border-border px-5 py-3.5">
-                    <h3 class="text-base font-medium text-foreground">Hint</h3>
-                </div>
-                <div class="p-5">
-                    <RichTextEditor :model-value="problem.hint" :editable="false" />
-                </div>
-            </section>
+                <section v-if="hasText(problem.sampleInput) || hasText(problem.sampleOutput)" :class="cardClass">
+                    <h3 :class="cardHeadClass">Samples</h3>
+                    <div class="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
+                        <div v-if="hasText(problem.sampleInput)" class="flex flex-col gap-1.5">
+                            <p class="text-xs font-medium text-muted-foreground">Sample input</p>
+                            <pre class="overflow-x-auto rounded-lg border border-border bg-code-bg p-3 font-mono text-xs break-words whitespace-pre-wrap text-foreground">{{ problem.sampleInput }}</pre>
+                        </div>
+                        <div v-if="hasText(problem.sampleOutput)" class="flex flex-col gap-1.5">
+                            <p class="text-xs font-medium text-muted-foreground">Sample output</p>
+                            <pre class="overflow-x-auto rounded-lg border border-border bg-code-bg p-3 font-mono text-xs break-words whitespace-pre-wrap text-foreground">{{ problem.sampleOutput }}</pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Test cases (live management panel; requires problem:update) -->
+                <TestCaseManager
+                    v-if="canUpdate"
+                    :slug="problem.problemSlug ?? String(route.params.slug)"
+                    :can-manage="canUpdate"
+                />
+
+                <section v-if="hasHtml(problem.hint)" :class="cardClass">
+                    <h3 :class="cardHeadClass">Hint</h3>
+                    <div class="p-4">
+                        <RichTextEditor :model-value="problem.hint" :editable="false" />
+                    </div>
+                </section>
+            </template>
         </template>
+
+        <UnsavedChangesBar
+            :dirty="editDirty"
+            summary="in this problem"
+            :saving="submitting"
+            @save="save"
+            @discard="discardEdits"
+        />
 
         <!-- Delete confirm -->
         <ConfirmDialog
             v-model:open="deleteOpen"
             :title="`Delete problem “${problem?.title ?? ''}”?`"
             description="It disappears from the problem list. Submissions are kept."
-            confirm-label="Delete"
+            confirm-label="Delete problem"
             :busy="deleting"
             @confirm="confirmDelete"
         />
 
-        <!-- Discard edits -->
+        <!-- Leaving (or cancelling) with unsaved edits -->
         <ConfirmDialog
             :open="confirmOpen || cancelAsk"
-            title="Discard unsaved changes?"
-            description="Your edits to this problem are lost."
-            confirm-label="Discard"
+            title="Leave without saving?"
+            description="Your changes to this problem are lost."
+            confirm-label="Leave"
+            cancel-label="Stay"
+            tone="neutral"
             @confirm="onDiscardConfirm"
             @update:open="(v: boolean) => { if (!v) onDiscardClose() }"
         />
@@ -216,10 +184,13 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import axios from 'axios'
-import { ArrowLeft, Pencil, Trash2, Loader2, TriangleAlert, RefreshCw } from 'lucide-vue-next'
+import { CloudOff, ExternalLink, EyeOff, Loader2, Pencil, RotateCw, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import DifficultyBadge from '@/components/common/DifficultyBadge.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
+import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
 import { useDiscardGuard } from '@/composables/useDiscardGuard'
 import ProblemFormFields, { type ProblemFormValue } from '@/components/admin/problem/ProblemFormFields.vue'
 import TestCaseManager from '@/components/admin/problem/TestCaseManager.vue'
@@ -229,12 +200,21 @@ import { getErrorMessage } from '@/lib/errorMessage'
 import problemService from '@/services/problemService'
 import { useAuthStore } from '@/stores/auth'
 import type { Problem, UpdateProblemPayload } from '@/types/problem'
-import { shortId, difficultyLabel, statusLabel, statusDotClass, relativeTime } from '@/lib/problemDisplay'
+import { relativeTime } from '@/lib/problemDisplay'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const { triggerToast, success } = useToast()
+const { triggerToast, success, error: errorToast } = useToast()
+
+const cardClass = 'min-w-0 overflow-hidden rounded-xl border border-border bg-card'
+const cardHeadClass = 'border-b border-border px-3.5 py-3 text-sm font-semibold text-foreground'
+
+const crumbs = computed(() => [
+    { label: 'Admin', to: { name: 'AdminDashboard' } },
+    { label: 'Problems', to: { name: 'AdminProblems' } },
+    { label: String(route.params.slug ?? ''), mono: true },
+])
 
 const canUpdate = computed(() => authStore.hasPermission('problem:update'))
 const canDelete = computed(() => authStore.hasPermission('problem:delete'))
@@ -312,6 +292,13 @@ const isDirty = () =>
 
 const { confirmOpen, confirmLeave, cancelLeave } = useDiscardGuard(isDirty)
 const cancelAsk = ref(false)
+const editDirty = computed(() => isDirty())
+
+// Discard keeps the editor open with the saved values.
+const discardEdits = () => {
+    if (problem.value) editPayload.value = fromProblem(problem.value)
+    errors.value = {}
+}
 
 const requestCancelEdit = () => {
     if (isDirty()) cancelAsk.value = true
@@ -352,6 +339,7 @@ const validate = (): boolean => {
 }
 
 const save = async () => {
+    if (submitting.value) return
     if (!validate()) {
         triggerToast('Fix the highlighted fields', 'error')
         return
@@ -393,7 +381,7 @@ const confirmDelete = async () => {
         deleteOpen.value = false
         router.push({ name: 'AdminProblems' })
     } catch (err) {
-        triggerToast(getErrorMessage(err, 'Could not delete the problem.'), 'error')
+        errorToast("Couldn't delete the problem", { description: getErrorMessage(err, 'The request failed. Try again.') })
     } finally {
         deleting.value = false
     }
