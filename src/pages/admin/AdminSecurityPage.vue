@@ -1,177 +1,155 @@
 <template>
     <div class="flex flex-col gap-[22px]">
-        <!-- Page header -->
-        <div class="flex flex-wrap items-start justify-between gap-4">
-            <div class="min-w-0">
-                <h1 class="text-[24px] font-semibold leading-tight tracking-tight text-foreground">Security</h1>
-                <p class="mt-1 text-sm text-muted-foreground">Watch login attempts and block abusive IPs or devices.</p>
-            </div>
-            <Button v-if="canCreate && tab === 'bans'" class="h-[38px]" @click="openBanDialog('IP', '')">
-                <Plus class="size-4" />
-                New ban
-            </Button>
-        </div>
-
-        <!-- Tabs -->
-        <div class="flex gap-1 border-b border-border" role="tablist">
-            <button
-                v-for="t in tabs"
-                :key="t.key"
-                role="tab"
-                :aria-selected="tab === t.key"
-                class="-mb-px border-b-2 px-3 py-2 text-sm transition-colors"
-                :class="tab === t.key ? 'border-primary font-medium text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
-                @click="tab = t.key"
-            >
-                {{ t.label }}
-            </button>
-        </div>
-
-        <!-- ============ Attempts tab ============ -->
-        <div v-if="tab === 'attempts'" class="min-w-0 rounded-xl border border-border bg-card">
-            <div class="flex flex-wrap items-end gap-3 border-b border-border p-[18px]">
-                <div class="w-full sm:w-[180px]">
-                    <Input v-model="fIp" placeholder="Filter by IP" class="h-9" aria-label="Filter by IP" />
-                </div>
-                <div class="w-full sm:w-[200px]">
-                    <Input v-model="fUsername" placeholder="Filter by username" class="h-9" aria-label="Filter by username" />
-                </div>
-                <div class="w-[150px]">
-                    <Select v-model="fResult">
-                        <SelectTrigger class="h-9"><SelectValue placeholder="Result" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All results</SelectItem>
-                            <SelectItem value="ok">Success</SelectItem>
-                            <SelectItem value="fail">Failed</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div class="flex items-end gap-2">
-                    <div class="flex flex-col gap-1">
-                        <label class="text-[11px] text-muted-foreground">From</label>
-                        <Input v-model="fFrom" type="date" class="h-9 w-[150px]" aria-label="From date" />
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <label class="text-[11px] text-muted-foreground">to</label>
-                        <Input v-model="fTo" type="date" class="h-9 w-[150px]" aria-label="To date" />
-                    </div>
-                    <Button v-if="hasAttemptFilters" variant="ghost" size="sm" class="h-9" @click="clearAttemptFilters">
-                        <X class="size-4" />
-                        Clear
-                    </Button>
-                </div>
-            </div>
-
-            <div v-if="attemptsLoading" class="p-[18px] text-sm text-muted-foreground">Loading…</div>
-            <div v-else-if="attemptsError" class="flex items-center gap-2 p-[18px] text-sm text-destructive">
-                <TriangleAlert class="size-4" />
-                {{ getErrorMessage(attemptsError, 'Could not load login attempts') }}
-                <Button variant="outline" size="sm" @click="loadAttempts">
-                    <RefreshCw class="size-4" />
-                    Retry
+        <AdminPageHeader title="Security" description="Watch login attempts and block abusive IPs or devices.">
+            <template v-if="canCreate && tab === 'bans'" #actions>
+                <Button @click="openBanDialog('IP', '')">
+                    <Plus class="size-4" />
+                    New ban
                 </Button>
-            </div>
-            <div v-else-if="!attempts.length" class="p-[18px] text-sm text-muted-foreground">
-                No login attempts match these filters.
-            </div>
-            <div v-else class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="text-left text-muted-foreground">
-                        <tr class="border-b border-border">
-                            <th class="px-[18px] py-2.5 font-medium">Time</th>
-                            <th class="px-3 py-2.5 font-medium">Username</th>
-                            <th class="px-3 py-2.5 font-medium">IP</th>
-                            <th class="px-3 py-2.5 font-medium">Device</th>
-                            <th class="px-3 py-2.5 font-medium">Result</th>
-                            <th class="px-3 py-2.5 text-right font-medium">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="a in attempts" :key="a.id" class="border-b border-border last:border-0">
-                            <td class="whitespace-nowrap px-[18px] py-2.5">{{ fmt(a.createdAt) }}</td>
-                            <td class="px-3 py-2.5">{{ a.username ?? '—' }}</td>
-                            <td class="px-3 py-2.5 font-mono text-xs">{{ a.ip ?? '—' }}</td>
-                            <td class="max-w-[160px] truncate px-3 py-2.5 font-mono text-xs" :title="a.deviceHash ?? ''">
-                                {{ a.deviceHash ?? '—' }}
-                            </td>
-                            <td class="px-3 py-2.5">
-                                <Badge :variant="a.success ? 'secondary' : 'destructive'">
-                                    {{ a.success ? 'Success' : (a.errorCode ?? 'Failed') }}
-                                </Badge>
-                            </td>
-                            <td class="whitespace-nowrap px-3 py-2.5 text-right">
-                                <Button v-if="canCreate && a.ip" variant="ghost" size="sm" @click="openBanDialog('IP', a.ip)">
-                                    Ban IP
-                                </Button>
-                                <Button v-if="canCreate && a.deviceHash" variant="ghost" size="sm" @click="openBanDialog('DEVICE', a.deviceHash)">
-                                    Ban device
-                                </Button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            </template>
+        </AdminPageHeader>
 
-            <div class="flex items-center justify-between border-t border-border p-[18px] text-sm">
-                <span class="text-muted-foreground">{{ attemptTotal }} attempts</span>
-                <div class="flex gap-2">
-                    <Button variant="outline" size="sm" :disabled="!attemptsCanPrev" @click="attemptPage--">Previous</Button>
-                    <Button variant="outline" size="sm" :disabled="!attemptsCanNext" @click="attemptPage++">Next</Button>
+        <Tabs v-model="tab" class="gap-[22px]">
+            <TabsList class="w-fit">
+                <TabsTrigger v-for="t in tabs" :key="t.key" :value="t.key">{{ t.label }}</TabsTrigger>
+            </TabsList>
+
+            <!-- ============ Attempts tab ============ -->
+            <TabsContent value="attempts" class="min-w-0 rounded-xl border border-border bg-card">
+                <div class="flex flex-wrap items-end gap-3 border-b border-border p-[18px]">
+                    <div class="w-full sm:w-[180px]">
+                        <Input v-model="fIp" placeholder="Filter by IP" class="h-9" aria-label="Filter by IP" />
+                    </div>
+                    <div class="w-full sm:w-[200px]">
+                        <Input v-model="fUsername" placeholder="Filter by username" class="h-9" aria-label="Filter by username" />
+                    </div>
+                    <div class="w-[150px]">
+                        <Select v-model="fResult">
+                            <SelectTrigger class="h-9"><SelectValue placeholder="Result" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All results</SelectItem>
+                                <SelectItem value="ok">Success</SelectItem>
+                                <SelectItem value="fail">Failed</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[11px] text-muted-foreground">From</label>
+                            <Input v-model="fFrom" type="date" class="h-9 w-[150px]" aria-label="From date" />
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[11px] text-muted-foreground">to</label>
+                            <Input v-model="fTo" type="date" class="h-9 w-[150px]" aria-label="To date" />
+                        </div>
+                        <Button v-if="hasAttemptFilters" variant="ghost" size="sm" class="h-9" @click="clearAttemptFilters">
+                            <X class="size-4" />
+                            Clear
+                        </Button>
+                    </div>
+                    <p v-if="!rangeValid" class="w-full text-xs text-destructive" role="alert">Start date must be before end date</p>
                 </div>
-            </div>
-        </div>
 
-        <!-- ============ Bans tab ============ -->
-        <div v-else class="min-w-0 rounded-xl border border-border bg-card">
-            <div v-if="bansLoading" class="p-[18px] text-sm text-muted-foreground">Loading…</div>
-            <div v-else-if="bansError" class="flex items-center gap-2 p-[18px] text-sm text-destructive">
-                <TriangleAlert class="size-4" />
-                {{ getErrorMessage(bansError, 'Could not load bans') }}
-                <Button variant="outline" size="sm" @click="loadBans">
-                    <RefreshCw class="size-4" />
-                    Retry
-                </Button>
-            </div>
-            <div v-else-if="!bans.length" class="p-[18px] text-sm text-muted-foreground">
-                No active bans. Use “New ban” or ban straight from the Attempts tab.
-            </div>
-            <div v-else class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="text-left text-muted-foreground">
-                        <tr class="border-b border-border">
-                            <th class="px-[18px] py-2.5 font-medium">Type</th>
-                            <th class="px-3 py-2.5 font-medium">Value</th>
-                            <th class="px-3 py-2.5 font-medium">Reason</th>
-                            <th class="px-3 py-2.5 font-medium">Expires</th>
-                            <th class="px-3 py-2.5 font-medium">By</th>
-                            <th class="px-3 py-2.5 text-right font-medium">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="b in bans" :key="b.id" class="border-b border-border last:border-0">
-                            <td class="px-[18px] py-2.5"><Badge variant="outline">{{ b.type }}</Badge></td>
-                            <td class="px-3 py-2.5 font-mono text-xs">{{ b.value }}</td>
-                            <td class="max-w-[220px] truncate px-3 py-2.5" :title="b.reason ?? ''">{{ b.reason ?? '—' }}</td>
-                            <td class="whitespace-nowrap px-3 py-2.5">{{ b.expiresAt ? fmt(b.expiresAt) : 'Permanent' }}</td>
-                            <td class="px-3 py-2.5">{{ b.createdBy ?? '—' }}</td>
-                            <td class="whitespace-nowrap px-3 py-2.5 text-right">
-                                <Button v-if="canDelete" variant="ghost" size="sm" class="text-destructive" @click="unbanTarget = b">
-                                    Unban
-                                </Button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                <ListStateShell
+                    :loading="attemptsLoading"
+                    :error="attemptsError ? 'error' : null"
+                    :has-data="attemptsData !== null"
+                    :empty="attempts.length === 0"
+                    @retry="loadAttempts"
+                >
+                    <template #empty>
+                        <div class="p-[18px] text-sm text-muted-foreground">
+                            {{ hasAttemptFilters ? 'No login attempts match these filters.' : 'No login attempts yet.' }}
+                        </div>
+                    </template>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="text-left text-muted-foreground">
+                                <tr class="border-b border-border">
+                                    <th class="px-[18px] py-2.5 font-medium">Time</th>
+                                    <th class="px-3 py-2.5 font-medium">Username</th>
+                                    <th class="px-3 py-2.5 font-medium">IP</th>
+                                    <th class="px-3 py-2.5 font-medium">Device</th>
+                                    <th class="px-3 py-2.5 font-medium">Result</th>
+                                    <th class="px-[18px] py-2.5 text-right"><span class="sr-only">Actions</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="a in attempts" :key="a.id" class="border-b border-border last:border-0">
+                                    <td class="whitespace-nowrap px-[18px] py-2.5">{{ fmt(a.createdAt) }}</td>
+                                    <td class="px-3 py-2.5">{{ a.username ?? '—' }}</td>
+                                    <td class="px-3 py-2.5 font-mono text-xs">{{ a.ip ?? '—' }}</td>
+                                    <td class="max-w-[160px] truncate px-3 py-2.5 font-mono text-xs" :title="a.deviceHash ?? ''">
+                                        {{ a.deviceHash ?? '—' }}
+                                    </td>
+                                    <td class="px-3 py-2.5">
+                                        <Badge :variant="a.success ? 'secondary' : 'destructive'">
+                                            {{ a.success ? 'Success' : (a.errorCode ?? 'Failed') }}
+                                        </Badge>
+                                    </td>
+                                    <td class="whitespace-nowrap px-[18px] py-2.5 text-right">
+                                        <RowActionsMenu
+                                            v-if="attemptActions(a).length"
+                                            :items="attemptActions(a)"
+                                            :label="a.username ?? a.ip ?? 'attempt'"
+                                        />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </ListStateShell>
+                <PaginationFooter
+                    :pagination="attemptsPagination ?? undefined"
+                    @change-page="onAttemptPage"
+                    @update:size="onAttemptSize"
+                />
+            </TabsContent>
 
-            <div class="flex items-center justify-between border-t border-border p-[18px] text-sm">
-                <span class="text-muted-foreground">{{ banTotal }} bans</span>
-                <div class="flex gap-2">
-                    <Button variant="outline" size="sm" :disabled="!bansCanPrev" @click="banPage--">Previous</Button>
-                    <Button variant="outline" size="sm" :disabled="!bansCanNext" @click="banPage++">Next</Button>
-                </div>
-            </div>
-        </div>
+            <!-- ============ Bans tab ============ -->
+            <TabsContent value="bans" class="min-w-0 rounded-xl border border-border bg-card">
+                <ListStateShell
+                    :loading="bansLoading"
+                    :error="bansError ? 'error' : null"
+                    :has-data="bansData !== null"
+                    :empty="bans.length === 0"
+                    @retry="loadBans"
+                >
+                    <template #empty>
+                        <div class="p-[18px] text-sm text-muted-foreground">
+                            No active bans. Use “New ban” or ban straight from the Attempts tab.
+                        </div>
+                    </template>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="text-left text-muted-foreground">
+                                <tr class="border-b border-border">
+                                    <th class="px-[18px] py-2.5 font-medium">Type</th>
+                                    <th class="px-3 py-2.5 font-medium">Value</th>
+                                    <th class="px-3 py-2.5 font-medium">Reason</th>
+                                    <th class="px-3 py-2.5 font-medium">Expires</th>
+                                    <th class="px-3 py-2.5 font-medium">By</th>
+                                    <th class="px-[18px] py-2.5 text-right"><span class="sr-only">Actions</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="b in bans" :key="b.id" class="border-b border-border last:border-0">
+                                    <td class="px-[18px] py-2.5"><Badge variant="outline">{{ b.type }}</Badge></td>
+                                    <td class="px-3 py-2.5 font-mono text-xs">{{ b.value }}</td>
+                                    <td class="max-w-[220px] truncate px-3 py-2.5" :title="b.reason ?? ''">{{ b.reason ?? '—' }}</td>
+                                    <td class="whitespace-nowrap px-3 py-2.5">{{ b.expiresAt ? fmt(b.expiresAt) : 'Permanent' }}</td>
+                                    <td class="px-3 py-2.5">{{ b.createdBy ?? '—' }}</td>
+                                    <td class="whitespace-nowrap px-[18px] py-2.5 text-right">
+                                        <RowActionsMenu v-if="canDelete" :items="banActions(b)" :label="b.value" />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </ListStateShell>
+                <PaginationFooter :pagination="bansPagination ?? undefined" @change-page="onBanPage" @update:size="onBanSize" />
+            </TabsContent>
+        </Tabs>
 
         <!-- Create-ban dialog -->
         <Dialog v-model:open="banDialogOpen">
@@ -215,7 +193,7 @@
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" @click="banDialogOpen = false">Cancel</Button>
+                    <Button variant="outline" :disabled="banSaving" @click="banDialogOpen = false">Cancel</Button>
                     <Button :disabled="banSaving || !banForm.value.trim()" @click="submitBan">
                         <Loader2 v-if="banSaving" class="size-4 animate-spin" />
                         Ban
@@ -224,37 +202,36 @@
             </DialogContent>
         </Dialog>
 
-        <!-- Unban confirm -->
-        <Dialog :open="!!unbanTarget" @update:open="(v: boolean) => { if (!v) unbanTarget = null }">
-            <DialogContent class="sm:max-w-sm">
-                <DialogHeader>
-                    <DialogTitle>Remove this ban?</DialogTitle>
-                    <DialogDescription>
-                        {{ unbanTarget?.type }} <span class="font-mono">{{ unbanTarget?.value }}</span> will immediately regain access.
-                    </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                    <Button variant="outline" @click="unbanTarget = null">Cancel</Button>
-                    <Button variant="destructive" :disabled="unbanning" @click="confirmUnban">
-                        <Loader2 v-if="unbanning" class="size-4 animate-spin" />
-                        Unban
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+        <ConfirmDialog
+            :open="!!unbanTarget"
+            :title="`Remove ban on ${unbanTarget?.value ?? ''}?`"
+            description="Requests from it are allowed again."
+            confirm-label="Unban"
+            :busy="unbanning"
+            @update:open="(v) => { if (!v) unbanTarget = null }"
+            @confirm="confirmUnban"
+        />
     </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { watchDebounced } from '@vueuse/core'
-import { Plus, X, TriangleAlert, RefreshCw, Loader2 } from 'lucide-vue-next'
+import { Plus, X, Loader2, Globe, Fingerprint, ShieldOff } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
+import ListStateShell from '@/components/common/ListStateShell.vue'
+import PaginationFooter from '@/components/common/PaginationFooter.vue'
+import RowActionsMenu from '@/components/common/RowActionsMenu.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import type { RowAction } from '@/components/common/rowActions'
+import { isValidRange } from '@/lib/dateRange'
 import { useFetch } from '@/composables/useFetch'
 import { useToast } from '@/composables/useToast'
 import { getErrorMessage } from '@/lib/errorMessage'
@@ -284,32 +261,33 @@ const {
 
 const attempts = computed<LoginAttempt[]>(() => attemptsData.value?.data ?? [])
 const attemptsPagination = computed(() => attemptsData.value?.pagination ?? null)
-const attemptTotal = computed(() => attemptsPagination.value?.totalElements ?? attempts.value.length)
-const attemptsCanPrev = computed(() => (attemptsPagination.value ? attemptsPagination.value.hasPrev : attemptPage.value > 0))
-const attemptsCanNext = computed(() => attemptsPagination.value?.hasNext ?? false)
 
 const attemptPage = ref(0)
-const size = 20
+const attemptSize = ref(20)
 const fIp = ref('')
 const fUsername = ref('')
 const fResult = ref<'all' | 'ok' | 'fail'>('all')
 const fFrom = ref('')
 const fTo = ref('')
 
+const rangeValid = computed(() => isValidRange(fFrom.value, fTo.value))
+
 const hasAttemptFilters = computed(
     () => !!fIp.value || !!fUsername.value || fResult.value !== 'all' || !!fFrom.value || !!fTo.value,
 )
 
-const loadAttempts = () =>
-    executeAttempts({
+const loadAttempts = () => {
+    if (!rangeValid.value) return
+    return executeAttempts({
         page: attemptPage.value,
-        size,
+        size: attemptSize.value,
         ip: fIp.value.trim() || undefined,
         username: fUsername.value.trim() || undefined,
         success: fResult.value === 'all' ? undefined : fResult.value === 'ok',
         createdFrom: fFrom.value || undefined,
         createdTo: fTo.value || undefined,
     })
+}
 
 const clearAttemptFilters = () => {
     fIp.value = ''
@@ -321,7 +299,24 @@ const clearAttemptFilters = () => {
 
 watchDebounced([fIp, fUsername], () => { attemptPage.value = 0; loadAttempts() }, { debounce: 300 })
 watch([fResult, fFrom, fTo], () => { attemptPage.value = 0; loadAttempts() })
-watch(attemptPage, loadAttempts)
+
+const onAttemptPage = (p: number) => {
+    attemptPage.value = p
+    loadAttempts()
+}
+const onAttemptSize = (n: number) => {
+    attemptSize.value = n
+    attemptPage.value = 0
+    loadAttempts()
+}
+
+const attemptActions = (a: LoginAttempt): RowAction[] => {
+    if (!canCreate.value) return []
+    const items: RowAction[] = []
+    if (a.ip) items.push({ label: 'Ban IP…', icon: Globe, onSelect: () => openBanDialog('IP', a.ip!) })
+    if (a.deviceHash) items.push({ label: 'Ban device…', icon: Fingerprint, onSelect: () => openBanDialog('DEVICE', a.deviceHash!) })
+    return items
+}
 
 // --- Bans tab ---
 const {
@@ -333,13 +328,23 @@ const {
 
 const bans = computed<AccessBan[]>(() => bansData.value?.data ?? [])
 const bansPagination = computed(() => bansData.value?.pagination ?? null)
-const banTotal = computed(() => bansPagination.value?.totalElements ?? bans.value.length)
-const bansCanPrev = computed(() => (bansPagination.value ? bansPagination.value.hasPrev : banPage.value > 0))
-const bansCanNext = computed(() => bansPagination.value?.hasNext ?? false)
 
 const banPage = ref(0)
-const loadBans = () => executeBans({ page: banPage.value, size })
-watch(banPage, loadBans)
+const banSize = ref(10)
+const loadBans = () => executeBans({ page: banPage.value, size: banSize.value })
+const onBanPage = (p: number) => {
+    banPage.value = p
+    loadBans()
+}
+const onBanSize = (n: number) => {
+    banSize.value = n
+    banPage.value = 0
+    loadBans()
+}
+
+const banActions = (b: AccessBan): RowAction[] => [
+    { label: 'Unban…', icon: ShieldOff, destructive: true, onSelect: () => { unbanTarget.value = b } },
+]
 
 onMounted(() => {
     loadAttempts()
@@ -361,6 +366,7 @@ function openBanDialog(type: BanType, value: string) {
 }
 
 async function submitBan() {
+    if (banSaving.value) return
     banSaving.value = true
     try {
         const payload: CreateBanPayload = {
@@ -386,7 +392,7 @@ const unbanTarget = ref<AccessBan | null>(null)
 const unbanning = ref(false)
 
 async function confirmUnban() {
-    if (!unbanTarget.value) return
+    if (!unbanTarget.value || unbanning.value) return
     unbanning.value = true
     try {
         await securityService.deleteBan(unbanTarget.value.id)
