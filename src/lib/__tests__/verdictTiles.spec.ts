@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clipForDisplay, defaultSelection, passedCount, sortTests, tileLabel } from '../verdictTiles'
+import { clipForDisplay, defaultSelection, firstDiffLine, passedCount, sortTests, tileLabel } from '../verdictTiles'
 import type { TestCaseResult } from '@/types/submission'
 
 const row = (name: string, result = 0, sample = false): TestCaseResult => ({
@@ -7,9 +7,16 @@ const row = (name: string, result = 0, sample = false): TestCaseResult => ({
 })
 
 describe('verdictTiles', () => {
-    it('labelMapping', () => {
-        const m: [number, string][] = [[0, '✓'], [-1, 'WA'], [1, 'TLE'], [2, 'TLE'], [3, 'MLE'], [4, 'RE'], [5, 'SE'], [9, '?']]
+    it('tileLabelUsesCodes', () => {
+        const m: [number, string][] = [[0, 'AC'], [-1, 'WA'], [1, 'TLE'], [2, 'TLE'], [3, 'MLE'], [4, 'RE'], [5, 'SE'], [9, '?']]
         for (const [c, l] of m) expect(tileLabel(c)).toBe(l)
+    })
+    it('firstDiffLineCases', () => {
+        expect(firstDiffLine('4', '4')).toBeNull()
+        expect(firstDiffLine('4\n', '4')).toBeNull()
+        expect(firstDiffLine('1\n2', '1\n3')).toBe(2)
+        expect(firstDiffLine('1', '1\n2')).toBe(2)
+        expect(firstDiffLine('a  \nb', 'a\nb')).toBeNull()
     })
     it('sortsNumerically', () => {
         const names = sortTests(['10', 'b', '2', 'a', '1'].map((n) => row(n))).map((r) => r.name)

@@ -1,14 +1,22 @@
 <template>
     <div class="border-t border-border bg-muted/30 px-4 py-3">
         <div v-if="!current" class="flex items-center gap-2 text-sm text-muted-foreground">
-            <Terminal class="h-4 w-4" />
-            Submit your code to see the verdict here.
+            <Terminal class="h-4 w-4 shrink-0" aria-hidden="true" />
+            Submit to see your verdict here. Sample tests show their input, expected and your output.
         </div>
         <VerdictTiles v-else-if="terminal" :submission="current" />
-        <div v-else class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-            <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Verdict</span>
-            <VerdictChip :status="current.status" />
-            <span class="tabular text-muted-foreground">#{{ current.id.substring(0, 8) }}</span>
+        <div v-else class="space-y-3 text-sm">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <VerdictChip size="lg" :status="current.status" />
+                <span class="text-muted-foreground">
+                    {{ current.status === SubmissionResult.JUDGING ? 'Running tests' : 'In the queue' }}
+                </span>
+                <span class="tabular ml-auto font-mono text-xs text-muted-foreground">#{{ current.id.substring(0, 8) }}</span>
+            </div>
+            <GhostTiles :state="current.status === SubmissionResult.JUDGING ? 'running' : 'pending'" />
+            <p v-if="current.status === SubmissionResult.JUDGING" class="text-xs text-muted-foreground">
+                Results for every test arrive together when judging finishes.
+            </p>
         </div>
     </div>
 </template>
@@ -17,8 +25,9 @@
 import { ref, computed, watch } from 'vue'
 import { Terminal } from 'lucide-vue-next'
 import VerdictChip from '@/components/common/VerdictChip.vue'
-import { isTerminalStatus, type Submission } from '@/types/submission'
+import { isTerminalStatus, SubmissionResult, type Submission } from '@/types/submission'
 import VerdictTiles from './VerdictTiles.vue'
+import GhostTiles from './GhostTiles.vue'
 import submissionService from '@/services/submissionService'
 import { useSubmissionStream } from '@/composables/useSubmissionStream'
 
