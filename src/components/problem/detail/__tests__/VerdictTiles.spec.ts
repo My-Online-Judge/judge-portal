@@ -77,4 +77,21 @@ describe('VerdictTiles', () => {
         const w = mountIt(sub({ status: -1, result: -1, details: [tc('1', { result: -1, sample: true, input: 'i', expectedOutput: '1\n2', actualOutput: '1\n3' })] }))
         expect(w.text()).toContain('Differs on line 2')
     })
+    it('sampleTilesKeepButtonSemanticsAndSelectionState', async () => {
+        const w = mountIt(sub({ status: -1, result: -1, details: [
+            tc('1', { result: -1, sample: true, input: 'i', expectedOutput: 'e', actualOutput: 'x' }),
+            tc('2', { sample: true, input: 'i', expectedOutput: 'e', actualOutput: 'e' }),
+        ] }))
+        const buttons = w.findAll('button[data-test^="tile-"]')
+        expect(buttons).toHaveLength(2)
+        for (const b of buttons) {
+            expect(b.attributes('role')).toBeUndefined()
+            expect(b.element.parentElement?.getAttribute('role')).toBe('listitem')
+        }
+        expect(buttons[0].attributes('aria-pressed')).toBe('true')
+        expect(buttons[1].attributes('aria-pressed')).toBe('false')
+        await buttons[1].trigger('click')
+        expect(buttons[0].attributes('aria-pressed')).toBe('false')
+        expect(buttons[1].attributes('aria-pressed')).toBe('true')
+    })
 })

@@ -25,20 +25,20 @@
             <TooltipProvider>
                 <div class="tiles" role="list" aria-label="Test results">
                     <template v-for="(r, i) in rows" :key="r.name">
-                        <button
-                            v-if="r.sample"
-                            type="button"
-                            role="listitem"
-                            :data-test="`tile-${r.name}`"
-                            :aria-label="ariaLabel(r)"
-                            :aria-pressed="selected === r.name"
-                            :class="tileClass(r)"
-                            :style="revealStyle(i)"
-                            @click="selected = r.name"
-                        >
-                            <span class="tn">{{ r.name }}</span>
-                            <span class="tv"><component :is="iconOf(r)" v-if="iconOf(r)" aria-hidden="true" />{{ tileLabel(r.result) }}</span>
-                        </button>
+                        <span v-if="r.sample" role="listitem" class="contents">
+                            <button
+                                type="button"
+                                :data-test="`tile-${r.name}`"
+                                :aria-label="ariaLabel(r)"
+                                :aria-pressed="selected === r.name"
+                                :class="tileClass(r)"
+                                :style="revealStyle(i)"
+                                @click="selected = r.name"
+                            >
+                                <span class="tn">{{ r.name }}</span>
+                                <span class="tv"><component :is="iconOf(r)" v-if="iconOf(r)" aria-hidden="true" />{{ tileLabel(r.result) }}</span>
+                            </button>
+                        </span>
                         <Tooltip v-else>
                             <TooltipTrigger as-child>
                                 <span
