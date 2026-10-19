@@ -3,12 +3,19 @@
         <!-- Results Text -->
         <p class="text-sm text-muted-foreground font-medium">
             <template v-if="pagination.totalElements === 0">No results</template>
-            <template v-else>Showing {{ startItem }} to {{ endItem }} of {{ pagination.totalElements }} results</template>
+            <template v-else>
+                <span :class="pagination.totalPages > 1 ? 'hidden sm:inline' : ''" class="tabular-nums">Showing <b class="font-mono font-medium text-foreground">{{ startItem }}-{{ endItem }}</b> of <b class="font-mono font-medium text-foreground">{{ pagination.totalElements }}</b></span>
+                <span v-if="pagination.totalPages > 1" class="tabular-nums sm:hidden">Page <b class="font-mono font-medium text-foreground">{{ currentPage }}</b> of <b class="font-mono font-medium text-foreground">{{ pagination.totalPages }}</b></span>
+            </template>
         </p>
 
         <div v-if="pagination.totalElements > 0" class="flex items-center gap-4">
             <!-- Pagination Controls -->
-            <Pagination v-if="pagination.totalPages > 1" :page="currentPage" :total="pagination.totalElements" :sibling-count="1" show-edges
+            <div v-if="pagination.totalPages > 1" class="flex items-center gap-2 sm:hidden">
+                <Button variant="secondary" size="sm" :disabled="!pagination.hasPrev" @click="handlePageChange(currentPage - 1)">Previous</Button>
+                <Button variant="secondary" size="sm" :disabled="!pagination.hasNext" @click="handlePageChange(currentPage + 1)">Next</Button>
+            </div>
+            <Pagination v-if="pagination.totalPages > 1" class="hidden sm:block" :page="currentPage" :total="pagination.totalElements" :sibling-count="1" show-edges
                 :items-per-page="pagination.size" @update:page="handlePageChange">
                 <PaginationContent v-slot="{ items }" class="flex items-center gap-1">
                     <PaginationFirst class="h-9 w-9" :disabled="currentPage === 1">

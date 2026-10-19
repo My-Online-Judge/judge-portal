@@ -26,7 +26,7 @@ afterEach(() => {
 describe('PaginationFooter', () => {
   it('labelShowsRange', () => {
     const w = mountFooter(pagination())
-    expect(w.text()).toContain('Showing 21 to 40 of 137 results')
+    expect(w.text()).toContain('Showing 21-40 of 137')
   })
 
   it('zeroResultsShowsNoResultsAndNoControls', () => {
@@ -39,7 +39,7 @@ describe('PaginationFooter', () => {
 
   it('singlePageHidesPageButtons', () => {
     const w = mountFooter(pagination({ page: 0, totalElements: 5, totalPages: 1, hasPrev: false, hasNext: false }))
-    expect(w.text()).toContain('Showing 1 to 5 of 5 results')
+    expect(w.text()).toContain('Showing 1-5 of 5')
     expect(w.find('nav').exists()).toBe(false)
     expect(w.find('[role="combobox"]').exists()).toBe(true)
   })
