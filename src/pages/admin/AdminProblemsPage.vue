@@ -1,20 +1,16 @@
 <template>
     <div class="flex flex-col gap-[22px]">
-        <!-- Page header -->
-        <div class="flex flex-wrap items-start justify-between gap-4">
-            <div class="min-w-0">
-                <h1 class="text-[24px] font-semibold leading-tight tracking-tight text-foreground">Problems</h1>
-                <p class="mt-1 text-sm text-muted-foreground">Create, edit and remove problems.</p>
-            </div>
-            <Button v-if="canCreate" class="h-[38px]" @click="goCreate">
-                <Plus class="size-4" />
-                Create problem
-            </Button>
-        </div>
+        <AdminPageHeader title="Problems" description="Create, edit and remove problems.">
+            <template v-if="canCreate" #actions>
+                <Button @click="goCreate">
+                    <Plus class="size-4" />
+                    New problem
+                </Button>
+            </template>
+        </AdminPageHeader>
 
         <!-- List card -->
         <div class="min-w-0 rounded-xl border border-border bg-card">
-            <!-- Card header + search -->
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border p-[18px]">
                 <h2 class="text-base font-medium text-foreground">All problems</h2>
                 <div class="relative w-full sm:w-[260px]">
@@ -23,153 +19,81 @@
                 </div>
             </div>
 
-            <!-- Loading -->
-            <div v-if="isLoading" class="space-y-2.5 p-[18px]">
-                <div v-for="n in 6" :key="n" class="h-11 w-full rounded bg-muted animate-ojpulse" />
-            </div>
-
-            <!-- Error -->
-            <div v-else-if="error" class="p-[18px]">
-                <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-err/40 bg-err/5 px-6 py-12 text-center">
-                    <TriangleAlert class="size-6 text-err" />
-                    <p class="text-sm font-medium text-foreground">Couldn't load problems.</p>
-                    <p class="max-w-xs text-xs text-muted-foreground">
-                        The request failed. Check your connection and try again.
-                    </p>
-                    <Button variant="outline" size="sm" @click="load">
-                        <RefreshCw class="size-4" />
-                        Retry
-                    </Button>
-                </div>
-            </div>
-
-            <!-- Empty -->
-            <div v-else-if="problems.length === 0" class="p-[18px]">
-                <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-12 text-center">
-                    <ListChecks class="size-6 text-muted-foreground" />
-                    <p class="text-sm font-medium text-foreground">
-                        {{ search ? 'No problems match your search.' : 'No problems yet — create one.' }}
-                    </p>
-                    <Button v-if="canCreate && !search" variant="outline" size="sm" @click="goCreate">
-                        <Plus class="size-4" />
-                        Create problem
-                    </Button>
-                </div>
-            </div>
-
-            <!-- Data -->
-            <template v-else>
-                <div class="overflow-x-auto">
-                    <table class="w-full min-w-[760px] border-collapse text-sm">
-                        <thead>
-                            <tr class="border-b border-border text-left">
-                                <th class="px-[18px] py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">ID</th>
-                                <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Title</th>
-                                <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Difficulty</th>
-                                <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Status</th>
-                                <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Updated</th>
-                                <th class="px-[18px] py-2.5 text-right"><span class="sr-only">Actions</span></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="problem in problems"
-                                :key="problem.id"
-                                class="group cursor-pointer border-b border-border last:border-b-0 transition-colors hover:bg-muted/40"
-                                @click="goDetail(problem.problemSlug)"
-                            >
-                                <td class="whitespace-nowrap px-[18px] py-3 font-mono text-[12px] text-muted-foreground">
-                                    {{ shortId(problem.id) }}
-                                </td>
-                                <td class="px-3 py-3">
-                                    <div class="flex min-w-0 flex-col">
-                                        <span class="truncate font-medium text-foreground group-hover:underline">{{ problem.title }}</span>
-                                        <span class="truncate font-mono text-[11px] text-muted-foreground">{{ problem.problemSlug }}</span>
-                                    </div>
-                                </td>
-                                <td class="whitespace-nowrap px-3 py-3 font-mono text-[12px] text-muted-foreground">
-                                    {{ difficultyLabel(problem.hardnessLevel) }}
-                                </td>
-                                <td class="whitespace-nowrap px-3 py-3">
-                                    <span class="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-[12px] text-foreground">
-                                        <span class="size-1.5 rounded-full" :class="statusDotClass(problem.status)" />
-                                        {{ statusLabel(problem.status) }}
-                                    </span>
-                                </td>
-                                <td class="whitespace-nowrap px-3 py-3 font-mono text-[12px] text-muted-foreground">
-                                    {{ relativeTime(problem.updatedAt) }}
-                                </td>
-                                <td class="whitespace-nowrap px-[18px] py-3 text-right" @click.stop>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger
-                                            class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-                                            aria-label="Problem actions"
-                                        >
-                                            <MoreHorizontal class="size-4" />
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" class="w-36">
-                                            <DropdownMenuItem @select="goDetail(problem.problemSlug)">
-                                                <Eye class="size-4" />
-                                                View
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem v-if="canUpdate" @select="goEdit(problem.problemSlug)">
-                                                <Pencil class="size-4" />
-                                                Edit
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                v-if="canDelete"
-                                                variant="destructive"
-                                                @select="openDelete(problem)"
-                                            >
-                                                <Trash2 class="size-4" />
-                                                Delete
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Footer -->
-                <div class="flex items-center justify-between gap-3 border-t border-border p-[18px]">
-                    <p class="text-[12px] text-muted-foreground">
-                        Showing <span class="font-mono text-foreground">{{ problems.length }}</span> of
-                        <span class="font-mono text-foreground">{{ totalElements }}</span>
-                    </p>
-                    <div class="flex items-center gap-2">
-                        <Button variant="outline" size="sm" :disabled="!canPrev" @click="goPrev">Previous</Button>
-                        <Button variant="outline" size="sm" :disabled="!canNext" @click="goNext">Next</Button>
+            <ListStateShell :loading="isLoading" :error="error ? 'error' : null" :has-data="data !== null" :empty="problems.length === 0" @retry="load">
+                <template #empty>
+                    <div class="p-[18px]">
+                        <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-12 text-center">
+                            <ListChecks class="size-6 text-muted-foreground" />
+                            <p class="text-sm font-medium text-foreground">
+                                {{ search ? 'No problems match your search.' : 'No problems yet — create one.' }}
+                            </p>
+                            <Button v-if="canCreate && !search" variant="outline" size="sm" @click="goCreate">
+                                <Plus class="size-4" />
+                                New problem
+                            </Button>
+                        </div>
                     </div>
-                </div>
-            </template>
+                </template>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[760px] border-collapse text-sm">
+                            <thead>
+                                <tr class="border-b border-border text-left">
+                                    <th class="px-[18px] py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">ID</th>
+                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Title</th>
+                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Difficulty</th>
+                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Status</th>
+                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Updated</th>
+                                    <th class="px-[18px] py-2.5 text-right"><span class="sr-only">Actions</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="problem in problems"
+                                    :key="problem.id"
+                                    class="group cursor-pointer border-b border-border last:border-b-0 transition-colors hover:bg-muted/40"
+                                    @click="goDetail(problem.problemSlug)"
+                                >
+                                    <td class="whitespace-nowrap px-[18px] py-3 font-mono text-[12px] text-muted-foreground">
+                                        {{ shortId(problem.id) }}
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <div class="flex min-w-0 flex-col">
+                                            <span class="truncate font-medium text-foreground group-hover:underline">{{ problem.title }}</span>
+                                            <span class="truncate font-mono text-[11px] text-muted-foreground">{{ problem.problemSlug }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="whitespace-nowrap px-3 py-3 font-mono text-[12px] text-muted-foreground">
+                                        {{ difficultyLabel(problem.hardnessLevel) }}
+                                    </td>
+                                    <td class="whitespace-nowrap px-3 py-3">
+                                        <span class="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-[12px] text-foreground">
+                                            <span class="size-1.5 rounded-full" :class="statusDotClass(problem.status)" />
+                                            {{ statusLabel(problem.status) }}
+                                        </span>
+                                    </td>
+                                    <td class="whitespace-nowrap px-3 py-3 font-mono text-[12px] text-muted-foreground">
+                                        {{ relativeTime(problem.updatedAt) }}
+                                    </td>
+                                    <td class="whitespace-nowrap px-[18px] py-3 text-right" @click.stop>
+                                        <RowActionsMenu :items="rowActions(problem)" :label="problem.title" />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+            </ListStateShell>
+            <PaginationFooter :pagination="pagination ?? undefined" @change-page="onPageChange" @update:size="onSizeChange" />
         </div>
 
-        <!-- Delete confirm -->
-        <Dialog v-model:open="deleteOpen">
-            <DialogContent class="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Delete problem?</DialogTitle>
-                    <DialogDescription>
-                        This permanently removes the problem and its test cases. This can't be undone.
-                    </DialogDescription>
-                </DialogHeader>
-                <div v-if="deleteTarget" class="rounded-md border border-border bg-muted/40 px-3 py-2">
-                    <p class="truncate text-sm font-medium text-foreground">{{ deleteTarget.title }}</p>
-                    <p class="truncate font-mono text-xs text-muted-foreground">{{ deleteTarget.problemSlug }}</p>
-                </div>
-                <DialogFooter>
-                    <Button type="button" variant="outline" :disabled="deleting" @click="deleteOpen = false">
-                        Cancel
-                    </Button>
-                    <Button type="button" variant="destructive" :disabled="deleting" @click="confirmDelete">
-                        <Loader2 v-if="deleting" class="size-4 animate-spin" />
-                        Delete
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+        <ConfirmDialog
+            :open="deleteOpen"
+            :title="`Delete problem “${deleteTarget?.title ?? ''}”?`"
+            description="It disappears from the problem list. Submissions are kept."
+            confirm-label="Delete"
+            :busy="deleting"
+            @update:open="(v) => (deleteOpen = v)"
+            @confirm="confirmDelete"
+        />
     </div>
 </template>
 
@@ -177,34 +101,15 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { watchDebounced } from '@vueuse/core'
-import {
-    Plus,
-    Search,
-    ListChecks,
-    TriangleAlert,
-    RefreshCw,
-    MoreHorizontal,
-    Eye,
-    Pencil,
-    Trash2,
-    Loader2,
-} from 'lucide-vue-next'
+import { Plus, Search, ListChecks, Eye, Pencil, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogFooter,
-    DialogTitle,
-    DialogDescription,
-} from '@/components/ui/dialog'
-import {
-    DropdownMenu,
-    DropdownMenuTrigger,
-    DropdownMenuContent,
-    DropdownMenuItem,
-} from '@/components/ui/dropdown-menu'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
+import ListStateShell from '@/components/common/ListStateShell.vue'
+import PaginationFooter from '@/components/common/PaginationFooter.vue'
+import RowActionsMenu from '@/components/common/RowActionsMenu.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import type { RowAction } from '@/components/common/rowActions'
 import { useFetch } from '@/composables/useFetch'
 import { useToast } from '@/composables/useToast'
 import { getErrorMessage } from '@/lib/errorMessage'
@@ -229,21 +134,16 @@ const search = ref('')
 
 const problems = computed(() => data.value?.data ?? [])
 const pagination = computed(() => data.value?.pagination ?? null)
-const totalElements = computed(() => pagination.value?.totalElements ?? problems.value.length)
-const canPrev = computed(() => (pagination.value ? pagination.value.hasPrev : page.value > 0))
-const canNext = computed(() => pagination.value?.hasNext ?? false)
 
 const load = () => execute({ page: page.value, size: size.value, search: search.value || undefined })
 
-const goPrev = () => {
-    if (!canPrev.value) return
-    page.value = Math.max(0, page.value - 1)
+const onPageChange = (p: number) => {
+    page.value = p
     load()
 }
-
-const goNext = () => {
-    if (!canNext.value) return
-    page.value += 1
+const onSizeChange = (n: number) => {
+    size.value = n
+    page.value = 0
     load()
 }
 
@@ -262,6 +162,13 @@ const goCreate = () => router.push({ name: 'AdminProblemCreate' })
 const goDetail = (slug: string) => router.push({ name: 'AdminProblemDetail', params: { slug } })
 const goEdit = (slug: string) => router.push({ name: 'AdminProblemDetail', params: { slug }, query: { edit: '1' } })
 
+const rowActions = (p: Problem): RowAction[] => {
+    const items: RowAction[] = [{ label: 'View', icon: Eye, onSelect: () => goDetail(p.problemSlug) }]
+    if (canUpdate.value) items.push({ label: 'Edit', icon: Pencil, onSelect: () => goEdit(p.problemSlug) })
+    if (canDelete.value) items.push({ label: 'Delete…', icon: Trash2, destructive: true, onSelect: () => openDelete(p) })
+    return items
+}
+
 // --- Delete confirm ---
 const deleteOpen = ref(false)
 const deleteTarget = ref<Problem | null>(null)
@@ -273,7 +180,7 @@ const openDelete = (p: Problem) => {
 }
 
 const confirmDelete = async () => {
-    if (!deleteTarget.value) return
+    if (!deleteTarget.value || deleting.value) return
     deleting.value = true
     try {
         await problemService.remove(deleteTarget.value.problemSlug)
