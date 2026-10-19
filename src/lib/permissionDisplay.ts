@@ -19,7 +19,7 @@ const RESOURCE_LABELS: Record<string, string> = {
     user: 'Users',
 }
 
-// Capitalize the first letter — the fallback label for an unknown prefix.
+// Capitalize the first letter, the fallback label for an unknown prefix.
 function capitalize(value: string): string {
     if (!value) return value
     return value.charAt(0).toUpperCase() + value.slice(1)

@@ -1,5 +1,5 @@
 // Client-side gates for the user create/edit forms. The server is the source of
-// truth (mirrors UserService validation) — these only drive immediate feedback and
+// truth (mirrors UserService validation), these only drive immediate feedback and
 // the Save button's disabled state.
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,32}$/

@@ -47,11 +47,6 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Status tokens — spent only on meaning (health/verdict signalling) */
-  --color-ok: var(--ok);
-  --color-warn: var(--warn);
-  --color-err: var(--err);
-
   --color-primary-soft: var(--primary-soft);
   --color-link: var(--link);
   --color-switch-thumb: var(--switch-thumb);
@@ -161,10 +156,6 @@
   --sidebar-accent-foreground: oklch(0.4 0.14 262);
   --sidebar-border: oklch(0.915 0.008 258);
   --sidebar-ring: oklch(0.53 0.19 262);
-  /* Legacy aliases, removed in Task 13 */
-  --ok: var(--success);
-  --warn: var(--warning);
-  --err: var(--destructive);
   color-scheme: light;
 }
 
@@ -377,25 +368,6 @@
   }
   .animate-enter {
     animation: enter-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-}
-
-/* Skeleton pulse for loading placeholders (opacity-only, reduced-motion safe). */
-@keyframes ojpulse {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-.animate-ojpulse {
-  animation: ojpulse 1.6s ease-in-out infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .animate-ojpulse {
-    animation: none;
   }
 }
 

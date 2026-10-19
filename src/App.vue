@@ -1,5 +1,5 @@
 <template>
-  <!-- Admin renders its own full-height shell — no site Header/footer/max-width chrome. -->
+  <!-- Admin renders its own full-height shell, no site Header/footer/max-width chrome. -->
   <RouterView v-if="isAdmin" />
 
   <div v-else class="flex min-h-screen flex-col bg-background text-foreground">

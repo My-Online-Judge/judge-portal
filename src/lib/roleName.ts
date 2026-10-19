@@ -5,7 +5,7 @@
 const ROLE_NAME_RE = /^[A-Z][A-Z0-9_]*$/
 
 // True when `name` (after trimming) is a valid role name. The server is still the
-// source of truth — this only gates the Save button for immediate feedback.
+// source of truth, this only gates the Save button for immediate feedback.
 export function isValidRoleName(name: string): boolean {
     return ROLE_NAME_RE.test(name.trim())
 }

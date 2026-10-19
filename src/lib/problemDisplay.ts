@@ -3,9 +3,9 @@
 
 // Relative "time ago" from an ISO timestamp, degrading to a short date past a week.
 export const relativeTime = (iso?: string): string => {
-    if (!iso) return '—'
+    if (!iso) return '-'
     const then = new Date(iso).getTime()
-    if (Number.isNaN(then)) return '—'
+    if (Number.isNaN(then)) return '-'
     const seconds = Math.max(Math.round((Date.now() - then) / 1000), 0)
     if (seconds < 60) return `${seconds}s`
     const minutes = Math.round(seconds / 60)
