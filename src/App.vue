@@ -46,7 +46,7 @@ onMounted(() => {
     localStorage.removeItem('loginRedirectUrl')
 
     if (login !== 'ok') {
-        triggerToast('Login failed. Please try again.', 'error')
+        triggerToast('Login failed. Try again.', 'error')
         return
     }
 

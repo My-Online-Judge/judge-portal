@@ -91,6 +91,6 @@ const { copy } = useClipboard()
 
 const onCopy = (text: string) => {
     copy(text)
-    triggerToast('Copied!')
+    triggerToast('Copied to clipboard')
 }
 </script>

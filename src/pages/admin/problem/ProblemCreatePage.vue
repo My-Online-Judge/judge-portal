@@ -153,7 +153,7 @@ const cancel = () => router.push({ name: 'AdminProblems' })
 
 const onSubmit = async () => {
     if (!validate()) {
-        triggerToast('Please fix the highlighted fields.', 'error')
+        triggerToast('Fix the highlighted fields', 'error')
         return
     }
 

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { buildProblemFormData } from '@/services/problemService'
 import type { CreateProblemPayload } from '@/types/problem'
 
@@ -16,5 +16,25 @@ describe('buildProblemFormData', () => {
         expect(data).toBeInstanceOf(Blob)
         expect(JSON.parse(await data.text())).toMatchObject({ title: 'T', problemSlug: 'demo-slug' })
         expect((fd.get('file') as File).name).toBe('cases.zip')
+    })
+})
+
+describe('deleteKeepalive', () => {
+    it('deleteKeepaliveUsesFetchKeepalive', async () => {
+        const { default: problemService } = await import('@/services/problemService')
+        const { API_ROUTES } = await import('@/constants/apiPath')
+        const { API_BASE_URL } = await import('@/api/axiosClient')
+        const fetchMock = vi.fn(() => Promise.resolve(new Response(null)))
+        vi.stubGlobal('fetch', fetchMock)
+        try {
+            problemService.deleteKeepalive('demo-slug')
+            expect(fetchMock).toHaveBeenCalledWith(API_BASE_URL + API_ROUTES.PROBLEMS.DETAIL('demo-slug'), {
+                method: 'DELETE',
+                credentials: 'include',
+                keepalive: true,
+            })
+        } finally {
+            vi.unstubAllGlobals()
+        }
     })
 })

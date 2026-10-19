@@ -66,7 +66,7 @@ const handleGoogleLogin = async () => {
         }
     } catch (error) {
         console.error('Failed to get Google Auth URL', error)
-        triggerToast('Failed to initialize Google Login', 'error')
+        triggerToast("Couldn't start Google login", 'error')
         loading.value = false
     }
 }

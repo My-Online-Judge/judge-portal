@@ -72,15 +72,16 @@
             </div>
         </div>
 
-        <LoginModal v-model:open="isLoginOpen" @close="isLoginOpen = false" />
+        <LoginModal v-model:open="loginPrompt.open.value" @close="loginPrompt.open.value = false" />
     </header>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Home, List, Trophy, ShieldCheck } from 'lucide-vue-next'
 import LoginModal from '@/components/auth/LoginModal.vue'
+import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import ThemeMenu from '@/components/layout/ThemeMenu.vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -99,7 +100,7 @@ import {
     AvatarImage,
 } from '@/components/ui/avatar'
 
-const isLoginOpen = ref(false)
+const loginPrompt = useLoginPrompt()
 const authStore = useAuthStore()
 const router = useRouter()
 
@@ -107,7 +108,7 @@ const ADMIN_ANY = ['problem:create', 'problem:update', 'problem:delete', 'judges
 const isAdmin = computed(() => ADMIN_ANY.some((p) => authStore.hasPermission(p)))
 
 const openLogin = () => {
-    isLoginOpen.value = true
+    loginPrompt.request()
 }
 
 const handleLogout = () => {

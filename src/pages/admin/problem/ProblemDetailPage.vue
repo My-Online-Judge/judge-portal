@@ -234,7 +234,7 @@ import { shortId, difficultyLabel, statusLabel, statusDotClass, relativeTime } f
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const { triggerToast } = useToast()
+const { triggerToast, success } = useToast()
 
 const canUpdate = computed(() => authStore.hasPermission('problem:update'))
 const canDelete = computed(() => authStore.hasPermission('problem:delete'))
@@ -353,7 +353,7 @@ const validate = (): boolean => {
 
 const save = async () => {
     if (!validate()) {
-        triggerToast('Please fix the highlighted fields.', 'error')
+        triggerToast('Fix the highlighted fields', 'error')
         return
     }
     submitting.value = true
@@ -375,7 +375,7 @@ const save = async () => {
             tags: p.tags,
         }
         await problemService.update(String(route.params.slug), dto)
-        triggerToast('Problem updated', 'success')
+        success('Changes saved', { description: `“${dto.title}”` })
         isEditing.value = false
         await fetchProblem()
     } catch (err) {

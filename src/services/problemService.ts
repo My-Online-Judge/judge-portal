@@ -1,4 +1,4 @@
-import axiosClient from '@/api/axiosClient'
+import axiosClient, { API_BASE_URL } from '@/api/axiosClient'
 import type { AxiosResponse } from 'axios'
 import type { ApiResponse } from '@/types/common'
 import type { Problem, ProblemSearchParams, TagCount, CreateProblemPayload, UpdateProblemPayload } from '@/types/problem'
@@ -49,6 +49,15 @@ class ProblemService {
     // Delete a problem by slug
     remove(slug: string): Promise<AxiosResponse<ApiResponse<void>>> {
         return axiosClient.delete<ApiResponse<void>>(API_ROUTES.PROBLEMS.DETAIL(slug))
+    }
+
+    // Same delete for page unload: fetch with keepalive survives the tab closing (axios/XHR does not).
+    deleteKeepalive(slug: string): void {
+        void fetch(API_BASE_URL + API_ROUTES.PROBLEMS.DETAIL(slug), {
+            method: 'DELETE',
+            credentials: 'include',
+            keepalive: true,
+        }).catch(() => undefined)
     }
 }
 

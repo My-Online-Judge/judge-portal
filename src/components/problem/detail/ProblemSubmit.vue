@@ -78,10 +78,11 @@
         <!-- Submit bar -->
         <div class="flex items-center justify-end gap-3 border-t border-border px-4 py-3">
             <template v-if="authStore.isAuthenticated">
-                <Button class="cursor-pointer px-6" @click="handleSubmit"
-                    :disabled="isSubmitting || cooldownActive || sourceCode.trim() === ''">
+                <Button class="cursor-pointer px-6 aria-disabled:opacity-50" @click="handleSubmit"
+                    :aria-disabled="cooldownActive || undefined"
+                    :disabled="isSubmitting || sourceCode.trim() === ''">
                     <Send class="h-4 w-4" />
-                    {{ isSubmitting ? 'Submitting...' : cooldownActive ? `Submit (${cooldownRemaining}s)` : 'Submit' }}
+                    {{ isSubmitting ? 'Submitting…' : cooldownActive ? `Submit (${cooldownRemaining}s)` : 'Submit' }}
                 </Button>
             </template>
             <template v-else>
@@ -127,6 +128,8 @@ import { isAxiosError } from 'axios'
 import { useToast } from '@/composables/useToast'
 import { useCooldown } from '@/composables/useCooldown'
 import { getErrorMessage } from '@/lib/errorMessage'
+import { retryAfterSeconds } from '@/lib/retryAfter'
+import { submissionToasts } from '@/lib/submissionToasts'
 import submissionService from '@/services/submissionService'
 import type { Submission, SubmissionRequest } from '@/types/submission'
 import { getMonacoLanguage } from '@/utils/editorUtils'
@@ -143,7 +146,7 @@ const emit = defineEmits<{
     (e: 'success', submission: Submission): void
 }>()
 
-const { triggerToast } = useToast()
+const { triggerToast, loading, error: errorToast, countdown } = useToast()
 
 const selectedLanguage = ref<Language>()
 const selectedTheme = ref('vs-light')
@@ -174,20 +177,34 @@ watch(
 
 const handleReset = () => {
     sourceCode.value = ''
-    triggerToast('Code reset successful', 'success')
+    triggerToast('Code reset to the template', 'success')
 }
 
+// When the current cooldown ends (epoch ms), so a press on the cooldown button can show the same toast.
+let cooldownUntil = 0
+const beginCooldown = (seconds: number) => {
+    startCooldown(seconds)
+    cooldownUntil = Date.now() + seconds * 1000
+}
+const showTooFast = () =>
+    countdown('You are submitting too fast', { until: Math.max(cooldownUntil, Date.now() + 1000) })
+
 const handleSubmit = async () => {
+    if (cooldownActive.value) {
+        showTooFast()
+        return
+    }
     if (!selectedLanguage.value) {
-        triggerToast('Please select a language', 'error')
+        triggerToast('Select a language first', 'error')
         return
     }
     if (!sourceCode.value.trim()) {
-        triggerToast('Source code cannot be empty', 'error')
+        triggerToast('Write some code before submitting', 'error')
         return
     }
 
     isSubmitting.value = true
+    const pending = loading('Submitting…')
     try {
         const data: SubmissionRequest = {
             problemSlug: props.problemSlug,
@@ -197,18 +214,31 @@ const handleSubmit = async () => {
 
         const res = await submissionService.submit(data)
 
-        triggerToast('Submitted', 'success')
-        startCooldown(COOLDOWN_SECONDS)
+        // The console turns this toast into the verdict when judging ends.
+        pending.update({
+            type: 'info',
+            title: 'Submitted',
+            description: 'Judging now. The verdict appears below the editor.',
+            duration: Infinity,
+        })
+        submissionToasts.set(res.data.data.id, pending)
+        beginCooldown(COOLDOWN_SECONDS)
         sourceCode.value = ''
 
         emit('success', res.data.data)
     } catch (error) {
+        pending.dismiss()
         if (isAxiosError(error) && error.response?.status === 429) {
-            const ra = Number(error.response.headers?.['retry-after'])
-            startCooldown(Number.isFinite(ra) && ra > 0 ? ra : COOLDOWN_SECONDS)
-            triggerToast(getErrorMessage(error, 'You are submitting too fast'), 'error')
+            const seconds = retryAfterSeconds(error.response.headers?.['retry-after'], COOLDOWN_SECONDS)
+            beginCooldown(seconds)
+            showTooFast()
+        } else if (isAxiosError(error) && !error.response) {
+            errorToast("Couldn't reach the server", {
+                description: "Your submission wasn't sent. Check your connection.",
+                action: { label: 'Retry', onClick: handleSubmit },
+            })
         } else {
-            triggerToast(getErrorMessage(error, 'An error occurred'), 'error')
+            triggerToast(getErrorMessage(error, 'Submission failed'), 'error')
         }
     } finally {
         isSubmitting.value = false

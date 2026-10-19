@@ -88,9 +88,8 @@
         <ConfirmDialog
             :open="deleteOpen"
             :title="`Delete problem “${deleteTarget?.title ?? ''}”?`"
-            description="It disappears from the problem list. Submissions are kept."
-            confirm-label="Delete"
-            :busy="deleting"
+            description="Its test cases are deleted with it. You can undo for 8 seconds after deleting."
+            confirm-label="Delete problem"
             @update:open="(v) => (deleteOpen = v)"
             @confirm="confirmDelete"
         />
@@ -112,7 +111,6 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import type { RowAction } from '@/components/common/rowActions'
 import { useFetch } from '@/composables/useFetch'
 import { useToast } from '@/composables/useToast'
-import { getErrorMessage } from '@/lib/errorMessage'
 import problemService from '@/services/problemService'
 import { useAuthStore } from '@/stores/auth'
 import type { Problem } from '@/types/problem'
@@ -120,7 +118,7 @@ import { shortId, difficultyLabel, statusLabel, statusDotClass, relativeTime } f
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { triggerToast } = useToast()
+const { undo, error: errorToast } = useToast()
 
 const canCreate = computed(() => authStore.hasPermission('problem:create'))
 const canUpdate = computed(() => authStore.hasPermission('problem:update'))
@@ -172,28 +170,55 @@ const rowActions = (p: Problem): RowAction[] => {
 // --- Delete confirm ---
 const deleteOpen = ref(false)
 const deleteTarget = ref<Problem | null>(null)
-const deleting = ref(false)
-
 const openDelete = (p: Problem) => {
     deleteTarget.value = p
     deleteOpen.value = true
 }
 
-const confirmDelete = async () => {
-    if (!deleteTarget.value || deleting.value) return
-    deleting.value = true
-    try {
-        await problemService.remove(deleteTarget.value.problemSlug)
-        triggerToast('Problem deleted', 'success')
-        // If we just removed the last row on a non-first page, step back.
-        if (problems.value.length === 1 && page.value > 0) page.value -= 1
-        deleteOpen.value = false
-        load()
-    } catch (err) {
-        triggerToast(getErrorMessage(err, 'Could not delete the problem.'), 'error')
-    } finally {
-        deleting.value = false
-    }
+// The row leaves the list at once; the request waits out the undo window.
+const removeRow = (p: Problem): number => {
+    const rows = data.value?.data ?? []
+    const index = rows.findIndex((r) => r.id === p.id)
+    if (index >= 0 && data.value) data.value = { ...data.value, data: rows.filter((r) => r.id !== p.id) }
+    return index
+}
+
+const restoreRow = (p: Problem, index: number) => {
+    const rows = data.value?.data ?? []
+    if (!data.value || rows.some((r) => r.id === p.id)) return
+    const next = [...rows]
+    next.splice(index < 0 ? next.length : Math.min(index, next.length), 0, p)
+    data.value = { ...data.value, data: next }
+}
+
+const startDelete = (p: Problem) => {
+    const index = removeRow(p)
+    undo('Problem deleted', {
+        description: `“${p.title}”`,
+        onUndo: () => restoreRow(p, index),
+        commitOnUnload: () => problemService.deleteKeepalive(p.problemSlug),
+        // Catches its own errors, so the toast engine never sees a rejection.
+        commit: async () => {
+            try {
+                await problemService.remove(p.problemSlug)
+                // If we just removed the last row on a non-first page, step back.
+                if (problems.value.length === 0 && page.value > 0) page.value -= 1
+                load()
+            } catch {
+                restoreRow(p, index)
+                errorToast("Couldn't delete the problem", {
+                    action: { label: 'Retry', onClick: () => startDelete(p) },
+                })
+            }
+        },
+    })
+}
+
+const confirmDelete = () => {
+    const target = deleteTarget.value
+    if (!target) return
+    deleteOpen.value = false
+    startDelete(target)
 }
 
 onMounted(load)
