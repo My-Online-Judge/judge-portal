@@ -5,12 +5,15 @@ import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 
 const h = vi.hoisted(() => ({
-  listAttempts: vi.fn(), listBans: vi.fn(), createBan: vi.fn(), deleteBan: vi.fn(), toast: vi.fn(),
-  undo: vi.fn(), error: vi.fn(),
+  listAttempts: vi.fn(), listBans: vi.fn(), createBan: vi.fn(), deleteBan: vi.fn(), deleteBanKeepalive: vi.fn(),
+  toast: vi.fn(), undo: vi.fn(), error: vi.fn(),
 }))
 
 vi.mock('@/services/securityService', () => ({
-  default: { listAttempts: h.listAttempts, listBans: h.listBans, createBan: h.createBan, deleteBan: h.deleteBan },
+  default: {
+    listAttempts: h.listAttempts, listBans: h.listBans, createBan: h.createBan,
+    deleteBan: h.deleteBan, deleteBanKeepalive: h.deleteBanKeepalive,
+  },
 }))
 vi.mock('@/composables/useToast', () => ({
   useToast: () => ({ triggerToast: h.toast, undo: h.undo, error: h.error }),
@@ -43,7 +46,7 @@ async function openMenu(name: string) {
   await nextTick()
 }
 const tabs = () => wrapper!.findAll('[role="tab"]')
-type UndoOpts = { description?: string; commit: () => Promise<void>; onUndo: () => void }
+type UndoOpts = { description?: string; commit: () => Promise<void>; onUndo: () => void; commitOnUnload?: () => void }
 const undoOpts = () => h.undo.mock.calls[0][1] as UndoOpts
 async function openBansTab() {
   await tabs()[1].trigger('mousedown', { button: 0, ctrlKey: false })
@@ -90,6 +93,18 @@ describe('AdminSecurityPage', () => {
     await flushPromises()
     expect(h.deleteBan).toHaveBeenCalledTimes(1)
     expect(h.deleteBan).toHaveBeenCalledWith('b1')
+  })
+
+  it('removeBanUnloadUsesKeepalive', async () => {
+    await mountPage()
+    await openBansTab()
+    await openMenu('198.51.100.9')
+    menuItem('Remove ban').click()
+    await flushPromises()
+    undoOpts().commitOnUnload!()
+    expect(h.deleteBanKeepalive).toHaveBeenCalledTimes(1)
+    expect(h.deleteBanKeepalive).toHaveBeenCalledWith('b1')
+    expect(h.deleteBan).not.toHaveBeenCalled()
   })
 
   it('removeBanUndoRestoresRow', async () => {

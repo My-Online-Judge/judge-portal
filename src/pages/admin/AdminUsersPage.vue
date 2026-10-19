@@ -339,7 +339,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import type { RowAction } from '@/components/common/rowActions'
 import { isValidRange } from '@/lib/dateRange'
 import { useFetch } from '@/composables/useFetch'
-import { useToast } from '@/composables/useToast'
+import { useToast, type ToastHandle } from '@/composables/useToast'
 import { getErrorMessage } from '@/lib/errorMessage'
 import { isValidUsername, isValidPassword, isValidEmail } from '@/lib/userValidators'
 import userService from '@/services/userService'
@@ -349,7 +349,7 @@ import { USER_STATUS, type UserResponse } from '@/types/user'
 import type { Role } from '@/types/role'
 
 const authStore = useAuthStore()
-const { triggerToast, undo, error: errorToast } = useToast()
+const { triggerToast, undo, error: errorToast, toasts } = useToast()
 
 const canCreate = computed(() => authStore.hasPermission('user:create'))
 const canUpdate = computed(() => authStore.hasPermission('user:update'))
@@ -494,7 +494,10 @@ const editForm = reactive({ name: '', email: '', status: '1' })
 const editingSelf = computed(() => (editingUser.value ? isSelf(editingUser.value) : false))
 const editValid = computed(() => isValidEmail(editForm.email))
 
-const openEdit = (u: UserResponse) => {
+const openEdit = (row: UserResponse) => {
+    // A disable still in its undo window is cancelled first, so the dialog shows the real status.
+    cancelPendingDisable(row.id)
+    const u = data.value?.data?.find((x) => x.id === row.id) ?? row
     editingUser.value = u
     editForm.name = u.name ?? ''
     editForm.email = u.email ?? ''
@@ -598,6 +601,11 @@ const submitReset = async () => {
 
 // --- Enable (direct) / Disable (undo toast from the menu, confirmed from the edit dialog) ---
 const enableUser = async (u: UserResponse) => {
+    // Enabling during a pending disable is the same as pressing Undo: nothing is sent.
+    if (cancelPendingDisable(u.id)) {
+        triggerToast('User enabled', 'success')
+        return
+    }
     try {
         await userService.updateStatus(u.id, USER_STATUS.ACTIVE)
         triggerToast('User enabled', 'success')
@@ -616,16 +624,38 @@ const clearOverride = (id: string) => {
     statusOverride.value = next
 }
 
+// Disables still inside their undo window, by user id, with the undo toast's handle.
+const pendingDisables = new Map<string, ToastHandle | undefined>()
+
+// Cancels a pending disable exactly as pressing Undo would: the toast goes, the row is
+// restored and no request is sent. False when that user has no disable pending.
+const cancelPendingDisable = (id: string): boolean => {
+    if (!pendingDisables.has(id)) return false
+    const handle = pendingDisables.get(id)
+    pendingDisables.delete(id)
+    const item = handle ? toasts.value.find((t) => t.id === handle.id) : undefined
+    if (item?.action) item.action.onClick()
+    else clearOverride(id)
+    return true
+}
+
 // The row reads Disabled at once; the status change is sent when the undo window closes.
 const startDisable = (u: UserResponse) => {
     if (statusOverride.value.has(u.id)) return
     setOverride(u.id, USER_STATUS.DISABLED)
     const name = u.name || u.username
-    undo('User disabled', {
+    const handle = undo('User disabled', {
         description: `${name} can't sign in until you enable them again.`,
-        onUndo: () => clearOverride(u.id),
+        onUndo: () => {
+            pendingDisables.delete(u.id)
+            clearOverride(u.id)
+        },
+        // Leaving the page inside the window: a keepalive request survives the tab closing.
+        commitOnUnload: () => userService.updateStatusKeepalive(u.id, USER_STATUS.DISABLED),
         // Catches its own errors, so the toast engine never sees a rejection.
         commit: async () => {
+            // The window is over: from here an Enable is a normal status change.
+            pendingDisables.delete(u.id)
             try {
                 await userService.updateStatus(u.id, USER_STATUS.DISABLED)
                 await load()
@@ -639,6 +669,7 @@ const startDisable = (u: UserResponse) => {
             }
         },
     })
+    pendingDisables.set(u.id, handle)
 }
 
 const disableOpen = ref(false)

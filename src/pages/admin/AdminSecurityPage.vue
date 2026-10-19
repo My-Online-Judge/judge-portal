@@ -427,6 +427,8 @@ const startUnban = (b: AccessBan) => {
     undo('Ban removed', {
         description: `${b.type === 'IP' ? 'IP address' : 'Device'} ${b.value}`,
         onUndo: () => pendingUnbans.remove(b.id),
+        // Leaving the page inside the window: a keepalive request survives the tab closing.
+        commitOnUnload: () => securityService.deleteBanKeepalive(b.id),
         // Catches its own errors, so the toast engine never sees a rejection.
         commit: async () => {
             try {

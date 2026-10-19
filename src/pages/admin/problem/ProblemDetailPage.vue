@@ -11,7 +11,7 @@
 
         <!-- Error / not found -->
         <template v-else-if="loadError || !problem">
-            <PageHeader title="Problem" :breadcrumbs="crumbs" />
+            <PageHeader title="Problem" />
             <div class="rounded-xl border border-border bg-card p-[18px]">
                 <div role="alert" class="flex min-h-60 flex-col items-center justify-center gap-2.5 px-5 py-10 text-center">
                     <span class="grid size-10 place-items-center rounded-xl bg-destructive-soft text-destructive-ink">
@@ -35,7 +35,7 @@
         </template>
 
         <template v-else>
-            <PageHeader :title="problem.title" :breadcrumbs="crumbs">
+            <PageHeader :title="problem.title">
                 <template v-if="!isEditing" #actions>
                     <Button variant="secondary" as-child>
                         <RouterLink :to="`/problems/${problem.problemSlug}`">
@@ -209,12 +209,6 @@ const { triggerToast, success, error: errorToast } = useToast()
 
 const cardClass = 'min-w-0 overflow-hidden rounded-xl border border-border bg-card'
 const cardHeadClass = 'border-b border-border px-3.5 py-3 text-sm font-semibold text-foreground'
-
-const crumbs = computed(() => [
-    { label: 'Admin', to: { name: 'AdminDashboard' } },
-    { label: 'Problems', to: { name: 'AdminProblems' } },
-    { label: String(route.params.slug ?? ''), mono: true },
-])
 
 const canUpdate = computed(() => authStore.hasPermission('problem:update'))
 const canDelete = computed(() => authStore.hasPermission('problem:delete'))

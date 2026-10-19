@@ -3,11 +3,6 @@
         <PageHeader
             title="Create problem"
             description="Add a problem to the catalog. Fields marked * are required."
-            :breadcrumbs="[
-                { label: 'Admin', to: { name: 'AdminDashboard' } },
-                { label: 'Problems', to: { name: 'AdminProblems' } },
-                { label: 'New' },
-            ]"
         />
 
         <!-- Form -->

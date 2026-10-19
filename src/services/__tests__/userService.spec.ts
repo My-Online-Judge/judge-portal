@@ -11,6 +11,7 @@ const { get, post, put, patch, del } = vi.hoisted(() => ({
 
 vi.mock('@/api/axiosClient', () => ({
     default: { get, post, put, patch, delete: del },
+    API_BASE_URL: 'http://api.test/v1',
 }))
 
 import userService from '@/services/userService'
@@ -58,5 +59,25 @@ describe('userService', () => {
     it('remove -> DELETE /users/{id}', () => {
         userService.remove('u1')
         expect(del).toHaveBeenCalledWith('/users/u1')
+    })
+})
+
+describe('updateStatusKeepalive', () => {
+    it('updateStatusKeepaliveUsesFetchKeepalive', () => {
+        const fetchMock = vi.fn(() => Promise.resolve(new Response(null)))
+        vi.stubGlobal('fetch', fetchMock)
+        try {
+            userService.updateStatusKeepalive('u1', 0)
+            expect(fetchMock).toHaveBeenCalledWith('http://api.test/v1/users/u1/status', {
+                method: 'PATCH',
+                credentials: 'include',
+                keepalive: true,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 0 }),
+            })
+            expect(patch).not.toHaveBeenCalled()
+        } finally {
+            vi.unstubAllGlobals()
+        }
     })
 })
