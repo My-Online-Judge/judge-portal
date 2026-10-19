@@ -6,7 +6,7 @@ import type { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios'
  * which no refresh can fix. /auth/me is deliberately NOT here — booting the app with
  * an expired access token is exactly the case this module exists for.
  */
-export const REFRESH_EXCLUDED_PATHS = ['/auth/refresh', '/auth/login', '/auth/logout']
+export const REFRESH_EXCLUDED_PATHS = ['/auth/refresh', '/auth/login', '/auth/logout', '/users/me/password']
 
 export const isRefreshExcluded = (url?: string): boolean =>
     !!url && REFRESH_EXCLUDED_PATHS.some((path) => url.includes(path))

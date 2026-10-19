@@ -71,6 +71,6 @@ const handleSubmit = async () => {
     }
     // The server already cleared the cookies; just drop local state.
     await authStore.logout({ reload: false, notifyServer: false })
-    await router.push(ROUTE_PATH.ADMIN_LOGIN)
+    await router.push({ path: ROUTE_PATH.ADMIN_LOGIN, query: { redirect: ROUTE_PATH.PROBLEM } })
 }
 </script>
