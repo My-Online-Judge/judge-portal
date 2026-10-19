@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { Terminal } from 'lucide-vue-next'
 import VerdictChip from '@/components/common/VerdictChip.vue'
 import { isTerminalStatus, SubmissionResult, type Submission } from '@/types/submission'
@@ -31,7 +31,7 @@ import GhostTiles from './GhostTiles.vue'
 import submissionService from '@/services/submissionService'
 import type { ToastHandle } from '@/composables/useToast'
 import { useSubmissionStream } from '@/composables/useSubmissionStream'
-import { submissionToasts } from '@/lib/submissionToasts'
+import { submissionToasts, releaseSubmissionToast } from '@/lib/submissionToasts'
 import { verdictToastPatch } from '@/lib/verdictToast'
 
 const props = defineProps<{ submission?: Submission | null }>()
@@ -40,6 +40,9 @@ const emit = defineEmits<{ (e: 'judged', submission: Submission): void }>()
 
 const current = ref<Submission | null>(props.submission ?? null)
 const rootEl = ref<HTMLElement | null>(null)
+const watched = new Set<string>()
+// Leaving before a verdict: the "Submitted" toast must not wait forever.
+onBeforeUnmount(() => watched.forEach(releaseSubmissionToast))
 const { watch: watchVerdict } = useSubmissionStream()
 
 // A fresh submission arrives from the Submit action with status PENDING. Show it
@@ -83,13 +86,18 @@ watch(
         if (isTerminalStatus(sub.status)) {
             settle(sub)
         } else {
-            watchVerdict(sub.id, (verdict) => {
-                current.value = verdict
-                if (isTerminalStatus(verdict.status)) {
-                    emit('judged', verdict)
-                    settle(verdict)
-                }
-            })
+            watched.add(sub.id)
+            watchVerdict(
+                sub.id,
+                (verdict) => {
+                    current.value = verdict
+                    if (isTerminalStatus(verdict.status)) {
+                        emit('judged', verdict)
+                        settle(verdict)
+                    }
+                },
+                () => releaseSubmissionToast(sub.id),
+            )
         }
     },
     { immediate: true },

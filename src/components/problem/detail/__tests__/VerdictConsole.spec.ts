@@ -34,7 +34,7 @@ describe('VerdictConsole', () => {
 
     it('emitsJudgedOnTerminalVerdict', async () => {
         const w = mount(VerdictConsole, { props: { submission: pending } })
-        expect(watchVerdict).toHaveBeenCalledWith('abcdef123456', expect.any(Function))
+        expect(watchVerdict).toHaveBeenCalledWith('abcdef123456', expect.any(Function), expect.any(Function))
         watchVerdict.mock.calls[0][1](full)
         await flushPromises()
         expect(w.emitted('judged')).toHaveLength(1)

@@ -33,7 +33,7 @@ export function useSubmissionStream() {
 
     // Idempotent: claims (closes + removes) the watcher synchronously so repeated
     // triggers (multiple 'error' events, or error racing the timeout) fetch once.
-    const fallbackFetch = async (id: string, onVerdict: VerdictHandler) => {
+    const fallbackFetch = async (id: string, onVerdict: VerdictHandler, onGiveUp?: () => void) => {
         if (!watchers.has(id)) return
         stop(id)
         const token = { cancelled: false }
@@ -42,20 +42,23 @@ export function useSubmissionStream() {
             const res = await submissionService.getSubmissionById(id)
             const sub = res.data.data
             if (!token.cancelled && sub && isTerminalStatus(sub.status)) onVerdict(sub)
+            else if (!token.cancelled) onGiveUp?.()
         } catch {
             // Nothing more we can do; leave the row as Judging.
+            if (!token.cancelled) onGiveUp?.()
         } finally {
             pendingFallbacks.delete(token)
         }
     }
 
-    const watch = (id: string, onVerdict: VerdictHandler) => {
+    // `onGiveUp` runs when the fallback ends without a final verdict.
+    const watch = (id: string, onVerdict: VerdictHandler, onGiveUp?: () => void) => {
         if (watchers.has(id)) return
 
         const source = new EventSource(`${BASE_URL}${API_ROUTES.SUBMISSIONS.STREAM(id)}`, {
             withCredentials: true,
         })
-        const timer = setTimeout(() => fallbackFetch(id, onVerdict), FALLBACK_TIMEOUT_MS)
+        const timer = setTimeout(() => fallbackFetch(id, onVerdict, onGiveUp), FALLBACK_TIMEOUT_MS)
         watchers.set(id, { source, timer })
 
         source.addEventListener('verdict', (ev: MessageEvent) => {
@@ -63,7 +66,7 @@ export function useSubmissionStream() {
             try {
                 verdict = JSON.parse(ev.data)
             } catch {
-                fallbackFetch(id, onVerdict) // malformed payload → fetch the real value
+                fallbackFetch(id, onVerdict, onGiveUp) // malformed payload → fetch the real value
                 return
             }
             stop(id) // close BEFORE the callback so a throwing onVerdict can't leave the stream open
@@ -72,7 +75,7 @@ export function useSubmissionStream() {
 
         source.addEventListener('error', () => {
             // EventSource would auto-reconnect; we don't want that. Close and fall back once.
-            fallbackFetch(id, onVerdict)
+            fallbackFetch(id, onVerdict, onGiveUp)
         })
     }
 

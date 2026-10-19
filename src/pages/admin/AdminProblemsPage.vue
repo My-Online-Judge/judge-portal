@@ -111,6 +111,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import type { RowAction } from '@/components/common/rowActions'
 import { useFetch } from '@/composables/useFetch'
 import { useToast } from '@/composables/useToast'
+import { usePendingDeletes, isAlreadyGone } from '@/composables/usePendingDeletes'
 import problemService from '@/services/problemService'
 import { useAuthStore } from '@/stores/auth'
 import type { Problem } from '@/types/problem'
@@ -130,7 +131,8 @@ const page = ref(0)
 const size = ref(10)
 const search = ref('')
 
-const problems = computed(() => data.value?.data ?? [])
+const pending = usePendingDeletes()
+const problems = computed(() => pending.filter(data.value?.data ?? [], (p) => p.problemSlug))
 const pagination = computed(() => data.value?.pagination ?? null)
 
 const load = () => execute({ page: page.value, size: size.value, search: search.value || undefined })
@@ -175,37 +177,27 @@ const openDelete = (p: Problem) => {
     deleteOpen.value = true
 }
 
-// The row leaves the list at once; the request waits out the undo window.
-const removeRow = (p: Problem): number => {
-    const rows = data.value?.data ?? []
-    const index = rows.findIndex((r) => r.id === p.id)
-    if (index >= 0 && data.value) data.value = { ...data.value, data: rows.filter((r) => r.id !== p.id) }
-    return index
-}
-
-const restoreRow = (p: Problem, index: number) => {
-    const rows = data.value?.data ?? []
-    if (!data.value || rows.some((r) => r.id === p.id)) return
-    const next = [...rows]
-    next.splice(index < 0 ? next.length : Math.min(index, next.length), 0, p)
-    data.value = { ...data.value, data: next }
-}
-
+// The row is hidden at once (also across reloads); the request waits out the undo window.
 const startDelete = (p: Problem) => {
-    const index = removeRow(p)
+    if (!pending.add(p.problemSlug)) return
     undo('Problem deleted', {
         description: `“${p.title}”`,
-        onUndo: () => restoreRow(p, index),
+        onUndo: () => pending.remove(p.problemSlug),
         commitOnUnload: () => problemService.deleteKeepalive(p.problemSlug),
         // Catches its own errors, so the toast engine never sees a rejection.
         commit: async () => {
             try {
-                await problemService.remove(p.problemSlug)
+                try {
+                    await problemService.remove(p.problemSlug)
+                } catch (err) {
+                    if (!isAlreadyGone(err)) throw err
+                }
+                pending.remove(p.problemSlug)
                 // If we just removed the last row on a non-first page, step back.
                 if (problems.value.length === 0 && page.value > 0) page.value -= 1
                 load()
             } catch {
-                restoreRow(p, index)
+                pending.remove(p.problemSlug)
                 errorToast("Couldn't delete the problem", {
                     action: { label: 'Retry', onClick: () => startDelete(p) },
                 })

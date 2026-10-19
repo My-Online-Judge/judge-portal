@@ -177,7 +177,7 @@ watch(
 
 const handleReset = () => {
     sourceCode.value = ''
-    triggerToast('Code reset to the template', 'success')
+    triggerToast('Editor cleared', 'success')
 }
 
 // When the current cooldown ends (epoch ms), so a press on the cooldown button can show the same toast.
