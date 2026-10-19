@@ -10,7 +10,7 @@
             move-class="transition duration-200 ease-out"
         >
             <div
-                v-for="toast in toasts"
+                v-for="toast in visibleToasts"
                 :key="toast.id"
                 class="pointer-events-auto flex w-full items-center gap-3 rounded-xl border border-l-2 border-border bg-background/95 px-3.5 py-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80"
                 :class="getConfig(toast.type).accent"
@@ -23,12 +23,15 @@
                 >
                     <component :is="getConfig(toast.type).icon" class="size-3.5 text-white" :stroke-width="3" />
                 </span>
-                <span class="min-w-0 flex-1 text-sm font-medium leading-snug text-foreground">{{ toast.message }}</span>
+                <span class="min-w-0 flex-1 text-sm leading-snug">
+                    <span class="block font-medium text-foreground">{{ toast.title }}</span>
+                    <span v-if="toast.description" class="block text-muted-foreground">{{ toast.description }}</span>
+                </span>
                 <button
                     type="button"
                     class="shrink-0 rounded-md p-1 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
                     aria-label="Dismiss notification"
-                    @click="removeToast(toast.id)"
+                    @click="dismiss(toast.id)"
                 >
                     <X class="size-4" />
                 </button>
@@ -38,20 +41,25 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useToast, type ToastType } from '@/composables/useToast'
 import { CheckCircle2, Info, TriangleAlert, XCircle, X, type LucideIcon } from 'lucide-vue-next'
 
-const { toasts, removeToast } = useToast()
+const { toasts, dismiss } = useToast()
+
+// Only the first MAX_VISIBLE render; the rest wait in the engine's queue.
+const visibleToasts = computed(() => toasts.value.filter((t) => t.visible))
 
 // Per-type look: a solid icon chip + a matching left accent border. The card
 // surface itself uses theme tokens (bg-background / border-border / text-foreground)
 // so the toast reads correctly in both light and dark themes.
-const config: Record<ToastType, { icon: LucideIcon; chip: string; accent: string }> = {
+const config: Partial<Record<ToastType, { icon: LucideIcon; chip: string; accent: string }>> = {
     success: { icon: CheckCircle2, chip: 'bg-emerald-500', accent: 'border-l-emerald-500' },
     info: { icon: Info, chip: 'bg-blue-500', accent: 'border-l-blue-500' },
     warning: { icon: TriangleAlert, chip: 'bg-amber-500', accent: 'border-l-amber-500' },
     error: { icon: XCircle, chip: 'bg-rose-500', accent: 'border-l-rose-500' },
 }
 
-const getConfig = (type: ToastType) => config[type] || config.success
+// Types without their own look yet (loading, countdown, undo, verdict) use info's.
+const getConfig = (type: ToastType) => config[type] ?? config.info!
 </script>
