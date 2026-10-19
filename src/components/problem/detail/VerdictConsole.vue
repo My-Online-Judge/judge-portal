@@ -4,6 +4,7 @@
             <Terminal class="h-4 w-4" />
             Submit your code to see the verdict here.
         </div>
+        <VerdictTiles v-else-if="terminal" :submission="current!" />
         <div v-else class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
             <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Verdict</span>
             <Badge :class="view.chipClass">
@@ -20,6 +21,7 @@
                 </span>
             </template>
         </div>
+
     </div>
 </template>
 
@@ -29,6 +31,8 @@ import { Loader2, Terminal } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { getStatusChipClass, STATUS_CHIP_BASE } from '@/lib/submissionDisplay'
 import { getSubmissionStatus, isTerminalStatus, type Submission } from '@/types/submission'
+import VerdictTiles from './VerdictTiles.vue'
+import submissionService from '@/services/submissionService'
 import { useSubmissionStream } from '@/composables/useSubmissionStream'
 
 const props = defineProps<{ submission?: Submission | null }>()
@@ -40,15 +44,33 @@ const { watch: watchVerdict } = useSubmissionStream()
 
 // A fresh submission arrives from the Submit action with status PENDING. Show it
 // optimistically, then subscribe to the stream and swap in the final verdict.
+const terminal = computed(() => !!current.value && isTerminalStatus(current.value.status))
+
+// The stream payload may omit per-test details; fetch the full submission once in that case.
+async function ensureDetails(verdict: Submission) {
+    if (verdict.details !== undefined) return
+    try {
+        const res = await submissionService.getSubmissionById(verdict.id)
+        if (current.value?.id === verdict.id) current.value = res.data.data
+    } catch {
+        if (current.value?.id === verdict.id) current.value = { ...verdict, details: null }
+    }
+}
+
 watch(
     () => props.submission,
     (sub) => {
         if (!sub) return
         current.value = sub
-        if (!isTerminalStatus(sub.status)) {
+        if (isTerminalStatus(sub.status)) {
+            void ensureDetails(sub)
+        } else {
             watchVerdict(sub.id, (verdict) => {
                 current.value = verdict
-                if (isTerminalStatus(verdict.status)) emit('judged', verdict)
+                if (isTerminalStatus(verdict.status)) {
+                    emit('judged', verdict)
+                    void ensureDetails(verdict)
+                }
             })
         }
     },

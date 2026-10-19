@@ -7,17 +7,17 @@ export interface SubmissionRequest {
     problemSlug: string
 }
 
-export interface JudgeResult {
-    cpu_time: number
-    real_time: number
-    memory: number
-    signal: number
-    exit_code: number
-    error: number
+export interface TestCaseResult {
+    name: string
     result: number
-    test_case: string
-    output_md5: string
-    output: string
+    cpuTime: number | null
+    realTime: number | null
+    memory: number | null
+    sample: boolean
+    // Present only for sample (open) rows; hidden rows never carry them.
+    input?: string | null
+    expectedOutput?: string | null
+    actualOutput?: string | null
 }
 
 export interface Submission extends BaseModel {
@@ -28,7 +28,7 @@ export interface Submission extends BaseModel {
     errorMessage: string
     cpuTime: number
     memory: number
-    details: JudgeResult[]
+    details: TestCaseResult[] | null
     language: Language
     problemSlug: string
 }
