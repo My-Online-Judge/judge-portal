@@ -1,5 +1,5 @@
 <template>
-    <div class="flex flex-col gap-[22px]">
+    <div class="flex flex-col gap-[18px]">
         <PageHeader title="Dashboard" description="Content, infrastructure and access at a glance.">
             <template v-if="hasPermission('problem:create')" #actions>
                 <Button as-child>
@@ -11,241 +11,182 @@
             </template>
         </PageHeader>
 
-        <!-- KPI row -->
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <!-- Problems (live) -->
-            <div class="rounded-xl border border-border bg-card p-[18px]">
-                <div class="flex items-start justify-between gap-3">
-                    <span class="text-[13px] font-medium text-muted-foreground">Problems</span>
-                    <ListChecks class="size-[18px] shrink-0 text-muted-foreground" />
-                </div>
-                <div class="mt-3 flex h-[30px] items-center">
-                    <div v-if="isLoading" class="h-5 w-[88px] rounded bg-muted animate-ojpulse" />
-                    <p v-else-if="error" class="font-mono text-[30px] font-semibold leading-none text-muted-foreground">—</p>
-                    <p v-else class="font-mono text-[30px] font-semibold leading-none tracking-tight text-foreground">
-                        {{ totalProblems ?? '—' }}
-                    </p>
-                </div>
-                <p class="mt-2 text-[12px] text-muted-foreground">
-                    {{ error ? "Couldn't load" : 'In the catalog' }}
-                </p>
-            </div>
+        <!-- Each cell loads and fails on its own -->
+        <StatStrip>
+            <StatCell
+                label="Problems"
+                :icon="ListChecks"
+                :loading="isLoading && data === null"
+                :error="!!error && data === null"
+                :value="totalProblems === null ? '-' : fmtCount(totalProblems)"
+                :context="problemsContext"
+                @retry="loadProblemsCell"
+            />
+            <StatCell
+                label="Judge servers"
+                :icon="Server"
+                :loading="canReadJudgeServers && judgeLoading && judgeData === null"
+                :error="canReadJudgeServers && !!judgeError && judgeData === null"
+                :value="canReadJudgeServers ? judgeOnline : '-'"
+                :suffix="canReadJudgeServers ? `/ ${judgeTotal} online` : undefined"
+                :context="judgeContext"
+                @retry="loadJudgeServers"
+            />
+            <StatCell
+                label="Users"
+                :icon="Users"
+                :loading="canReadUsers && usersLoading && usersData === null"
+                :error="canReadUsers && !!usersError && usersData === null"
+                :value="canReadUsers && totalUsers !== null ? fmtCount(totalUsers) : '-'"
+                :context="canReadUsers ? undefined : 'Needs the user:read permission'"
+                @retry="loadUsers"
+            />
+            <StatCell
+                label="Active bans"
+                :icon="ShieldAlert"
+                :loading="canReadBans && bansLoading && bansData === null"
+                :error="canReadBans && !!bansError && bansData === null"
+                :value="canReadBans && totalBans !== null ? fmtCount(totalBans) : '-'"
+                :context="canReadBans ? undefined : 'Needs the ban:read permission'"
+                @retry="loadBans"
+            />
+        </StatStrip>
 
-            <!-- Judge servers (live) -->
-            <div class="rounded-xl border border-border bg-card p-[18px]">
-                <div class="flex items-start justify-between gap-3">
-                    <span class="text-[13px] font-medium text-muted-foreground">Judge servers</span>
-                    <Server class="size-[18px] shrink-0 text-muted-foreground" />
-                </div>
-                <div class="mt-3 flex h-[30px] items-center">
-                    <div v-if="canReadJudgeServers && judgeLoading" class="h-5 w-[88px] rounded bg-muted animate-ojpulse" />
-                    <p v-else-if="!canReadJudgeServers || judgeError" class="font-mono text-[30px] font-semibold leading-none text-muted-foreground/60">—</p>
-                    <p v-else class="font-mono text-[30px] font-semibold leading-none tracking-tight text-foreground">
-                        {{ judgeOnline }} / {{ judgeTotal }}
-                    </p>
-                </div>
-                <p class="mt-2 text-[12px] text-muted-foreground">{{ judgeKpiContext }}</p>
-            </div>
-
-            <!-- Users (live) -->
-            <div class="rounded-xl border border-border bg-card p-[18px]">
-                <div class="flex items-start justify-between gap-3">
-                    <span class="text-[13px] font-medium text-muted-foreground">Users</span>
-                    <Users class="size-[18px] shrink-0 text-muted-foreground" />
-                </div>
-                <div class="mt-3 flex h-[30px] items-center">
-                    <div v-if="canReadUsers && usersLoading" class="h-5 w-[88px] rounded bg-muted animate-ojpulse" />
-                    <p v-else-if="!canReadUsers || usersError || totalUsers === null" class="font-mono text-[30px] font-semibold leading-none text-muted-foreground/60">—</p>
-                    <p v-else class="font-mono text-[30px] font-semibold leading-none tracking-tight text-foreground">{{ totalUsers }}</p>
-                </div>
-                <p class="mt-2 text-[12px] text-muted-foreground">{{ usersContext }}</p>
-            </div>
-        </div>
-
-        <!-- Two-column grid -->
-        <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
-            <!-- Judge server health -->
-            <div class="rounded-xl border border-border bg-card">
-                <div class="flex items-start justify-between gap-3 border-b border-border p-[18px]">
-                    <div class="min-w-0">
-                        <h2 class="text-base font-medium text-foreground">Judge server health</h2>
-                        <p class="mt-0.5 text-[12px] text-muted-foreground">
-                            <template v-if="canReadJudgeServers && !judgeError && judgeTotal > 0">
-                                <span class="font-mono text-foreground">{{ judgeOnline }}</span> of
-                                <span class="font-mono text-foreground">{{ judgeTotal }}</span> reporting
-                            </template>
-                            <template v-else>Connect in the Judge servers section.</template>
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        class="flex size-8 shrink-0 items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+        <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+            <!-- Judge server health: numbers only -->
+            <section class="min-w-0 overflow-hidden rounded-xl border border-border bg-card" aria-labelledby="dash-judges">
+                <div class="flex flex-wrap items-center gap-2.5 border-b border-border px-3.5 py-3">
+                    <h2 id="dash-judges" class="text-sm font-semibold">Judge server health</h2>
+                    <span v-if="canReadJudgeServers && judgeTotal > 0" class="text-xs text-muted-foreground tabular-nums">
+                        {{ judgeOnline }} of {{ judgeTotal }} online
+                    </span>
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        class="ml-auto"
                         aria-label="Refresh judge server health"
                         :disabled="!canReadJudgeServers || judgeLoading"
                         @click="loadJudgeServers"
                     >
-                        <RefreshCw class="size-4" :class="canReadJudgeServers && judgeLoading && 'animate-spin'" />
-                    </button>
+                        <RefreshCw :class="canReadJudgeServers && judgeLoading && 'animate-spin motion-reduce:animate-none'" />
+                    </Button>
                 </div>
-                <div class="p-[18px]">
-                    <!-- Loading -->
-                    <div v-if="canReadJudgeServers && judgeLoading" class="space-y-2.5">
-                        <div v-for="n in 4" :key="n" class="h-10 w-full rounded bg-muted animate-ojpulse" />
+
+                <p v-if="!canReadJudgeServers" class="px-3.5 py-8 text-center text-[13px] text-muted-foreground">
+                    Server health needs the <span class="font-mono">judgeserver:read</span> permission.
+                </p>
+                <ListStateShell
+                    v-else
+                    :loading="judgeLoading"
+                    :error="judgeError ? 'The request failed. Check your connection and try again.' : null"
+                    :has-data="judgeData !== null"
+                    :empty="judgeServers.length === 0"
+                    :rows="3"
+                    empty-title="No judge servers reporting yet"
+                    empty-hint="They appear here once a judge server checks in."
+                    @retry="loadJudgeServers"
+                >
+                    <div class="overflow-x-auto">
+                        <table class="dt min-w-[560px]">
+                            <thead>
+                                <tr>
+                                    <th>Server</th>
+                                    <th>Status</th>
+                                    <th class="num">CPU</th>
+                                    <th class="num">Memory</th>
+                                    <th class="num">Tasks</th>
+                                    <th class="num">Heartbeat</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="server in judgeTopServers"
+                                    :key="`${server.hostname}-${server.ip}`"
+                                    :class="{ 'row-warn': serverStatus(server).health === 'offline' }"
+                                >
+                                    <td>
+                                        <b class="font-mono text-[12.5px] font-semibold">{{ server.hostname }}</b>
+                                        <div class="slug meta-strip">
+                                            <span>{{ server.ip }}</span>
+                                            <span>v{{ server.judgerVersion }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <Badge :variant="serverStatus(server).variant">
+                                            <span v-if="serverStatus(server).dot" class="size-[7px] shrink-0 rounded-full bg-current" aria-hidden="true" />
+                                            <component :is="serverStatus(server).icon" v-else-if="serverStatus(server).icon" aria-hidden="true" />
+                                            {{ serverStatus(server).label }}
+                                        </Badge>
+                                    </td>
+                                    <template v-if="serverStatus(server).health === 'offline'">
+                                        <td class="num text-muted-foreground">-</td>
+                                        <td class="num text-muted-foreground">-</td>
+                                        <td class="num text-muted-foreground">-</td>
+                                        <td class="num text-destructive-ink">{{ relativeTime(server.lastHeartbeat) }}</td>
+                                    </template>
+                                    <template v-else>
+                                        <td class="num">{{ server.cpuUsage }}%</td>
+                                        <td class="num">{{ server.memoryUsage }}%</td>
+                                        <td class="num">{{ server.taskNumber }}</td>
+                                        <td class="num text-muted-foreground">{{ relativeTime(server.lastHeartbeat) }}</td>
+                                    </template>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
+                </ListStateShell>
+            </section>
 
-                    <!-- Error -->
-                    <div v-else-if="canReadJudgeServers && judgeError">
-                        <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-destructive/40 bg-destructive/5 px-6 py-10 text-center">
-                            <TriangleAlert class="size-6 text-destructive" />
-                            <p class="text-sm font-medium text-foreground">Couldn't load judge servers.</p>
-                            <p class="max-w-[15rem] text-xs text-muted-foreground">
-                                The request failed. Check your connection and try again.
-                            </p>
-                            <Button variant="outline" size="sm" @click="loadJudgeServers">
-                                <RefreshCw class="size-4" />
-                                Retry
-                            </Button>
-                        </div>
-                    </div>
-
-                    <!-- Empty (no permission or nothing reporting) -->
-                    <div v-else-if="judgeTopServers.length === 0">
-                        <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-10 text-center">
-                            <Server class="size-6 text-muted-foreground" />
-                            <p class="text-sm font-medium text-foreground">No judge servers reporting yet.</p>
-                            <p class="max-w-[15rem] text-xs text-muted-foreground">
-                                They'll show up here once a judge server checks in.
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Data -->
-                    <ul v-else class="flex flex-col gap-0.5">
-                        <li
-                            v-for="server in judgeTopServers"
-                            :key="`${server.hostname}-${server.ip}`"
-                            class="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/40"
-                        >
-                            <span class="size-2 shrink-0 rounded-full" :class="healthDotClass[serverHealth(server)]" />
-                            <div class="flex min-w-0 flex-col leading-tight">
-                                <span class="truncate font-mono text-[13px] text-foreground">{{ server.hostname }}</span>
-                                <span class="truncate font-mono text-[11px] text-muted-foreground">{{ server.ip }}</span>
-                            </div>
-                            <span class="ml-auto shrink-0 font-mono text-[12px] text-muted-foreground">
-                                {{ relativeTime(server.lastHeartbeat) }}
-                            </span>
-                        </li>
-                    </ul>
+            <!-- Recent activity: the latest problems -->
+            <section class="min-w-0 overflow-hidden rounded-xl border border-border bg-card" aria-labelledby="dash-activity">
+                <div class="flex flex-wrap items-center gap-2.5 border-b border-border px-3.5 py-3">
+                    <h2 id="dash-activity" class="text-sm font-semibold">Recent activity</h2>
+                    <span class="text-xs text-muted-foreground">Problems</span>
                 </div>
-            </div>
-
-            <!-- Recent problems -->
-            <div class="min-w-0 rounded-xl border border-border bg-card">
-                <div class="flex items-center justify-between gap-3 border-b border-border p-[18px]">
-                    <h2 class="text-base font-medium text-foreground">Recent problems</h2>
-                    <RouterLink
-                        :to="ROUTE_PATH.ADMIN_PROBLEMS"
-                        class="inline-flex items-center gap-1 rounded-md text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                        View all
-                        <ArrowRight class="size-4" />
-                    </RouterLink>
-                </div>
-
-                <!-- Loading -->
-                <div v-if="isLoading" class="space-y-2.5 p-[18px]">
-                    <div v-for="n in 5" :key="n" class="h-10 w-full rounded bg-muted animate-ojpulse" />
-                </div>
-
-                <!-- Error -->
-                <div v-else-if="error" class="p-[18px]">
-                    <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-destructive/40 bg-destructive/5 px-6 py-10 text-center">
-                        <TriangleAlert class="size-6 text-destructive" />
-                        <p class="text-sm font-medium text-foreground">Couldn't load problems.</p>
-                        <p class="max-w-xs text-xs text-muted-foreground">
-                            The request failed. Check your connection and try again.
-                        </p>
-                        <Button variant="outline" size="sm" @click="load">
-                            <RefreshCw class="size-4" />
-                            Retry
-                        </Button>
-                    </div>
-                </div>
-
-                <!-- Empty -->
-                <div v-else-if="problems.length === 0" class="p-[18px]">
-                    <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-10 text-center">
-                        <ListChecks class="size-6 text-muted-foreground" />
-                        <p class="text-sm font-medium text-foreground">No problems yet — create one.</p>
-                        <Button v-if="hasPermission('problem:create')" variant="outline" size="sm" as-child>
+                <ListStateShell
+                    :loading="isLoading"
+                    :error="error ? 'The request failed. Check your connection and try again.' : null"
+                    :has-data="data !== null"
+                    :empty="problems.length === 0"
+                    :rows="5"
+                    empty-title="No problems yet"
+                    empty-hint="Create one to start the catalog."
+                    @retry="loadProblemsCell"
+                >
+                    <template #empty-action>
+                        <Button v-if="hasPermission('problem:create')" variant="secondary" size="sm" as-child>
                             <RouterLink :to="CREATE_PROBLEM_PATH">
                                 <Plus class="size-4" />
                                 New problem
                             </RouterLink>
                         </Button>
-                    </div>
+                    </template>
+                    <ul class="m-0 list-none py-1">
+                        <li v-for="problem in problems" :key="problem.id" class="flex items-center gap-2.5 px-3.5 py-[9px] text-[13px]">
+                            <span class="grid size-[26px] shrink-0 place-items-center rounded-[7px] bg-muted text-muted-foreground" aria-hidden="true">
+                                <component :is="activityIcon(problem)" class="size-3.5" />
+                            </span>
+                            <span class="min-w-0 flex-1 truncate">
+                                <RouterLink
+                                    :to="{ name: 'AdminProblemDetail', params: { slug: problem.problemSlug } }"
+                                    class="font-semibold text-foreground hover:text-link hover:underline"
+                                >{{ problem.title }}</RouterLink>
+                                <span class="text-xs text-muted-foreground"> {{ activityVerb(problem) }}</span>
+                            </span>
+                            <span class="shrink-0 text-xs text-muted-foreground tabular-nums">{{ relativeTime(problem.updatedAt) }}</span>
+                        </li>
+                    </ul>
+                </ListStateShell>
+                <div class="border-t border-border px-3.5 py-2.5">
+                    <RouterLink
+                        :to="ROUTE_PATH.ADMIN_PROBLEMS"
+                        class="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-link hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                        All problems
+                        <ArrowRight class="size-3" aria-hidden="true" />
+                    </RouterLink>
                 </div>
-
-                <!-- Data -->
-                <template v-else>
-                    <div class="overflow-x-auto">
-                        <table class="w-full min-w-[640px] border-collapse text-sm">
-                            <thead>
-                                <tr class="border-b border-border text-left">
-                                    <th class="px-[18px] py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">ID</th>
-                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Title</th>
-                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Difficulty</th>
-                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Status</th>
-                                    <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Updated</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr
-                                    v-for="problem in problems"
-                                    :key="problem.id"
-                                    class="border-b border-border last:border-b-0 transition-colors hover:bg-muted/40"
-                                >
-                                    <td class="whitespace-nowrap px-[18px] py-3 font-mono text-[12px] text-muted-foreground">
-                                        {{ shortId(problem.id) }}
-                                    </td>
-                                    <td class="px-3 py-3">
-                                        <div class="flex min-w-0 flex-col">
-                                            <span class="truncate font-medium text-foreground">{{ problem.title }}</span>
-                                            <span class="truncate font-mono text-[11px] text-muted-foreground">{{ problem.problemSlug }}</span>
-                                        </div>
-                                    </td>
-                                    <td class="whitespace-nowrap px-3 py-3 font-mono text-[12px] text-muted-foreground">
-                                        {{ difficultyLabel(problem.hardnessLevel) }}
-                                    </td>
-                                    <td class="whitespace-nowrap px-3 py-3">
-                                        <span class="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-[12px] text-foreground">
-                                            <span class="size-1.5 rounded-full" :class="statusDotClass(problem.status)" />
-                                            {{ statusLabel(problem.status) }}
-                                        </span>
-                                    </td>
-                                    <td class="whitespace-nowrap px-3 py-3 font-mono text-[12px] text-muted-foreground">
-                                        {{ relativeTime(problem.updatedAt) }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Footer -->
-                    <div class="flex items-center justify-between gap-3 border-t border-border p-[18px]">
-                        <p class="text-[12px] text-muted-foreground">
-                            Showing <span class="font-mono text-foreground">{{ shownCount }}</span> of
-                            <span class="font-mono text-foreground">{{ totalProblems ?? shownCount }}</span>
-                        </p>
-                        <Button variant="outline" size="sm" as-child>
-                            <RouterLink :to="ROUTE_PATH.ADMIN_PROBLEMS">
-                                View all
-                                <ArrowRight class="size-4" />
-                            </RouterLink>
-                        </Button>
-                    </div>
-                </template>
-            </div>
+            </section>
         </div>
     </div>
 </template>
@@ -254,43 +195,73 @@
 import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
-    ListChecks,
-    Users,
-    Server,
     ArrowRight,
-    TriangleAlert,
-    RefreshCw,
+    EyeOff,
+    ListChecks,
+    Pencil,
     Plus,
+    RefreshCw,
+    Server,
+    ShieldAlert,
+    Users,
 } from 'lucide-vue-next'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import PageHeader from '@/components/common/PageHeader.vue'
+import StatStrip from '@/components/common/StatStrip.vue'
+import StatCell from '@/components/common/StatCell.vue'
+import ListStateShell from '@/components/common/ListStateShell.vue'
 import { useFetch } from '@/composables/useFetch'
 import problemService from '@/services/problemService'
 import userService from '@/services/userService'
 import judgeServerService from '@/services/judgeServerService'
+import securityService from '@/services/securityService'
 import { useAuthStore } from '@/stores/auth'
 import { ROUTE_PATH } from '@/constants/routePath'
-import { shortId, difficultyLabel, statusLabel, statusDotClass, relativeTime } from '@/lib/problemDisplay'
-import { serverHealth, healthDotClass } from '@/lib/judgeServerDisplay'
+import { relativeTime } from '@/lib/problemDisplay'
+import { serverHealth, serverStatus } from '@/lib/judgeServerDisplay'
 import type { JudgeServer } from '@/types/judgeServer'
+import type { Problem } from '@/types/problem'
 
 const CREATE_PROBLEM_PATH = `${ROUTE_PATH.ADMIN_PROBLEMS}/new`
 
 const authStore = useAuthStore()
 const hasPermission = (permission: string) => authStore.hasPermission(permission)
 
-// --- Problems (Recent problems card + Problems KPI) ---
+const fmtCount = (n: number) => n.toLocaleString('en-US')
+
+// --- Problems (stat cell + recent activity) ---
 const { data, isLoading, error, execute } = useFetch(problemService.getProblems, { immediate: false })
+// A one-row page filtered to inactive gives the inactive count; active is the rest.
+const { data: inactiveData, execute: inactiveExecute } = useFetch(problemService.getProblems, { immediate: false })
 
 const load = () => execute({ page: 0, size: 5 })
+const loadInactive = () => inactiveExecute({ page: 0, size: 1, status: 'INACTIVE' })
+const loadProblemsCell = () => {
+    load()
+    loadInactive()
+}
 
 const problems = computed(() => data.value?.data ?? [])
 const totalProblems = computed(() => data.value?.pagination?.totalElements ?? null)
-const shownCount = computed(() => problems.value.length)
+const inactiveProblems = computed(() => inactiveData.value?.pagination?.totalElements ?? null)
+const problemsContext = computed(() => {
+    if (totalProblems.value === null || inactiveProblems.value === null) return undefined
+    const inactive = inactiveProblems.value
+    const active = Math.max(totalProblems.value - inactive, 0)
+    return `${fmtCount(active)} active, ${fmtCount(inactive)} inactive`
+})
 
-// --- Judge servers (health card + Judge servers KPI) ---
-// Independent fetch, gated on the read permission so a user without it
-// gets the graceful pending/empty treatment rather than an error.
+// A problem whose last update is its creation reads as "created".
+const isFresh = (p: Problem) => {
+    const created = new Date(p.createdAt).getTime()
+    const updated = new Date(p.updatedAt).getTime()
+    return Number.isNaN(created) || Number.isNaN(updated) || Math.abs(updated - created) < 5000
+}
+const activityIcon = (p: Problem) => (p.status !== 1 ? EyeOff : isFresh(p) ? Plus : Pencil)
+const activityVerb = (p: Problem) => `${isFresh(p) ? 'created' : 'updated'}${p.status !== 1 ? ', inactive' : ''}`
+
+// --- Judge servers (stat cell + health table), gated on the read permission ---
 const canReadJudgeServers = computed(() => hasPermission('judgeserver:read'))
 
 const {
@@ -305,18 +276,26 @@ const loadJudgeServers = () => judgeExecute()
 const judgeServers = computed<JudgeServer[]>(() => judgeData.value?.data ?? [])
 const judgeTotal = computed(() => judgeServers.value.length)
 const judgeOnline = computed(() => judgeServers.value.filter((s) => serverHealth(s) === 'online').length)
-const judgeStale = computed(() => judgeTotal.value - judgeOnline.value)
-const judgeTopServers = computed(() => judgeServers.value.slice(0, 5))
+// Offline servers first, so a problem is never below the fold of the card.
+const judgeTopServers = computed(() =>
+    [...judgeServers.value]
+        .sort((a, b) => Number(serverHealth(b) === 'offline') - Number(serverHealth(a) === 'offline'))
+        .slice(0, 5),
+)
 
-const judgeKpiContext = computed(() => {
-    if (!canReadJudgeServers.value) return 'Wired up in the Judge servers section.'
-    if (judgeError.value) return "Couldn't load"
-    if (judgeLoading.value) return 'Checking in…'
+const judgeContext = computed(() => {
+    if (!canReadJudgeServers.value) return 'Needs the judgeserver:read permission'
     if (judgeTotal.value === 0) return 'None reporting'
-    return judgeStale.value > 0 ? `${judgeStale.value} stale/offline` : 'All reporting'
+    const offline = judgeServers.value.filter((s) => serverHealth(s) === 'offline')
+    const disabled = judgeServers.value.filter((s) => serverHealth(s) === 'disabled').length
+    const parts: string[] = []
+    if (offline.length === 1) parts.push(`${offline[0]!.hostname} offline`)
+    else if (offline.length > 1) parts.push(`${offline.length} offline`)
+    if (disabled > 0) parts.push(`${disabled} disabled`)
+    return parts.length ? parts.join(', ') : 'All online'
 })
 
-// --- Users KPI: only the total is needed, so ask for a single row ---
+// --- Users: only the total is needed, so ask for a single row ---
 const canReadUsers = computed(() => hasPermission('user:read'))
 const {
     data: usersData,
@@ -325,16 +304,25 @@ const {
     execute: usersExecute,
 } = useFetch(userService.list, { immediate: false })
 
+const loadUsers = () => usersExecute({ size: 1 })
 const totalUsers = computed(() => usersData.value?.pagination?.totalElements ?? null)
-const usersContext = computed(() => {
-    if (!canReadUsers.value) return 'Needs the user:read permission.'
-    if (usersError.value) return "Couldn't load"
-    return 'Registered accounts'
-})
+
+// --- Active bans: the total of the bans list ---
+const canReadBans = computed(() => hasPermission('ban:read'))
+const {
+    data: bansData,
+    isLoading: bansLoading,
+    error: bansError,
+    execute: bansExecute,
+} = useFetch(securityService.listBans, { immediate: false })
+
+const loadBans = () => bansExecute({ page: 0, size: 1 })
+const totalBans = computed(() => bansData.value?.pagination?.totalElements ?? null)
 
 onMounted(() => {
-    load()
-    if (canReadUsers.value) usersExecute({ size: 1 })
+    loadProblemsCell()
+    if (canReadUsers.value) loadUsers()
     if (canReadJudgeServers.value) loadJudgeServers()
+    if (canReadBans.value) loadBans()
 })
 </script>
