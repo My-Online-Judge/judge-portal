@@ -16,6 +16,7 @@ export const API_ROUTES = {
     },
     PROBLEMS: {
         ROOT: '/problems',
+        TAGS: '/problems/tags',
         DETAIL: (slug: string) => `/problems/${slug}`,
         TEST_CASES: (slug: string) => `/problems/${slug}/test-cases`,
         TEST_CASES_IMPORT: (slug: string) => `/problems/${slug}/test-cases/import`,

@@ -20,6 +20,7 @@ export interface ProblemFormValue {
     sampleOutput: string
     hint: string
     status: number
+    tags: string[]
 }
 </script>
 
@@ -29,6 +30,10 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import RichTextEditor from '@/components/admin/editor/RichTextEditor.vue'
+import TagInput from '@/components/admin/problem/TagInput.vue'
+import problemService from '@/services/problemService'
+import { SEED_TAG_VOCABULARY } from '@/lib/tags'
+import { onMounted, onUnmounted, ref } from 'vue'
 
 const props = defineProps<{
     modelValue: ProblemFormValue
@@ -44,6 +49,20 @@ const emit = defineEmits<{
 const set = <K extends keyof ProblemFormValue>(key: K, value: ProblemFormValue[K]) => {
     emit('update:modelValue', { ...props.modelValue, [key]: value })
 }
+
+// Suggestions: the API vocabulary if non-empty, else the seed list.
+const suggestions = ref<string[]>(SEED_TAG_VOCABULARY)
+const tagsController = new AbortController()
+onMounted(async () => {
+    try {
+        const res = await problemService.getTags(tagsController.signal)
+        const list = (res.data?.data ?? []).map((t) => t.tag)
+        if (list.length) suggestions.value = list
+    } catch {
+        // keep the seed vocabulary
+    }
+})
+onUnmounted(() => tagsController.abort())
 
 const errorFor = (key: string) => props.errors?.[key]
 const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
@@ -162,6 +181,18 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
                             </SelectContent>
                         </Select>
                     </div>
+                </div>
+
+                <!-- Tags -->
+                <div class="space-y-1.5">
+                    <Label>Tags</Label>
+                    <TagInput
+                        :model-value="modelValue.tags"
+                        :suggestions="suggestions"
+                        @update:model-value="(v) => set('tags', v)"
+                    />
+                    <p v-if="errorFor('tags')" class="text-xs text-destructive">{{ errorFor('tags') }}</p>
+                    <p v-else class="text-xs text-muted-foreground">Up to 10. Press Enter or comma to add.</p>
                 </div>
             </div>
         </section>

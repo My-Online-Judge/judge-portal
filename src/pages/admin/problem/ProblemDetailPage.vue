@@ -278,6 +278,7 @@ const fromProblem = (p: Problem): ProblemFormValue => ({
     sampleOutput: p.sampleOutput ?? '',
     hint: p.hint ?? '',
     status: p.status ?? 1,
+    tags: [...(p.tags ?? [])],
 })
 
 const editPayload = ref<ProblemFormValue>(fromProblem({} as Problem))
@@ -365,6 +366,7 @@ const save = async () => {
             sampleOutput: p.sampleOutput,
             hint: p.hint || undefined,
             status: Number(p.status),
+            tags: p.tags,
         }
         await problemService.update(String(route.params.slug), dto)
         triggerToast('Problem updated', 'success')

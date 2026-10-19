@@ -94,6 +94,7 @@ const emptyPayload = (): ProblemFormValue => ({
     sampleOutput: '',
     hint: '',
     status: 1,
+    tags: [],
 })
 
 const payload = ref<ProblemFormValue>(emptyPayload())
@@ -156,6 +157,7 @@ const onSubmit = async () => {
             sampleOutput: p.sampleOutput,
             hint: p.hint || undefined,
             status: Number(p.status),
+            tags: p.tags,
         }
 
         // Zip the input/output pairs client-side as 1.in/1.out, 2.in/2.out, …

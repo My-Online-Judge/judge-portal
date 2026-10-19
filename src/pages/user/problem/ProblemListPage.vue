@@ -12,6 +12,15 @@
                     @update:show-tags="showTags = $event"
                     @refresh="fetchProblems" />
                 <div class="px-6 pb-6">
+                    <div v-if="tag" class="pt-4">
+                        <span class="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs text-primary-foreground">
+                            Tag: {{ tag }}
+                            <button type="button" class="opacity-80 hover:opacity-100" aria-label="Clear tag filter"
+                                @click="onTag('')">
+                                <X class="size-3" />
+                            </button>
+                        </span>
+                    </div>
                     <ListStateShell
                         :loading="isLoading"
                         :error="error ? 'error' : null"
@@ -38,7 +47,7 @@
 
         <!-- Sidebar (Right) -->
         <aside class="space-y-6">
-            <TagCloud />
+            <TagCloud :selected="tag" @select="onTag" />
             <Announcements />
         </aside>
     </div>
@@ -46,6 +55,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { X } from 'lucide-vue-next'
 import SearchBar from '@/components/problem/SearchBar.vue'
 import ProblemTable from '@/components/problem/ProblemTable.vue'
 import TagCloud from '@/components/problem/TagCloud.vue'
@@ -61,6 +71,7 @@ const size = ref(10)
 const search = ref('')
 const difficulty = ref('all')
 const showTags = ref(false)
+const tag = ref('')
 
 const { data: response, isLoading, error, execute } = useFetch(problemService.getProblems, {
     immediate: false
@@ -74,7 +85,8 @@ const fetchProblems = () => {
         page: page.value,
         size: size.value,
         search: search.value || undefined,
-        hardnessLevel: difficultyToHardness(difficulty.value)
+        hardnessLevel: difficultyToHardness(difficulty.value),
+        tag: tag.value || undefined
     })
 }
 
@@ -87,6 +99,13 @@ const onSearch = (value: string) => {
 
 const onDifficulty = (value: string) => {
     difficulty.value = value
+    page.value = 0
+    fetchProblems()
+}
+
+// Clicking the active tag again clears it.
+const onTag = (value: string) => {
+    tag.value = value === tag.value ? '' : value
     page.value = 0
     fetchProblems()
 }

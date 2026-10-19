@@ -1,7 +1,7 @@
 import axiosClient from '@/api/axiosClient'
 import type { AxiosResponse } from 'axios'
 import type { ApiResponse } from '@/types/common'
-import type { Problem, ProblemSearchParams, CreateProblemPayload, UpdateProblemPayload } from '@/types/problem'
+import type { Problem, ProblemSearchParams, TagCount, CreateProblemPayload, UpdateProblemPayload } from '@/types/problem'
 import { API_ROUTES } from '@/constants/apiPath'
 
 // Builds the multipart body for problem creation:
@@ -22,6 +22,11 @@ class ProblemService {
             params,
             signal
         })
+    }
+
+    // Tag vocabulary with counts (public)
+    getTags(signal?: AbortSignal): Promise<AxiosResponse<ApiResponse<TagCount[]>>> {
+        return axiosClient.get<ApiResponse<TagCount[]>>(API_ROUTES.PROBLEMS.TAGS, { signal })
     }
 
     // Get problem by slug

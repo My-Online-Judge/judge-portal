@@ -23,6 +23,7 @@ export interface Problem extends BaseModel {
 export interface ProblemSearchParams extends BaseSearchParams {
     status?: 'ACTIVE' | 'INACTIVE'
     hardnessLevel?: number
+    tag?: string
 }
 
 export interface UpdateProblemPayload {
@@ -38,6 +39,12 @@ export interface UpdateProblemPayload {
     sampleOutput: string
     hint?: string
     status?: number
+    tags?: string[]
+}
+
+export interface TagCount {
+    tag: string
+    count: number
 }
 
 export interface CreateProblemPayload extends UpdateProblemPayload {
