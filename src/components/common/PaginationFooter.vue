@@ -1,37 +1,38 @@
 <template>
-    <div v-if="pagination" class="flex flex-col gap-4 py-4 sm:flex-row sm:items-center border-t border-slate-200 sm:justify-between mt-2">
+    <div v-if="pagination" class="flex flex-col gap-4 py-4 sm:flex-row sm:items-center border-t border-border sm:justify-between mt-2">
         <!-- Results Text -->
-        <p class="text-sm text-slate-500 font-medium">
-            Showing {{ startItem }} to {{ endItem }} of {{ pagination.totalElements }} results
+        <p class="text-sm text-muted-foreground font-medium">
+            <template v-if="pagination.totalElements === 0">No results</template>
+            <template v-else>Showing {{ startItem }} to {{ endItem }} of {{ pagination.totalElements }} results</template>
         </p>
 
-        <div class="flex items-center gap-4">
+        <div v-if="pagination.totalElements > 0" class="flex items-center gap-4">
             <!-- Pagination Controls -->
             <Pagination v-if="pagination.totalPages > 1" :page="currentPage" :total="pagination.totalElements" :sibling-count="1" show-edges
                 :items-per-page="pagination.size" @update:page="handlePageChange">
                 <PaginationContent v-slot="{ items }" class="flex items-center gap-1">
-                    <PaginationFirst class="h-9 w-9" @click="handlePageChange(1)" :disabled="currentPage === 1">
+                    <PaginationFirst class="h-9 w-9" :disabled="currentPage === 1">
                         <ChevronsLeft class="h-4 w-4" />
                     </PaginationFirst>
-                    <PaginationPrevious class="h-9 w-9" @click="handlePageChange(currentPage - 1)" :disabled="!pagination.hasPrev">
+                    <PaginationPrevious class="h-9 w-9" :disabled="!pagination.hasPrev">
                         <ChevronLeft class="h-4 w-4" />
                     </PaginationPrevious>
 
                     <template v-for="(item, index) in items">
                         <PaginationItem v-if="item.type === 'page'" :key="index" :value="item.value" as-child>
                             <Button class="w-9 h-9 p-0 text-sm cursor-pointer" :variant="item.value === currentPage ? 'default' : 'outline'"
-                                :class="item.value === currentPage ? 'bg-blue-600 hover:bg-blue-700' : 'text-slate-600 border-slate-200 hover:bg-slate-50'"
-                                @click="handlePageChange(item.value)">
+                                :class="item.value === currentPage ? '' : 'text-muted-foreground border-border hover:bg-accent'"
+                               >
                                 {{ item.value }}
                             </Button>
                         </PaginationItem>
                         <PaginationEllipsis v-else :key="item.type" :index="index" />
                     </template>
 
-                    <PaginationNext class="h-9 w-9" @click="handlePageChange(currentPage + 1)" :disabled="!pagination.hasNext">
+                    <PaginationNext class="h-9 w-9" :disabled="!pagination.hasNext">
                         <ChevronRight class="h-4 w-4" />
                     </PaginationNext>
-                    <PaginationLast class="h-9 w-9" @click="handlePageChange(pagination.totalPages)"
+                    <PaginationLast class="h-9 w-9"
                         :disabled="currentPage === pagination.totalPages">
                         <ChevronsRight class="h-4 w-4" />
                     </PaginationLast>
@@ -41,7 +42,7 @@
             <!-- Page Size Selector -->
             <div class="flex items-center gap-2">
                 <Select :model-value="String(pagination.size)" @update:model-value="handleSizeChange">
-                    <SelectTrigger class="w-[110px] h-9 text-sm bg-white border-slate-200">
+                    <SelectTrigger class="w-[110px] h-9 text-sm bg-background border-border">
                         <SelectValue placeholder="Size" />
                     </SelectTrigger>
                     <SelectContent>
@@ -103,7 +104,7 @@ const endItem = computed(() => {
 
 const handlePageChange = (page: number) => {
     if (!props.pagination) return
-    if (page < 0 || page > props.pagination.totalPages) return
+    if (page < 1 || page > props.pagination.totalPages) return
     if (page === currentPage.value) return
 
     emit('change-page', page - 1)
