@@ -54,6 +54,7 @@
 
   --color-primary-soft: var(--primary-soft);
   --color-link: var(--link);
+  --color-switch-thumb: var(--switch-thumb);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-destructive-soft: var(--destructive-soft);
   --color-destructive-ink: var(--destructive-ink);
@@ -121,6 +122,7 @@
   --warning-ink: oklch(0.47 0.1 65);
   --info-ink: oklch(0.45 0.17 262);
   --skeleton: oklch(0.928 0.008 258);
+  --switch-thumb: oklch(0.99 0.003 255);
   --skeleton-hi: oklch(0.968 0.006 258);
   --code-bg: oklch(0.985 0.003 250);
   --syn-kw: oklch(0.5 0.17 300);
@@ -195,6 +197,7 @@
   --warning-ink: oklch(0.86 0.11 80);
   --info-ink: oklch(0.84 0.09 262);
   --skeleton: oklch(0.3 0.02 262);
+  --switch-thumb: oklch(0.96 0.004 255);
   --skeleton-hi: oklch(0.35 0.02 262);
   --code-bg: oklch(0.215 0.02 262);
   --syn-kw: oklch(0.78 0.12 300);

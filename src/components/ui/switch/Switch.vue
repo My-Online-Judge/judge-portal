@@ -30,7 +30,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
   >
     <SwitchThumb
       data-slot="switch-thumb"
-      :class="cn('bg-[oklch(0.99_0.003_255)] shadow-[0_1px_2px_oklch(0_0_0/0.25)] pointer-events-none block size-4 rounded-full ring-0 transition-transform motion-reduce:transition-none data-[state=checked]:translate-x-[18px] data-[state=unchecked]:translate-x-0.5')"
+      :class="cn('bg-switch-thumb shadow-[var(--shadow-sm)] pointer-events-none block size-4 rounded-full ring-0 transition-transform motion-reduce:transition-none data-[state=checked]:translate-x-[18px] data-[state=unchecked]:translate-x-0.5')"
     >
       <slot name="thumb" v-bind="slotProps" />
     </SwitchThumb>

@@ -27,10 +27,10 @@ defineEmits<{ retry: [] }>()
     </template>
     <template v-else-if="error">
       <span class="text-[15px] leading-[34px] text-muted-foreground">Unavailable</span>
-      <span class="flex flex-wrap items-center gap-1.5 text-xs text-destructive-ink">
+      <span role="alert" class="flex flex-wrap items-center gap-1.5 text-xs text-destructive-ink">
         <CircleAlert class="size-[13px]" aria-hidden="true" />
         Could not load.
-        <button type="button" class="text-link hover:underline" @click="$emit('retry')">Retry</button>
+        <button type="button" :aria-label="`Retry loading ${label}`" class="text-link hover:underline" @click="$emit('retry')">Retry</button>
       </span>
     </template>
     <template v-else>
