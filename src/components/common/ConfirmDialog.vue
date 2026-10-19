@@ -18,11 +18,12 @@ const props = withDefaults(
     title: string
     description: string
     confirmLabel: string
+    cancelLabel?: string
     destructive?: boolean
     tone?: 'neutral' | 'destructive'
     busy?: boolean
   }>(),
-  { destructive: true, tone: undefined, busy: false },
+  { cancelLabel: 'Cancel', destructive: true, tone: undefined, busy: false },
 )
 
 // tone wins over the legacy destructive flag when both are given.
@@ -70,7 +71,7 @@ function onConfirm() {
         </div>
       </AlertDialogHeader>
       <AlertDialogFooter class="border-t bg-muted/55 px-5 py-3.5">
-        <AlertDialogCancel :disabled="busy" class="mt-0">Cancel</AlertDialogCancel>
+        <AlertDialogCancel :disabled="busy" class="mt-0">{{ cancelLabel }}</AlertDialogCancel>
         <Button
           :variant="resolvedTone === 'destructive' ? 'destructive' : 'default'"
           :disabled="busy"

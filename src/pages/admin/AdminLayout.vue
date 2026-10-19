@@ -1,171 +1,217 @@
 <template>
-    <div class="flex h-screen overflow-hidden bg-background text-foreground">
-        <!-- Mobile drawer backdrop -->
-        <div
-            v-if="sidebarOpen"
-            class="fixed inset-0 z-30 bg-black/40 backdrop-blur-[1px] md:hidden"
-            aria-hidden="true"
-            @click="sidebarOpen = false"
-        />
+    <TooltipProvider :delay-duration="300">
+        <div class="flex h-screen overflow-hidden bg-background text-foreground">
+            <!-- Drawer backdrop below 1024 px -->
+            <div
+                v-if="sidebarOpen"
+                class="fixed inset-0 z-30 bg-black/40 lg:hidden"
+                aria-hidden="true"
+                @click="sidebarOpen = false"
+            />
 
-        <!-- Sidebar: static column on md+, off-canvas drawer below md -->
-        <aside
-            class="fixed inset-y-0 left-0 z-40 flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-out motion-reduce:transition-none md:static md:z-auto md:translate-x-0"
-            :class="sidebarOpen ? 'translate-x-0 shadow-xl md:shadow-none' : '-translate-x-full'"
-        >
-            <!-- Brand -->
-            <div class="flex h-14 shrink-0 items-center gap-2.5 border-b border-sidebar-border px-4">
-                <RouterLink
-                    :to="ROUTE_PATH.ADMIN"
-                    class="flex min-w-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                    @click="sidebarOpen = false"
-                >
-                    <span class="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                        <Binary class="size-4" />
-                    </span>
-                    <span class="flex min-w-0 flex-col leading-tight">
-                        <span class="text-[13px] font-semibold">Judge Admin</span>
-                        <span class="font-mono text-[11px] text-muted-foreground">oj.console</span>
-                    </span>
-                </RouterLink>
-                <button
-                    type="button"
-                    class="ml-auto rounded-md p-1.5 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring md:hidden"
-                    aria-label="Close navigation"
-                    @click="sidebarOpen = false"
-                >
-                    <X class="size-4" />
-                </button>
-            </div>
-
-            <!-- Navigation -->
-            <nav class="flex flex-1 flex-col gap-[18px] overflow-y-auto px-2.5 py-3.5">
-                <div v-for="group in navGroups" :key="group.label">
-                    <p class="px-2.5 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-sidebar-foreground/50">
-                        {{ group.label }}
-                    </p>
-                    <ul class="space-y-0.5">
-                        <li v-for="item in group.items" :key="item.to">
-                            <RouterLink
-                                :to="item.to"
-                                class="group flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                                :active-class="item.exact ? '' : activeLinkClass"
-                                :exact-active-class="activeLinkClass"
-                                @click="sidebarOpen = false"
-                            >
-                                <component :is="item.icon" class="size-4 shrink-0" />
-                                <span class="truncate">{{ item.label }}</span>
-                            </RouterLink>
-                        </li>
-                    </ul>
+            <!-- Sidebar: a 232 px column (56 px rail when collapsed) from 1024 px up, a drawer below -->
+            <aside
+                class="fixed inset-y-0 left-0 z-40 flex shrink-0 flex-col gap-3.5 overflow-hidden border-r border-border bg-card px-2.5 py-3 transition-transform duration-200 ease-out motion-reduce:transition-none lg:static lg:z-auto lg:translate-x-0"
+                :class="[
+                    rail ? 'w-14' : 'w-[232px]',
+                    sidebarOpen ? 'translate-x-0 shadow-[var(--shadow-lg)] lg:shadow-none' : '-translate-x-full',
+                ]"
+            >
+                <!-- Brand -->
+                <div class="flex items-center gap-2 pt-1 pb-1.5" :class="rail ? 'justify-center' : 'px-2'">
+                    <RouterLink
+                        :to="ROUTE_PATH.ADMIN"
+                        class="flex min-w-0 items-center gap-[9px] rounded-md text-[15px] font-bold tracking-[-0.03em] whitespace-nowrap text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-label="MOJ admin, dashboard"
+                        @click="sidebarOpen = false"
+                    >
+                        <span class="strip" aria-hidden="true"><i class="ok" /><i class="ok" /><i class="ok" /><i class="ok" /><i class="p" /><i class="dim" /></span>
+                        <template v-if="!rail">
+                            <span>MOJ</span>
+                            <Badge variant="neutral" class="h-5">Admin</Badge>
+                        </template>
+                    </RouterLink>
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        class="ml-auto lg:hidden"
+                        aria-label="Close navigation"
+                        @click="sidebarOpen = false"
+                    >
+                        <X />
+                    </Button>
                 </div>
-            </nav>
 
-            <!-- User chip (non-interactive for now) -->
-            <div class="flex items-center gap-2.5 border-t border-sidebar-border p-3">
-                <span class="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted font-mono text-[12px] font-semibold text-foreground">
-                    {{ initials }}
-                </span>
-                <div class="flex min-w-0 flex-1 flex-col leading-tight">
-                    <span class="truncate text-[13px] font-medium text-foreground">{{ displayName }}</span>
-                    <span class="truncate font-mono text-[11px] text-muted-foreground">{{ roleLabel }}</span>
-                </div>
-                <ChevronsUpDown class="size-4 shrink-0 text-muted-foreground" />
-            </div>
-        </aside>
-
-        <!-- Content column -->
-        <div class="flex min-w-0 flex-1 flex-col">
-            <!-- Top header -->
-            <header class="flex h-14 shrink-0 items-center gap-4 border-b border-border bg-background px-4 sm:px-6">
-                <button
-                    type="button"
-                    class="-ml-1 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
-                    aria-label="Open navigation"
-                    @click="sidebarOpen = true"
-                >
-                    <Menu class="size-5" />
-                </button>
-
-                <!-- Breadcrumb trail -->
-                <nav class="flex min-w-0 items-center gap-1.5 text-sm" aria-label="Breadcrumb">
-                    <template v-for="(crumb, i) in crumbs" :key="i">
-                        <ChevronRight v-if="i > 0" class="size-4 shrink-0 text-muted-foreground/60" />
-                        <RouterLink
-                            v-if="crumb.to && i < crumbs.length - 1"
-                            :to="crumb.to"
-                            class="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            :class="{ 'font-mono': crumb.mono }"
-                        >
-                            {{ crumb.label }}
-                        </RouterLink>
-                        <span
-                            v-else
-                            class="truncate text-foreground"
-                            :class="[i === crumbs.length - 1 ? 'font-medium' : 'shrink-0 text-muted-foreground', { 'font-mono': crumb.mono }]"
-                        >
-                            {{ crumb.label }}
+                <!-- Navigation -->
+                <nav class="flex flex-1 flex-col gap-3.5 overflow-x-hidden overflow-y-auto" aria-label="Admin navigation">
+                    <div v-for="group in navGroups" :key="group.label" class="flex flex-col gap-px">
+                        <span v-if="!rail" class="px-2.5 pb-1 text-xs font-medium whitespace-nowrap text-muted-foreground">
+                            {{ group.label }}
                         </span>
-                    </template>
+                        <span v-else class="mx-1.5 mt-0.5 mb-1 h-px bg-border" aria-hidden="true" />
+                        <ul class="flex flex-col gap-px" :aria-label="group.label">
+                            <li v-for="item in group.items" :key="item.to">
+                                <Tooltip :disabled="!rail">
+                                    <TooltipTrigger as-child>
+                                        <RouterLink
+                                            :to="item.to"
+                                            :class="linkClass(isCurrent(item))"
+                                            :aria-current="isCurrent(item) ? 'page' : undefined"
+                                            @click="sidebarOpen = false"
+                                        >
+                                            <component :is="item.icon" class="size-4 shrink-0" aria-hidden="true" />
+                                            <span :class="rail ? 'sr-only' : 'truncate'">{{ item.label }}</span>
+                                        </RouterLink>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">{{ item.label }}</TooltipContent>
+                                </Tooltip>
+                            </li>
+                        </ul>
+                    </div>
                 </nav>
 
-                <div class="flex-1"></div>
+                <!-- Footer: back to the client, collapse (1024 px up only) -->
+                <div class="mt-auto flex flex-col gap-px border-t border-border pt-2.5">
+                    <Tooltip :disabled="!rail">
+                        <TooltipTrigger as-child>
+                            <RouterLink
+                                :to="ROUTE_PATH.PROBLEM"
+                                :class="linkClass(false)"
+                            >
+                                <ArrowLeft class="size-4 shrink-0" aria-hidden="true" />
+                                <span :class="rail ? 'sr-only' : 'truncate'">Back to problems</span>
+                            </RouterLink>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">Back to problems</TooltipContent>
+                    </Tooltip>
+                    <Tooltip :disabled="!rail">
+                        <TooltipTrigger as-child>
+                            <button
+                                type="button"
+                                :class="[linkClass(false), 'max-lg:hidden']"
+                                :aria-expanded="!collapsed"
+                                @click="toggle"
+                            >
+                                <PanelLeftOpen v-if="collapsed" class="size-4 shrink-0" aria-hidden="true" />
+                                <PanelLeftClose v-else class="size-4 shrink-0" aria-hidden="true" />
+                                <span :class="rail ? 'sr-only' : 'truncate'">{{ collapsed ? 'Expand sidebar' : 'Collapse' }}</span>
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">Expand sidebar</TooltipContent>
+                    </Tooltip>
+                </div>
+            </aside>
 
-                <DropdownMenu>
-                    <DropdownMenuTrigger as-child>
-                        <button
-                            type="button"
-                            class="shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            aria-label="Account menu"
-                        >
-                            <Avatar class="size-8 rounded-lg">
-                                <AvatarImage v-if="user?.avatar" :src="user.avatar" :alt="user.username" />
-                                <AvatarFallback class="rounded-lg">{{ initials }}</AvatarFallback>
-                            </Avatar>
-                        </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent class="w-56" align="end">
-                        <DropdownMenuLabel class="font-normal">
-                            <div class="flex flex-col space-y-1">
-                                <p class="text-sm font-medium leading-none">{{ displayName }}</p>
-                                <p class="text-xs leading-none text-muted-foreground">{{ user?.email }}</p>
-                            </div>
-                        </DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <ThemeMenu />
-                        <DropdownMenuItem @click="authStore.logout()">Log out</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </header>
+            <!-- Content column -->
+            <div class="flex min-w-0 flex-1 flex-col">
+                <!-- Top bar -->
+                <header class="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-border bg-card px-4 sm:px-5">
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        class="-ml-1 lg:hidden"
+                        aria-label="Open navigation"
+                        @click="sidebarOpen = true"
+                    >
+                        <Menu />
+                    </Button>
 
-            <!-- Routed content — full-width; pages own their own max-width -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-background p-6">
-                <RouterView />
-            </main>
+                    <!-- Breadcrumb trail -->
+                    <nav class="min-w-0" aria-label="Breadcrumb">
+                        <ol class="flex min-w-0 items-center gap-1.5 text-[13px]">
+                            <li v-for="(crumb, i) in crumbs" :key="i" class="flex min-w-0 items-center gap-1.5">
+                                <ChevronRight v-if="i > 0" class="size-3.5 shrink-0 text-muted-foreground opacity-60" aria-hidden="true" />
+                                <RouterLink
+                                    v-if="crumb.to && i < crumbs.length - 1"
+                                    :to="crumb.to"
+                                    class="shrink-0 rounded-sm text-muted-foreground hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    :class="{ 'font-mono': crumb.mono }"
+                                >
+                                    {{ crumb.label }}
+                                </RouterLink>
+                                <span
+                                    v-else
+                                    class="truncate"
+                                    :class="[i === crumbs.length - 1 ? 'font-medium text-foreground' : 'shrink-0 text-muted-foreground', { 'font-mono': crumb.mono }]"
+                                    :aria-current="i === crumbs.length - 1 ? 'page' : undefined"
+                                >
+                                    {{ crumb.label }}
+                                </span>
+                            </li>
+                        </ol>
+                    </nav>
+
+                    <div class="ml-auto flex items-center gap-1.5">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                                <button
+                                    type="button"
+                                    class="flex cursor-pointer items-center rounded-[10px] p-[3px] outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:ring-2 data-[state=open]:ring-ring"
+                                    :aria-label="`Account menu for ${displayName}`"
+                                >
+                                    <Avatar class="size-8">
+                                        <AvatarImage v-if="user?.avatar" :src="user.avatar" :alt="user.username" />
+                                        <AvatarFallback class="bg-primary-soft text-xs font-semibold text-info-ink">{{ initials }}</AvatarFallback>
+                                    </Avatar>
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent class="w-56" align="end">
+                                <DropdownMenuLabel class="font-normal">
+                                    <div class="flex flex-col gap-1">
+                                        <p class="text-sm leading-none font-medium">{{ displayName }}</p>
+                                        <p class="text-xs leading-none text-muted-foreground">{{ user?.email }}</p>
+                                        <p class="font-mono text-[11px] leading-none text-muted-foreground">{{ roleLabel }}</p>
+                                    </div>
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <ThemeMenu />
+                                <DropdownMenuItem @click="authStore.logout()">
+                                    <LogOut class="size-4" />
+                                    Log out
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </header>
+
+                <!-- Routed content: pages own their max-width; sticky bars pin to this scroller -->
+                <main class="flex-1 overflow-x-hidden overflow-y-auto bg-background">
+                    <div class="px-4 pt-[22px] pb-7 sm:px-6">
+                        <RouterView />
+                    </div>
+                </main>
+            </div>
         </div>
-    </div>
+    </TooltipProvider>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, type Component } from 'vue'
+import { computed, ref, watch, type Component } from 'vue'
 import { RouterLink, RouterView, useRoute, type RouteLocationRaw } from 'vue-router'
+import { useMediaQuery } from '@vueuse/core'
 import {
-    Binary,
+    ArrowLeft,
+    ChevronRight,
+    KeyRound,
     LayoutDashboard,
     ListChecks,
-    Server,
-    ShieldCheck,
-    ShieldAlert,
-    KeyRound,
-    Users,
+    LogOut,
     Menu,
+    PanelLeftClose,
+    PanelLeftOpen,
+    Server,
+    ShieldAlert,
+    ShieldCheck,
+    Users,
     X,
-    ChevronRight,
-    ChevronsUpDown,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
+import { useSidebarCollapse } from '@/composables/useSidebarCollapse'
 import ThemeMenu from '@/components/layout/ThemeMenu.vue'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -175,14 +221,25 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ROUTE_PATH } from '@/constants/routePath'
+import { cn } from '@/lib/utils'
 
 const route = useRoute()
 const authStore = useAuthStore()
 const user = computed(() => authStore.user)
 
 const sidebarOpen = ref(false)
+watch(() => route.fullPath, () => (sidebarOpen.value = false))
 
-const activeLinkClass = 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
+// The 56 px rail exists only beside the content (1024 px up); the drawer always shows labels.
+const { collapsed, toggle } = useSidebarCollapse()
+const isDesktop = useMediaQuery('(min-width: 1024px)')
+const rail = computed(() => collapsed.value && isDesktop.value)
+
+const itemClass =
+    'flex h-[34px] w-full items-center gap-2.5 rounded-[7px] px-2.5 text-[13.5px] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+const idleClass = 'font-medium text-muted-foreground hover:bg-accent hover:text-foreground'
+const activeClass = 'bg-primary-soft font-semibold text-info-ink'
+const linkClass = (active: boolean) => cn(itemClass, active ? activeClass : idleClass, rail.value && 'justify-center px-0')
 
 const can = (...perms: string[]) => perms.some((p) => authStore.hasPermission(p))
 
@@ -193,6 +250,10 @@ interface NavItem {
     show: boolean
     exact?: boolean
 }
+
+// The dashboard matches only itself; a section also owns its sub-pages (Problems owns /problems/new).
+const isCurrent = (item: NavItem) =>
+    item.exact ? route.path === item.to : route.path === item.to || route.path.startsWith(`${item.to}/`)
 
 const navGroups = computed(() => {
     const groups: { label: string; items: NavItem[] }[] = [
