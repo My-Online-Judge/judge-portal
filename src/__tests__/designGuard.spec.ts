@@ -25,8 +25,7 @@ function walk(dir: string, out: string[] = []): string[] {
 
 const files: SrcFile[] = walk(SRC)
   .map((full) => ({ full, rel: relative(SRC, full) }))
-  .filter(({ rel }) => /\.(vue|ts)$/.test(rel) || rel === MAIN_CSS)
-  .filter(({ rel }) => rel !== MAIN_CSS)
+  .filter(({ rel }) => /\.(vue|ts)$/.test(rel) && rel !== MAIN_CSS)
   .map(({ full, rel }) => ({ rel, text: readFileSync(full, 'utf8') }))
 
 const vueFiles = files.filter((f) => f.rel.endsWith('.vue'))
@@ -37,10 +36,17 @@ interface Hit {
 }
 
 /** Scan `text` line by line; `offset` is the 0-based line the text starts at. */
-function scan(file: SrcFile, text: string, offset: number, re: RegExp): Hit[] {
+function scan(
+  file: SrcFile,
+  text: string,
+  offset: number,
+  re: RegExp,
+  also?: RegExp,
+): Hit[] {
   const hits: Hit[] = []
   text.split('\n').forEach((line, i) => {
-    if (re.test(line)) hits.push({ where: `src/${file.rel}:${offset + i + 1}: ${line.trim().slice(0, 120)}` })
+    // Both tests run on the full line; only the reported snippet is truncated.
+    if (re.test(line) && (!also || also.test(line))) hits.push({ where: `src/${file.rel}:${offset + i + 1}: ${line.trim().slice(0, 120)}` })
   })
   return hits
 }
@@ -57,6 +63,20 @@ function templateOf(file: SrcFile): { text: string; offset: number } | null {
 function expectNoHits(hits: Hit[], fix: string) {
   expect(hits.map((h) => h.where), fix).toEqual([])
 }
+
+const UPPERCASE = /(?<![-\w])uppercase(?![-\w])/
+const TRACKING = /tracking-/
+
+describe('scanner self-test', () => {
+  const file: SrcFile = { rel: 'x.vue', text: '' }
+  it('reports tracking- far past the snippet cut-off', () => {
+    const line = `<h3 class="uppercase ${'p-1 '.repeat(50)}tracking-wide">`
+    expect(scan(file, line, 0, UPPERCASE, TRACKING)).toHaveLength(1)
+  })
+  it('ignores uppercase without tracking-', () => {
+    expect(scan(file, '<h3 class="uppercase p-1">', 0, UPPERCASE, TRACKING)).toHaveLength(0)
+  })
+})
 
 describe('design guard', () => {
   it('no em or en dash in .vue templates', () => {
@@ -81,9 +101,7 @@ describe('design guard', () => {
   })
 
   it('no uppercase with tracking-* in the same line', () => {
-    const hits = files.flatMap((f) =>
-      scan(f, f.text, 0, /(?<![-\w])uppercase(?![-\w])/).filter((h) => /tracking-/.test(h.where)),
-    )
+    const hits = files.flatMap((f) => scan(f, f.text, 0, UPPERCASE, TRACKING))
     expectNoHits(hits, 'Labels use sentence case; drop "uppercase tracking-*".')
   })
 
