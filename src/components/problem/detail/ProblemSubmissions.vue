@@ -36,9 +36,11 @@
                                 v-for="sub in displayRows"
                                 :key="sub.id"
                                 tabindex="0"
-                                class="cursor-pointer border-border transition-colors hover:bg-muted/40"
+                                role="button"
+                                class="cursor-pointer border-border transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 @click="openDetail(sub.id)"
                                 @keydown.enter="openDetail(sub.id)"
+                                @keydown.space.prevent="openDetail(sub.id)"
                             >
                                 <TableCell class="tabular text-sm text-muted-foreground">#{{ sub.id.substring(0, 8) }}</TableCell>
                                 <TableCell class="text-sm text-muted-foreground">{{ formatDateTime(sub.createdAt) }}</TableCell>

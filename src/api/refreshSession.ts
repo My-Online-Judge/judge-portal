@@ -4,9 +4,11 @@ import type { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios'
  * Auth endpoints a 401 must never trigger a refresh for: refreshing /auth/refresh
  * would recurse forever, and login/logout 401s mean "these credentials are wrong",
  * which no refresh can fix. /auth/me is deliberately NOT here — booting the app with
- * an expired access token is exactly the case this module exists for.
+ * an expired access token is exactly the case this module exists for. Change-password
+ * is not here either: a wrong current password is a 400 CURRENT_PASSWORD_INCORRECT from
+ * the identity API, so a 401 there is an expired session and refreshes like any other.
  */
-export const REFRESH_EXCLUDED_PATHS = ['/auth/refresh', '/auth/login', '/auth/logout', '/users/me/password']
+export const REFRESH_EXCLUDED_PATHS = ['/auth/refresh', '/auth/login', '/auth/logout']
 
 export const isRefreshExcluded = (url?: string): boolean =>
     !!url && REFRESH_EXCLUDED_PATHS.some((path) => url.includes(path))

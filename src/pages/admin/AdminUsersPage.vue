@@ -658,7 +658,6 @@ const confirmDelete = async () => {
         triggerToast('User deleted', 'success')
         if (users.value.length === 1 && page.value > 0) page.value -= 1
         deleteOpen.value = false
-        deleteTarget.value = null
         load()
     } catch (err) {
         triggerToast(getErrorMessage(err, 'Could not delete user.'), 'error')

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import testCaseService from '@/services/testCaseService'
+import { summaryFixture } from './testCaseFixtures'
 
 const { get, post, put, patch, del } = vi.hoisted(() => ({
     get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), del: vi.fn(),
@@ -28,6 +29,21 @@ describe('testCaseService', () => {
     it('setSampleSendsPatch', async () => {
         await testCaseService.setSample('sum', 'tc1', true)
         expect(patch).toHaveBeenCalledWith('/problems/sum/test-cases/tc1', { sample: true })
+    })
+
+    it('addImportAndSetSampleResolveToTestCaseSummaryBodies', async () => {
+        const row = summaryFixture()
+        post.mockResolvedValueOnce({ data: { data: row } }).mockResolvedValueOnce({ data: { data: [row] } })
+        patch.mockResolvedValueOnce({ data: { data: row } })
+
+        const added = await testCaseService.addTestCase('sum', new Blob(['1 2']), new Blob(['3']))
+        const imported = await testCaseService.importTestCases('sum', new File(['z'], 'a.zip'))
+        const toggled = await testCaseService.setSample('sum', row.id, true)
+
+        expect(added.data.data?.inputPreview).toBe('1 2\n')
+        expect(imported.data.data?.[0]?.outputSize).toBe(2)
+        expect(toggled.data.data?.sample).toBe(true)
+        expect(post.mock.calls[1][0]).toBe('/problems/sum/test-cases/import')
     })
 
     it('getTestCaseHitsTheItemRoute', async () => {

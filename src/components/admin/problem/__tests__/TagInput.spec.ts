@@ -20,6 +20,15 @@ describe('TagInput', () => {
         expect(lastEmit(w)).toEqual(['dp', 'greedy'])
     })
 
+    it('ignoresEnterWhileComposing', async () => {
+        const w = mk(['dp'])
+        const input = w.find('input')
+        await input.setValue('くらす')
+        await input.trigger('keydown', { key: 'Enter', isComposing: true })
+        await input.trigger('keydown', { key: ',', isComposing: true })
+        expect(w.emitted('update:modelValue')).toBeUndefined()
+    })
+
     it('commaAddsTag', async () => {
         const w = mk()
         const input = w.find('input')

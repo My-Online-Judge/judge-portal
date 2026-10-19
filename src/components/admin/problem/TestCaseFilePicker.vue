@@ -6,6 +6,7 @@
             <Upload class="size-3.5" />
             {{ label }}
             <input
+                :id="inputId"
                 ref="fileInput"
                 type="file"
                 :accept="accept"
@@ -35,6 +36,7 @@ defineProps<{
     modelValue: File | null
     accept: string
     label: string
+    inputId?: string
 }>()
 
 const emit = defineEmits<{

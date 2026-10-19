@@ -10,7 +10,7 @@
                     Choose the input and expected output files.
                 </DialogDescription>
                 <DialogDescription v-else>
-                    Contestants judge against the new tests from the next submission.
+                    Type or paste the input and the expected output.
                 </DialogDescription>
             </DialogHeader>
 
@@ -21,7 +21,7 @@
                             <Label for="tc-input">Input</Label>
                             <span v-if="!showPickers" class="text-xs text-muted-foreground">{{ lines(inputText) }} lines</span>
                         </div>
-                        <FilePicker v-if="showPickers" v-model="inputFile" accept=".in,.txt" label="Replace .in" />
+                        <FilePicker v-if="showPickers" input-id="tc-input" v-model="inputFile" accept=".in,.txt" :label="mode === 'add' ? 'Input file (.in)' : 'Replace .in'" />
                         <Textarea
                             v-else
                             id="tc-input"
@@ -36,7 +36,7 @@
                             <Label for="tc-output">Expected output</Label>
                             <span v-if="!showPickers" class="text-xs text-muted-foreground">{{ lines(outputText) }} lines</span>
                         </div>
-                        <FilePicker v-if="showPickers" v-model="outputFile" accept=".out,.txt" label="Replace .out" />
+                        <FilePicker v-if="showPickers" input-id="tc-output" v-model="outputFile" accept=".out,.txt" :label="mode === 'add' ? 'Expected output file (.out)' : 'Replace .out'" />
                         <Textarea
                             v-else
                             id="tc-output"

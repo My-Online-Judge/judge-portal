@@ -36,8 +36,24 @@
         </slot>
     </template>
 
-    <div v-else :aria-busy="loading" :class="loading ? 'opacity-60 transition-opacity' : 'transition-opacity'">
-        <slot />
+    <div v-else>
+        <div
+            v-if="error && hasData"
+            role="alert"
+            class="flex items-center justify-between gap-3 border-b border-err/40 bg-err/5 px-[18px] py-2 text-sm text-foreground"
+        >
+            <span class="flex items-center gap-2">
+                <TriangleAlert class="size-4 text-err" />
+                Couldn't refresh this list.
+            </span>
+            <Button variant="outline" size="sm" @click="retry">
+                <RefreshCw class="size-4" />
+                Retry
+            </Button>
+        </div>
+        <div :aria-busy="loading" :class="loading ? 'opacity-60 transition-opacity' : 'transition-opacity'">
+            <slot />
+        </div>
     </div>
 </template>
 

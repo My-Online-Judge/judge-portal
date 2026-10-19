@@ -188,7 +188,6 @@ const confirmDelete = async () => {
         // If we just removed the last row on a non-first page, step back.
         if (problems.value.length === 1 && page.value > 0) page.value -= 1
         deleteOpen.value = false
-        deleteTarget.value = null
         load()
     } catch (err) {
         triggerToast(getErrorMessage(err, 'Could not delete the problem.'), 'error')

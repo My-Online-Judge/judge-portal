@@ -101,30 +101,30 @@
 
         <!-- Hidden → open -->
         <ConfirmDialog
-            :open="!!openTarget"
+            :open="openOpen"
             :title="`Make test case ${openTarget?.name ?? ''} open?`"
             description="Contestants will see its input, expected output and their own output in every submission of this problem, including past ones."
             confirm-label="Make open"
             :destructive="false"
-            @update:open="(v) => { if (!v) openTarget = null }"
+            @update:open="(v) => (openOpen = v)"
             @confirm="confirmOpen"
         />
 
         <!-- Delete -->
         <ConfirmDialog
-            :open="!!deleteTarget"
+            :open="deleteOpen"
             :title="`Delete test case ${deleteTarget?.name ?? ''}?`"
             description="The problem is re-packaged without it."
             confirm-label="Delete"
             :busy="deleting"
-            @update:open="(v) => { if (!v) deleteTarget = null }"
+            @update:open="(v) => (deleteOpen = v)"
             @confirm="confirmDelete"
         />
 
         <!-- Import zip -->
         <ConfirmDialog
-            :open="!!zipFile"
-            :title="`Import test cases from ${zipFile?.name ?? ''}?`"
+            :open="zipOpen"
+            :title="`Import test cases from ${zipName}?`"
             :description="`They are added after the existing ${testCases.length} test cases.`"
             confirm-label="Import"
             :destructive="false"
@@ -179,8 +179,13 @@ const dialogInitial = ref<{ input: string; output: string } | null>(null)
 const dialogOversized = ref(false)
 const editing = ref<TestCaseSummary | null>(null)
 
+// Targets stay set after their dialog closes so the title survives the close animation.
 const openTarget = ref<TestCaseSummary | null>(null)
+const openOpen = ref(false)
 const deleteTarget = ref<TestCaseSummary | null>(null)
+const deleteOpen = ref(false)
+const zipOpen = ref(false)
+const zipName = ref('')
 const zipInput = ref<HTMLInputElement | null>(null)
 const zipFile = ref<File | null>(null)
 
@@ -225,7 +230,10 @@ const replaceRow = (row: TestCaseSummary) => {
 
 // Sample/Hidden switch. The switch is controlled, so a failed request leaves it where it was.
 const onToggle = (tc: TestCaseSummary, value: boolean) => {
-    if (value) openTarget.value = tc
+    if (value) {
+        openTarget.value = tc
+        openOpen.value = true
+    }
     else void applySample(tc, false)
 }
 
@@ -233,7 +241,8 @@ const applySample = async (tc: TestCaseSummary, sample: boolean) => {
     switching.add(tc.id)
     try {
         const res = await testCaseService.setSample(props.slug, tc.id, sample)
-        replaceRow(res.data.data ?? { ...tc, sample })
+        // Merge only the flag: whatever shape the response has, the row keeps its sizes and previews.
+        replaceRow({ ...tc, sample: res.data.data?.sample ?? sample })
     } catch (e) {
         triggerToast(getErrorMessage(e, 'Could not change the test case.'), 'error')
     } finally {
@@ -243,7 +252,7 @@ const applySample = async (tc: TestCaseSummary, sample: boolean) => {
 
 const confirmOpen = async () => {
     const tc = openTarget.value
-    openTarget.value = null
+    openOpen.value = false
     if (tc) await applySample(tc, true)
 }
 
@@ -310,7 +319,7 @@ const download = async (tc: TestCaseSummary) => {
 const actionsFor = (tc: TestCaseSummary): RowAction[] => [
     { label: 'Edit', icon: Pencil, onSelect: () => void openEdit(tc) },
     { label: 'Download', icon: Download, onSelect: () => void download(tc) },
-    { label: 'Delete…', icon: Trash2, destructive: true, onSelect: () => { deleteTarget.value = tc } },
+    { label: 'Delete…', icon: Trash2, destructive: true, onSelect: () => { deleteTarget.value = tc; deleteOpen.value = true } },
 ]
 
 const confirmDelete = async () => {
@@ -320,7 +329,7 @@ const confirmDelete = async () => {
     try {
         await testCaseService.remove(props.slug, target.id)
         triggerToast('Test case deleted', 'success')
-        deleteTarget.value = null
+        deleteOpen.value = false
         await load()
     } catch (e) {
         triggerToast(getErrorMessage(e, 'Could not delete the test case.'), 'error')
@@ -331,10 +340,15 @@ const confirmDelete = async () => {
 
 const onZipPick = (e: Event) => {
     zipFile.value = (e.target as HTMLInputElement).files?.[0] ?? null
+    if (zipFile.value) {
+        zipName.value = zipFile.value.name
+        zipOpen.value = true
+    }
 }
 
 const clearZip = () => {
     zipFile.value = null
+    zipOpen.value = false
     if (zipInput.value) zipInput.value.value = ''
 }
 

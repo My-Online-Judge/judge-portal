@@ -37,13 +37,14 @@ describe('isRefreshExcluded', () => {
 })
 
 describe('createRefreshOn401', () => {
-    it('passes a 401 on the change-password path straight through (wrong current password)', async () => {
+    it('refreshes a 401 on the change-password path like any other (a wrong current password is a 400 now)', async () => {
         const handle = build()
         const original = err(401, '/users/me/password')
 
-        await expect(handle(original)).rejects.toBe(original)
-        expect(refresh).not.toHaveBeenCalled()
-        expect(onGiveUp).not.toHaveBeenCalled()
+        await expect(handle(original)).resolves.toBe(ok)
+        expect(refresh).toHaveBeenCalledTimes(1)
+        expect(retry).toHaveBeenCalledTimes(1)
+        expect(isRefreshExcluded('/users/me/password')).toBe(false)
     })
 
     it('passes non-401 errors straight through', async () => {

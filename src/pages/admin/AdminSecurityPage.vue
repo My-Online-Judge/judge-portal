@@ -44,7 +44,7 @@
                         </div>
                         <Button v-if="hasAttemptFilters" variant="ghost" size="sm" class="h-9" @click="clearAttemptFilters">
                             <X class="size-4" />
-                            Clear
+                            Clear filters
                         </Button>
                     </div>
                     <p v-if="!rangeValid" class="w-full text-xs text-destructive" role="alert">Start date must be before end date</p>
@@ -203,12 +203,12 @@
         </Dialog>
 
         <ConfirmDialog
-            :open="!!unbanTarget"
+            :open="unbanOpen"
             :title="`Remove ban on ${unbanTarget?.value ?? ''}?`"
             description="Requests from it are allowed again."
             confirm-label="Unban"
             :busy="unbanning"
-            @update:open="(v) => { if (!v) unbanTarget = null }"
+            @update:open="(v) => (unbanOpen = v)"
             @confirm="confirmUnban"
         />
     </div>
@@ -343,7 +343,7 @@ const onBanSize = (n: number) => {
 }
 
 const banActions = (b: AccessBan): RowAction[] => [
-    { label: 'Unban…', icon: ShieldOff, destructive: true, onSelect: () => { unbanTarget.value = b } },
+    { label: 'Unban…', icon: ShieldOff, destructive: true, onSelect: () => { unbanTarget.value = b; unbanOpen.value = true } },
 ]
 
 onMounted(() => {
@@ -388,7 +388,9 @@ async function submitBan() {
 }
 
 // --- Unban ---
+// The target stays set after the dialog closes so its title survives the close animation.
 const unbanTarget = ref<AccessBan | null>(null)
+const unbanOpen = ref(false)
 const unbanning = ref(false)
 
 async function confirmUnban() {
@@ -397,7 +399,7 @@ async function confirmUnban() {
     try {
         await securityService.deleteBan(unbanTarget.value.id)
         triggerToast(`Unbanned ${unbanTarget.value.value}`, 'success')
-        unbanTarget.value = null
+        unbanOpen.value = false
         loadBans()
     } catch (err) {
         triggerToast(getErrorMessage(err, 'Could not remove ban'), 'error')

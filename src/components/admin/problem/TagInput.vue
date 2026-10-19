@@ -40,6 +40,7 @@ const add = (raw: string) => {
 const remove = (tag: string) => emit('update:modelValue', props.modelValue.filter((t) => t !== tag))
 
 const onKeydown = (e: KeyboardEvent) => {
+    if (e.isComposing) return // an IME is still composing: Enter/comma belong to it
     if (e.key === 'Enter' || e.key === ',') {
         e.preventDefault()
         if (draft.value.trim()) add(draft.value)

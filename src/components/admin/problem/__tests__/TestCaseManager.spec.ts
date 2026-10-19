@@ -5,6 +5,7 @@ import { nextTick } from 'vue'
 import TestCaseManager from '../TestCaseManager.vue'
 import { useToast } from '@/composables/useToast'
 import type { TestCaseSummary } from '@/types/testCase'
+import { fullResponseFixture, summaryFixture } from '@/services/__tests__/testCaseFixtures'
 
 const svc = vi.hoisted(() => ({
     getTestCases: vi.fn(),
@@ -71,6 +72,21 @@ describe('TestCaseManager', () => {
         expect(document.body.textContent).not.toContain('Make test case')
         expect(svc.setSample).toHaveBeenCalledWith('sum', '01', false)
         expect(document.body.textContent).toContain('1 test · 0 sample')
+    })
+
+    it.each([
+        ['a TestCaseSummary', () => summaryFixture({ id: '01', name: '01', sample: false })],
+        ['a full TestCaseResponse', () => fullResponseFixture({ id: '01', name: '01', sample: false })],
+        ['an empty body', () => undefined],
+    ])('toggleKeepsTheRowRenderedWhenTheResponseIs %s', async (_label, body) => {
+        await mountManager([tc('01', true)])
+        svc.setSample.mockResolvedValue({ data: { data: body() } })
+        toggle('01').click()
+        await flushPromises()
+        expect(document.body.textContent).toContain('1 test · 0 sample')
+        expect(document.body.textContent).toContain('Hidden')
+        expect(document.body.textContent).toContain('1 2')
+        expect(document.body.textContent).toContain('3 B')
     })
 
     it('switchRevertsOnError', async () => {

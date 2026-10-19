@@ -74,6 +74,25 @@ describe('TestCaseDialog', () => {
         expect(await payload.output.text()).toBe('9')
     })
 
+    it('pickerLabelsDependOnMode', async () => {
+        mountDialog({ mode: 'add', initial: null })
+        await nextTick()
+        button('Upload files instead').click()
+        await nextTick()
+        expect(document.body.textContent).toContain('Input file (.in)')
+        expect(document.body.textContent).toContain('Expected output file (.out)')
+        expect(document.body.textContent).not.toContain('Replace .in')
+        // the <Label for> still points at a real control
+        expect(document.body.querySelector('label[for="tc-input"]')).not.toBeNull()
+        expect(document.body.querySelector('input#tc-input[type="file"]')).not.toBeNull()
+        wrapper?.unmount()
+        document.body.innerHTML = ''
+        mountDialog({ oversized: true, initial: null })
+        await nextTick()
+        expect(document.body.textContent).toContain('Replace .in')
+        expect(document.body.textContent).not.toContain('Contestants judge against')
+    })
+
     it('addCanSwitchToFilePickers', async () => {
         const w = mountDialog({ mode: 'add', initial: null })
         await nextTick()

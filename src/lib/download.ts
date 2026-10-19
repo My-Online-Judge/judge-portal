@@ -7,5 +7,6 @@ export function downloadText(filename: string, text: string): void {
     document.body.appendChild(a)
     a.click()
     a.remove()
-    URL.revokeObjectURL(url)
+    // Revoke on the next tick: some browsers start the download after click() returns.
+    setTimeout(() => URL.revokeObjectURL(url), 0)
 }

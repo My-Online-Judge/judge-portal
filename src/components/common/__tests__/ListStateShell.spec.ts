@@ -40,10 +40,23 @@ describe('ListStateShell', () => {
     expect(wrap.classes()).toContain('opacity-60')
   })
 
+  it('errorWithDataShowsInlineBannerAboveRows', async () => {
+    const w = mountShell({ hasData: true, error: 'x' })
+    const banner = w.get('[role="alert"]')
+    expect(banner.text()).toContain("Couldn't refresh")
+    expect(w.find('[data-test="rows"]').exists()).toBe(true)
+    await banner.get('button').trigger('click')
+    expect(w.emitted('retry')).toHaveLength(1)
+  })
+
+  it('noBannerWithoutError', () => {
+    expect(mountShell({ hasData: true }).find('[role="alert"]').exists()).toBe(false)
+  })
+
   it('idleRendersDefaultNotBusy', () => {
     const w = mountShell({ hasData: true })
     expect(w.get('[data-test="rows"]').exists()).toBe(true)
-    expect(w.get('div').attributes('aria-busy')).toBe('false')
+    expect(w.get('[aria-busy]').attributes('aria-busy')).toBe('false')
   })
 
   it('retryEmitted', async () => {
