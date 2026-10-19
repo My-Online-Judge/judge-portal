@@ -1,13 +1,12 @@
 <template>
     <div class="flex w-full flex-col gap-[22px]">
         <!-- Back link -->
-        <RouterLink
-            :to="{ name: 'AdminProblems' }"
-            class="inline-flex w-fit items-center gap-1 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-            <ArrowLeft class="size-4" />
-            Problems
-        </RouterLink>
+        <Button as-child variant="ghost" class="w-fit">
+            <RouterLink :to="{ name: 'AdminProblems' }">
+                <ArrowLeft class="size-4" />
+                Problems
+            </RouterLink>
+        </Button>
 
         <!-- Loading -->
         <div v-if="loading" class="flex flex-col gap-[22px]">
@@ -30,9 +29,9 @@
                         <RefreshCw class="size-4" />
                         Retry
                     </Button>
-                    <RouterLink :to="{ name: 'AdminProblems' }">
-                        <Button size="sm">Back to problems</Button>
-                    </RouterLink>
+                    <Button as-child size="sm">
+                        <RouterLink :to="{ name: 'AdminProblems' }">Problems</RouterLink>
+                    </Button>
                 </div>
             </div>
         </div>
@@ -51,7 +50,7 @@
                     <ProblemFormFields v-model="editPayload" mode="edit" :errors="errors" />
 
                     <div class="flex items-center justify-end gap-2 border-t border-border pt-4">
-                        <Button type="button" variant="outline" :disabled="submitting" @click="cancelEdit">
+                        <Button type="button" variant="outline" :disabled="submitting" @click="requestCancelEdit">
                             Cancel
                         </Button>
                         <Button type="submit" :disabled="submitting">
@@ -90,12 +89,7 @@
                         <Pencil class="size-4" />
                         Edit
                     </Button>
-                    <Button
-                        v-if="canDelete"
-                        variant="outline"
-                        class="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        @click="deleteOpen = true"
-                    >
+                    <Button v-if="canDelete" variant="outline" @click="deleteOpen = true">
                         <Trash2 class="size-4" />
                         Delete
                     </Button>
@@ -197,29 +191,24 @@
         </template>
 
         <!-- Delete confirm -->
-        <Dialog v-model:open="deleteOpen">
-            <DialogContent class="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Delete problem?</DialogTitle>
-                    <DialogDescription>
-                        This permanently removes the problem and its test cases. This can't be undone.
-                    </DialogDescription>
-                </DialogHeader>
-                <div v-if="problem" class="rounded-md border border-border bg-muted/40 px-3 py-2">
-                    <p class="truncate text-sm font-medium text-foreground">{{ problem.title }}</p>
-                    <p class="truncate font-mono text-xs text-muted-foreground">{{ problem.problemSlug }}</p>
-                </div>
-                <DialogFooter>
-                    <Button type="button" variant="outline" :disabled="deleting" @click="deleteOpen = false">
-                        Cancel
-                    </Button>
-                    <Button type="button" variant="destructive" :disabled="deleting" @click="confirmDelete">
-                        <Loader2 v-if="deleting" class="size-4 animate-spin" />
-                        Delete
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+        <ConfirmDialog
+            v-model:open="deleteOpen"
+            :title="`Delete problem “${problem?.title ?? ''}”?`"
+            description="It disappears from the problem list. Submissions are kept."
+            confirm-label="Delete"
+            :busy="deleting"
+            @confirm="confirmDelete"
+        />
+
+        <!-- Discard edits -->
+        <ConfirmDialog
+            :open="confirmOpen || cancelAsk"
+            title="Discard unsaved changes?"
+            description="Your edits to this problem are lost."
+            confirm-label="Discard"
+            @confirm="onDiscardConfirm"
+            @update:open="(v: boolean) => { if (!v) onDiscardClose() }"
+        />
     </div>
 </template>
 
@@ -230,14 +219,8 @@ import axios from 'axios'
 import { ArrowLeft, Pencil, Trash2, Loader2, TriangleAlert, RefreshCw } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogFooter,
-    DialogTitle,
-    DialogDescription,
-} from '@/components/ui/dialog'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import { useDiscardGuard } from '@/composables/useDiscardGuard'
 import ProblemFormFields, { type ProblemFormValue } from '@/components/admin/problem/ProblemFormFields.vue'
 import TestCaseManager from '@/components/admin/problem/TestCaseManager.vue'
 import RichTextEditor from '@/components/admin/editor/RichTextEditor.vue'
@@ -322,6 +305,29 @@ const startEdit = () => {
     isEditing.value = true
 }
 
+const isDirty = () =>
+    isEditing.value &&
+    !!problem.value &&
+    JSON.stringify(editPayload.value) !== JSON.stringify(fromProblem(problem.value))
+
+const { confirmOpen, confirmLeave, cancelLeave } = useDiscardGuard(isDirty)
+const cancelAsk = ref(false)
+
+const requestCancelEdit = () => {
+    if (isDirty()) cancelAsk.value = true
+    else cancelEdit()
+}
+const onDiscardConfirm = () => {
+    if (cancelAsk.value) {
+        cancelAsk.value = false
+        cancelEdit()
+    } else confirmLeave()
+}
+const onDiscardClose = () => {
+    cancelAsk.value = false
+    cancelLeave()
+}
+
 const cancelEdit = () => {
     if (problem.value) editPayload.value = fromProblem(problem.value)
     errors.value = {}
@@ -370,8 +376,8 @@ const save = async () => {
         }
         await problemService.update(String(route.params.slug), dto)
         triggerToast('Problem updated', 'success')
-        await fetchProblem()
         isEditing.value = false
+        await fetchProblem()
     } catch (err) {
         triggerToast(getErrorMessage(err, 'Could not save changes.'), 'error')
     } finally {

@@ -2,13 +2,12 @@
     <div class="flex w-full flex-col gap-[22px]">
         <!-- Header -->
         <div class="flex flex-col gap-3">
-            <RouterLink
-                :to="{ name: 'AdminProblems' }"
-                class="inline-flex w-fit items-center gap-1 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-                <ArrowLeft class="size-4" />
-                Problems
-            </RouterLink>
+            <Button as-child variant="ghost" class="w-fit">
+                <RouterLink :to="{ name: 'AdminProblems' }">
+                    <ArrowLeft class="size-4" />
+                    Problems
+                </RouterLink>
+            </Button>
             <div class="min-w-0">
                 <h1 class="text-[24px] font-semibold leading-tight tracking-tight text-foreground">Create problem</h1>
                 <p class="mt-1 text-sm text-muted-foreground">Add a problem to the catalog. Fields marked * are required.</p>
@@ -61,6 +60,15 @@
                 </Button>
             </div>
         </form>
+
+        <ConfirmDialog
+            v-model:open="confirmOpen"
+            title="Discard unsaved changes?"
+            description="Your edits to this problem are lost."
+            confirm-label="Discard"
+            @confirm="confirmLeave"
+            @update:open="(v: boolean) => { if (!v) cancelLeave() }"
+        />
     </div>
 </template>
 
@@ -70,6 +78,8 @@ import { useRouter, RouterLink } from 'vue-router'
 import { ArrowLeft, Loader2, Upload } from 'lucide-vue-next'
 import JSZip from 'jszip'
 import { Button } from '@/components/ui/button'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import { useDiscardGuard } from '@/composables/useDiscardGuard'
 import ProblemFormFields, { type ProblemFormValue } from '@/components/admin/problem/ProblemFormFields.vue'
 import TestCaseEditor, { type TestCasePair } from '@/components/admin/problem/TestCaseEditor.vue'
 import { useToast } from '@/composables/useToast'
@@ -101,6 +111,13 @@ const payload = ref<ProblemFormValue>(emptyPayload())
 const testCases = ref<TestCasePair[]>([{ input: '', output: '' }])
 const errors = ref<Record<string, string>>({})
 const submitting = ref(false)
+const created = ref(false)
+
+const snapshot = () => JSON.stringify([payload.value, testCases.value])
+const initialSnapshot = snapshot()
+const { confirmOpen, confirmLeave, cancelLeave } = useDiscardGuard(
+    () => !created.value && snapshot() !== initialSnapshot,
+)
 
 // Rich-text fields carry HTML; an "empty" editor still emits <p></p>, so strip
 // tags before checking. Plain fields have no tags, so this is a no-op for them.
@@ -174,6 +191,7 @@ const onSubmit = async () => {
         const file = new File([blob], `${dto.problemSlug || 'testcases'}.zip`, { type: 'application/zip' })
 
         await problemService.create(buildProblemFormData(dto, file))
+        created.value = true
         triggerToast('Problem created', 'success')
         router.push({ name: 'AdminProblemDetail', params: { slug: dto.problemSlug } })
     } catch (err) {
