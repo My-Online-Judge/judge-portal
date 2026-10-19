@@ -77,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, watchEffect, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, watchEffect, onBeforeUnmount, provide } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useElementSize, useMediaQuery } from '@vueuse/core'
 import { ChevronLeft, CodeXml, FileText } from 'lucide-vue-next'
@@ -85,6 +85,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import ProblemHeader from '@/components/problem/detail/ProblemHeader.vue'
 import StatementPane from '@/components/problem/detail/StatementPane.vue'
 import { refreshStatsUntilChanged } from '@/lib/problemStats'
+import { SHOW_CONSOLE } from '@/lib/consoleReveal'
 import SolvePane from '@/components/problem/detail/SolvePane.vue'
 import Loading from '@/components/common/Loading.vue'
 import { ROUTE_PATH } from '@/constants/routePath'
@@ -112,6 +113,10 @@ const mobileViews = [
     { key: 'problem' as const, label: 'Problem', icon: FileText },
     { key: 'code' as const, label: 'Code', icon: CodeXml },
 ]
+// The verdict console lives in the Code view; the verdict toast's View switches there before scrolling to it.
+provide(SHOW_CONSOLE, () => {
+    if (!isDesktop.value) mobileView.value = 'code'
+})
 const onViewKeydown = (e: KeyboardEvent) => {
     const at = mobileViews.findIndex((v) => v.key === mobileView.value)
     const moves: Record<string, number> = { ArrowLeft: at - 1, ArrowRight: at + 1, Home: 0, End: mobileViews.length - 1 }

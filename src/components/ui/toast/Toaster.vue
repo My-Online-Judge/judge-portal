@@ -471,7 +471,8 @@ onBeforeUnmount(() => {
     position: fixed;
     z-index: 300;
     left: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    /* A page with a bar pinned to the bottom sets --toast-offset on :root to the bar's height. */
+    bottom: calc(16px + var(--toast-offset, 0px) + env(safe-area-inset-bottom, 0px));
     width: 380px;
     max-width: calc(100vw - 32px);
     pointer-events: none;
@@ -665,14 +666,14 @@ onBeforeUnmount(() => {
 .toaster.expanded .toaster-hint {
     opacity: 1;
 }
-/* Phones: full width. A page with a bar pinned to the bottom sets --toast-offset on :root. */
+/* Phones: full width, still above a pinned bottom bar (--toast-offset). */
 @media (max-width: 640px) {
     .toaster {
         left: 8px;
         right: 8px;
         width: auto;
         max-width: none;
-        bottom: calc(8px + env(safe-area-inset-bottom, 0px) + var(--toast-offset, 0px));
+        bottom: calc(8px + var(--toast-offset, 0px) + env(safe-area-inset-bottom, 0px));
     }
 }
 @media (prefers-reduced-motion: reduce) {

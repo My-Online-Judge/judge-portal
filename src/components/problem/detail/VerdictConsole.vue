@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onBeforeUnmount, inject } from 'vue'
 import { Terminal } from 'lucide-vue-next'
 import VerdictChip from '@/components/common/VerdictChip.vue'
 import { isTerminalStatus, SubmissionResult, type Submission } from '@/types/submission'
@@ -33,6 +33,7 @@ import type { ToastHandle } from '@/composables/useToast'
 import { useSubmissionStream } from '@/composables/useSubmissionStream'
 import { submissionToasts, releaseSubmissionToast } from '@/lib/submissionToasts'
 import { verdictToastPatch } from '@/lib/verdictToast'
+import { SHOW_CONSOLE, revealConsole } from '@/lib/consoleReveal'
 
 const props = defineProps<{ submission?: Submission | null }>()
 // Fired once a watched submission has its final verdict, so the page can refresh the problem's statistics.
@@ -40,6 +41,8 @@ const emit = defineEmits<{ (e: 'judged', submission: Submission): void }>()
 
 const current = ref<Submission | null>(props.submission ?? null)
 const rootEl = ref<HTMLElement | null>(null)
+// The page can hide this console (mobile Problem view); View asks it to show the console first.
+const showConsole = inject(SHOW_CONSOLE, undefined)
 const watched = new Set<string>()
 // Leaving before a verdict: the "Submitted" toast must not wait forever.
 onBeforeUnmount(() => watched.forEach(releaseSubmissionToast))
@@ -68,7 +71,7 @@ async function ensureDetails(verdict: Submission): Promise<Submission> {
 function announceVerdict(handle: ToastHandle | undefined, full: Submission) {
     handle?.update({
         ...verdictToastPatch(full),
-        action: { label: 'View', onClick: () => rootEl.value?.scrollIntoView({ block: 'nearest' }) },
+        action: { label: 'View', onClick: () => void revealConsole(showConsole, () => rootEl.value) },
     })
 }
 

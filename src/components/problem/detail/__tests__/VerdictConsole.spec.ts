@@ -4,6 +4,8 @@ import { flushPromises, mount } from '@vue/test-utils'
 import VerdictConsole from '../VerdictConsole.vue'
 import submissionService from '@/services/submissionService'
 import type { Submission } from '@/types/submission'
+import { submissionToasts } from '@/lib/submissionToasts'
+import { SHOW_CONSOLE } from '@/lib/consoleReveal'
 
 vi.mock('@/services/submissionService', () => ({ default: { getSubmissionById: vi.fn() } }))
 
@@ -40,5 +42,28 @@ describe('VerdictConsole', () => {
         expect(w.emitted('judged')).toHaveLength(1)
         expect(w.emitted('judged')![0]).toEqual([full])
         expect(getById).not.toHaveBeenCalled()
+    })
+
+    it('viewShowsTheHiddenConsoleThenScrollsToIt', async () => {
+        const update = vi.fn()
+        submissionToasts.set(base.id, { id: 1, update, dismiss: vi.fn() })
+        const showConsole = vi.fn()
+        const w = mount(VerdictConsole, {
+            props: { submission: pending },
+            global: { provide: { [SHOW_CONSOLE as symbol]: showConsole } },
+        })
+        const scroll = vi.fn()
+        ;(w.element as HTMLElement).scrollIntoView = scroll
+
+        watchVerdict.mock.calls[0][1](full)
+        await flushPromises()
+        const view = update.mock.calls.at(-1)![0].action
+        expect(view.label).toBe('View')
+        await view.onClick()
+        await flushPromises()
+
+        expect(showConsole).toHaveBeenCalledOnce()
+        expect(scroll).toHaveBeenCalledWith({ block: 'nearest' })
+        expect(showConsole.mock.invocationCallOrder[0]).toBeLessThan(scroll.mock.invocationCallOrder[0]!)
     })
 })
