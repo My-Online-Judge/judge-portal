@@ -4,9 +4,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* Type: geometric sans (UI/body), editorial serif (display), mono (data/code) */
+  /* Type: geometric sans (UI/body), mono (data/code) */
   --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-serif: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
 
   /* Crisp, restrained radii (no giant pills on containers) */
@@ -120,12 +119,6 @@
   --switch-thumb: oklch(0.99 0.003 255);
   --skeleton-hi: oklch(0.968 0.006 258);
   --code-bg: oklch(0.985 0.003 250);
-  --syn-kw: oklch(0.5 0.17 300);
-  --syn-type: oklch(0.5 0.13 220);
-  --syn-fn: oklch(0.48 0.17 262);
-  --syn-num: oklch(0.52 0.14 50);
-  --syn-str: oklch(0.5 0.12 150);
-  --syn-com: oklch(0.54 0.02 258);
   /* Verdict marks (fills, chart slices, icons) and inks (text). Validated: adjacent CVD ΔE ≥ 9.8. */
   --v-ac: oklch(0.72 0.16 150);   --v-ac-ink: oklch(0.45 0.12 150);
   --v-wa: oklch(0.56 0.2 27);     --v-wa-ink: oklch(0.48 0.18 27);
@@ -191,12 +184,6 @@
   --switch-thumb: oklch(0.96 0.004 255);
   --skeleton-hi: oklch(0.35 0.02 262);
   --code-bg: oklch(0.215 0.02 262);
-  --syn-kw: oklch(0.78 0.12 300);
-  --syn-type: oklch(0.8 0.1 210);
-  --syn-fn: oklch(0.8 0.1 262);
-  --syn-num: oklch(0.82 0.11 60);
-  --syn-str: oklch(0.8 0.12 150);
-  --syn-com: oklch(0.62 0.02 258);
   --v-ac: oklch(0.665 0.15 150);  --v-ac-ink: oklch(0.84 0.13 150);
   --v-wa: oklch(0.56 0.19 27);    --v-wa-ink: oklch(0.8 0.12 27);
   --v-tle: oklch(0.665 0.13 85);  --v-tle-ink: oklch(0.86 0.11 85);
@@ -251,14 +238,6 @@
     -moz-osx-font-smoothing: grayscale;
     line-height: 1.6;
     letter-spacing: -0.006em;
-  }
-  /* Display headings: bold sans, tight tracking (sans display, not serif —
-     Instrument Serif is a top production AI-tell per the taste skill). */
-  .font-display {
-    font-family: var(--font-sans);
-    font-weight: 700;
-    letter-spacing: -0.022em;
-    line-height: 1.08;
   }
   /* Data numerals: mono + tabular so columns line up */
   .tabular {
@@ -426,7 +405,6 @@
 .tile-detail > div:last-child { border-right: 0; }
 .tile-detail .h { font-size: 12px; font-weight: 500; color: var(--muted-foreground); display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 6px; }
 .tile-detail pre { margin: 0; font-family: var(--font-mono); font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
-.tile-detail .diffline { background: color-mix(in oklch, var(--v-wa) 16%, transparent); border-radius: 3px; padding: 0 3px; }
 .tile-detail .head-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; border-bottom: 1px solid var(--border); border-right: 0; background: var(--muted); font-size: 12.5px; }
 @media (max-width: 680px) { .tile-detail { grid-template-columns: minmax(0, 1fr); } .tile-detail > div { border-right: 0; border-bottom: 1px solid var(--border); } }
 .meta-strip { display: inline-flex; flex-wrap: wrap; align-items: center; row-gap: 2px; }
@@ -467,6 +445,10 @@
   }
   .dt tbody tr {
     transition: none;
+  }
+  /* Every Tailwind spinner and pulse, Loading.vue's and each Loader2's included. */
+  .animate-spin, .animate-pulse {
+    animation: none;
   }
 }
 

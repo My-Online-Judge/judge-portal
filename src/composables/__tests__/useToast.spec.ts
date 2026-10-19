@@ -295,6 +295,27 @@ describe('useToast engine', () => {
         expect(plain).toHaveBeenCalledTimes(1)
     })
 
+    it('freezeFlushesPendingUndoOnce', () => {
+        const { undo, toasts } = useToast()
+        const commit = vi.fn()
+        const commitOnUnload = vi.fn()
+        const onUndo = vi.fn()
+        undo('Problem deleted', { commit, onUndo, commitOnUnload })
+        vi.advanceTimersByTime(2000)
+        // A hidden tab can be frozen and then discarded with no pagehide.
+        document.dispatchEvent(new Event('freeze'))
+        expect(commitOnUnload).toHaveBeenCalledTimes(1)
+        expect(commit).not.toHaveBeenCalled()
+        document.dispatchEvent(new Event('freeze'))
+        window.dispatchEvent(new Event('pagehide'))
+        expect(commitOnUnload).toHaveBeenCalledTimes(1)
+        expect(toasts.value).toHaveLength(0)
+        vi.advanceTimersByTime(8000)
+        expect(commit).not.toHaveBeenCalled()
+        expect(commitOnUnload).toHaveBeenCalledTimes(1)
+        expect(onUndo).not.toHaveBeenCalled()
+    })
+
     it('errorsAnnounceAssertively', () => {
         const { error, success, info, dismiss, announcement } = useToast()
         error("Couldn't reach the server", {

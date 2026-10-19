@@ -92,6 +92,11 @@ describe('ListStateShell', () => {
     expect(w.emitted('clear-filters')).toHaveLength(1)
   })
 
+  it('filteredEmptyWithoutSummarySaysYourFilters', () => {
+    const w = mountShell({ hasData: true, empty: true, filtered: true })
+    expect(w.get('h4').text()).toBe('No results match your filters')
+  })
+
   it('errorWithDataStripCopy', () => {
     const w = mountShell({ hasData: true, error: 'x' })
     expect(w.get('[role="alert"]').text()).toContain("Couldn't refresh. Showing the last results.")

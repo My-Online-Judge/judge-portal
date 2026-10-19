@@ -160,7 +160,7 @@
         <ConfirmDialog
             v-model:open="deleteOpen"
             :title="`Delete problem “${problem?.title ?? ''}”?`"
-            description="It disappears from the problem list. Submissions are kept."
+            description="Its test cases are deleted with it."
             confirm-label="Delete problem"
             :busy="deleting"
             @confirm="confirmDelete"

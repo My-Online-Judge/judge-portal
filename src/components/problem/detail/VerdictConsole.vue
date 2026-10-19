@@ -67,11 +67,14 @@ async function ensureDetails(verdict: Submission): Promise<Submission> {
 }
 
 // The Submit action left a "Submitted" toast for this submission; turn it into the verdict.
-// No handle (a reload, or a submission from elsewhere) means no toast.
+// No handle (a reload, or a submission from elsewhere) means no toast. A console that unmounted
+// while the details loaded has nothing to show, so that verdict comes without View.
 function announceVerdict(handle: ToastHandle | undefined, full: Submission) {
     handle?.update({
         ...verdictToastPatch(full),
-        action: { label: 'View', onClick: () => void revealConsole(showConsole, () => rootEl.value) },
+        action: rootEl.value
+            ? { label: 'View', onClick: () => void revealConsole(showConsole, () => rootEl.value) }
+            : undefined,
     })
 }
 

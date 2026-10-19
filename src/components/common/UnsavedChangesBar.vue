@@ -41,10 +41,16 @@ useEventListener(window, 'keydown', (e: KeyboardEvent) => {
                 <span v-if="summary" class="text-muted-foreground"> {{ summary }}</span>
             </span>
             <Button variant="ghost" size="sm" :disabled="saving" @click="emit('discard')">Discard</Button>
-            <Button size="sm" :disabled="saving" :aria-busy="saving ? 'true' : undefined" @click="emit('save')">
+            <Button
+                size="sm"
+                :disabled="saving"
+                :aria-busy="saving ? 'true' : undefined"
+                aria-keyshortcuts="Control+S Meta+S"
+                @click="emit('save')"
+            >
                 <Loader2 v-if="saving" class="size-4 animate-spin" aria-hidden="true" />
                 Save changes
-                <kbd class="rounded-[4px] bg-[color-mix(in_oklch,currentColor_14%,transparent)] px-[5px] py-px font-mono text-[11px] opacity-75">{{ shortcut }}</kbd>
+                <kbd aria-hidden="true" class="rounded-[4px] bg-[color-mix(in_oklch,currentColor_14%,transparent)] px-[5px] py-px font-mono text-[11px] opacity-75">{{ shortcut }}</kbd>
             </Button>
         </div>
     </Transition>

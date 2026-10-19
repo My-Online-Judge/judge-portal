@@ -63,6 +63,9 @@ describe('UnsavedChangesBar', () => {
         const buttons = wrapper.findAll('button')
         const discard = buttons.find((b) => b.text() === 'Discard')!
         const save = buttons.find((b) => b.text().startsWith('Save changes'))!
+        // The shortcut is announced from aria-keyshortcuts, not read out of the key caps.
+        expect(save.attributes('aria-keyshortcuts')).toBe('Control+S Meta+S')
+        expect(save.get('kbd').attributes('aria-hidden')).toBe('true')
         await discard.trigger('click')
         await save.trigger('click')
         expect(wrapper.emitted('discard')).toHaveLength(1)

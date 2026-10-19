@@ -23,8 +23,10 @@ const toastEls = () => $$('li.toast').filter((li) => !li.hasAttribute('data-leav
 const button = (label: string) => $$('li.toast button').find((b) => b.textContent?.trim() === label)!
 const press = (target: EventTarget, key: string) =>
     target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
-const pointer = (el: Element, type: string, clientX: number) =>
-    el.dispatchEvent(new PointerEvent(type, { clientX, pointerId: 1, bubbles: true, cancelable: true }))
+const pointer = (el: Element, type: string, clientX: number, init: PointerEventInit = {}) =>
+    el.dispatchEvent(
+        new PointerEvent(type, { clientX, pointerId: 1, isPrimary: true, button: 0, bubbles: true, cancelable: true, ...init }),
+    )
 
 beforeEach(() => {
     vi.useFakeTimers()
@@ -244,6 +246,73 @@ describe('Toaster', () => {
         pointer(li, 'pointermove', 120)
         pointer(li, 'pointerup', 120)
         expect(useToast().toasts.value).toHaveLength(0)
+    })
+
+    it('swipeIgnoresOtherButtonsAndSecondPointers', async () => {
+        mountToaster()
+        useToast().info('Submitted')
+        await nextTick()
+        const li = toastEls()[0]!
+
+        // A right-button drag is not a swipe.
+        pointer(li, 'pointerdown', 0, { button: 2 })
+        pointer(li, 'pointermove', 200)
+        pointer(li, 'pointerup', 200)
+        expect(useToast().toasts.value).toHaveLength(1)
+        expect(li.style.transform).not.toContain('translateX')
+
+        // Nor is a pointer that isn't the primary one.
+        pointer(li, 'pointerdown', 0, { isPrimary: false })
+        pointer(li, 'pointermove', 200)
+        pointer(li, 'pointerup', 200)
+        expect(useToast().toasts.value).toHaveLength(1)
+
+        // A second pointer can't take over a drag in progress.
+        pointer(li, 'pointerdown', 0)
+        pointer(li, 'pointerdown', 0, { pointerId: 2 })
+        pointer(li, 'pointermove', 200, { pointerId: 2 })
+        pointer(li, 'pointerup', 200, { pointerId: 2 })
+        expect(useToast().toasts.value).toHaveLength(1)
+        pointer(li, 'pointerup', 0)
+        expect(useToast().toasts.value).toHaveLength(1)
+    })
+
+    it('lostPointerCaptureCancelsTheSwipe', async () => {
+        mountToaster()
+        useToast().info('Submitted')
+        await nextTick()
+        const li = toastEls()[0]!
+        const rest = li.style.transform
+
+        pointer(li, 'pointerdown', 0)
+        pointer(li, 'pointermove', 200)
+        expect(li.style.transform).toContain('translateX(200px)')
+        expect(li.style.transition).toBe('none')
+        expect(li.hasAttribute('data-dragging')).toBe(true)
+
+        pointer(li, 'lostpointercapture', 200)
+        expect(useToast().toasts.value).toHaveLength(1)
+        expect(li.style.transform).toBe(rest)
+        expect(li.style.transition).toBe('')
+        expect(li.hasAttribute('data-dragging')).toBe(false)
+
+        // The drag is over, so the pointerup that follows doesn't dismiss either.
+        pointer(li, 'pointerup', 200)
+        expect(useToast().toasts.value).toHaveLength(1)
+    })
+
+    it('toastTextIsSelectableWhenNotDragging', async () => {
+        mountToaster()
+        useToast().error("Couldn't reach the server", { description: 'Check your connection.' })
+        await nextTick()
+        const li = toastEls()[0]!
+        expect(li.hasAttribute('data-dragging')).toBe(false)
+        // No aria-label, so focus reads the title, the count and the description.
+        expect(li.hasAttribute('aria-label')).toBe(false)
+        pointer(li, 'pointerdown', 0)
+        expect(li.hasAttribute('data-dragging')).toBe(false)
+        pointer(li, 'pointerup', 0)
+        expect(li.hasAttribute('data-dragging')).toBe(false)
     })
 
     it('reducedMotionRemovesAtOnce', async () => {

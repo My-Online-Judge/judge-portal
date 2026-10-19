@@ -85,7 +85,8 @@ const pagination = computed(() => response.value?.pagination)
 const description = computed(() => {
     const total = pagination.value?.totalElements
     const tail = 'from your first loop to graphs and dynamic programming.'
-    return total === undefined ? `From your first loop to graphs and dynamic programming.` : `${total} problems, ${tail}`
+    if (total === undefined) return `From your first loop to graphs and dynamic programming.`
+    return `${total} ${total === 1 ? 'problem' : 'problems'}, ${tail}`
 })
 
 const isFiltered = computed(() => !!search.value || difficulty.value !== 'all' || !!tag.value)

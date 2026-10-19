@@ -17,12 +17,12 @@
                 :data-id="t.id"
                 :class="['toast', t.type, t.type === 'verdict' ? `v-${verdictOf(t).tone}` : '', { peek: !expanded && i > 0 }]"
                 tabindex="-1"
-                :aria-label="t.title"
                 @keydown="onKeydown(t.id, $event)"
                 @pointerdown="onPointerDown(t.id, $event)"
                 @pointermove="onPointerMove"
                 @pointerup="onPointerEnd"
                 @pointercancel="onPointerEnd"
+                @lostpointercapture="onPointerEnd"
             >
                 <span class="t-ico" aria-hidden="true">
                     <span v-if="iconOf(t) === null" class="spin" />
@@ -340,6 +340,9 @@ function onLeave(node: Element, done: () => void) {
 }
 
 function onPointerDown(id: number, e: PointerEvent) {
+    // Only the main button of the primary pointer swipes, and another pointer can't take over a
+    // swipe in progress. The same pointer pressing again means its last drag lost its pointerup.
+    if ((drag && drag.pointerId !== e.pointerId) || e.button !== 0 || !e.isPrimary) return
     if (e.target instanceof Element && e.target.closest('button')) return
     const el = e.currentTarget as HTMLElement
     drag = { id, el, pointerId: e.pointerId, startX: e.clientX, startedAt: performance.now(), dx: 0 }
@@ -354,14 +357,19 @@ function onPointerDown(id: number, e: PointerEvent) {
 function onPointerMove(e: PointerEvent) {
     if (!drag || e.pointerId !== drag.pointerId) return
     drag.dx = e.clientX - drag.startX
+    // Text stays selectable until the toast actually moves.
+    if (drag.dx !== 0) drag.el.dataset.dragging = ''
     drag.el.style.transform = `${baseTransform.get(drag.id) ?? ''} translateX(${drag.dx}px)`
     drag.el.style.opacity = String(Math.max(0.2, 1 - Math.abs(drag.dx) / 260))
 }
 
 function onPointerEnd(e: PointerEvent) {
     if (!drag || e.pointerId !== drag.pointerId) return
-    const { id, el, dx, startedAt } = drag
+    const { id, el, startedAt } = drag
+    // Losing capture mid-drag cancels the swipe: the toast snaps back and stays.
+    const dx = e.type === 'lostpointercapture' ? 0 : drag.dx
     drag = null
+    delete el.dataset.dragging
     el.style.transition = ''
     const distance = Math.abs(dx)
     const speed = distance / Math.max(1, performance.now() - startedAt)
@@ -507,6 +515,9 @@ onBeforeUnmount(() => {
         opacity 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
     will-change: transform;
     touch-action: pan-y;
+}
+/* Only while a swipe moves the toast, so its text can be selected and copied otherwise. */
+.toast[data-dragging] {
     user-select: none;
 }
 .toast > * {

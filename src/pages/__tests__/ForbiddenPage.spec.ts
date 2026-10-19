@@ -40,4 +40,21 @@ describe('ForbiddenPage', () => {
         expect(order).toEqual(['logout(open=false)'])
         expect(prompt.open.value).toBe(true)
     })
+
+    it('signedOutVisitorGetsLogInWithoutLogout', async () => {
+        const auth = useAuthStore()
+        const logout = vi.fn(async () => {})
+        auth.logout = logout as never
+        const prompt = useLoginPrompt()
+        const w = mountPage()
+        expect(w.text()).toContain("You're not signed in. Log in with an account that has access.")
+        expect(w.text()).not.toContain('signed in as')
+        const labels = w.findAll('button').map((b) => b.text())
+        expect(labels).toContain('Log in')
+        expect(labels).not.toContain('Log in as someone else')
+        await w.findAll('button').find((b) => b.text() === 'Log in')!.trigger('click')
+        await flushPromises()
+        expect(prompt.open.value).toBe(true)
+        expect(logout).not.toHaveBeenCalled()
+    })
 })

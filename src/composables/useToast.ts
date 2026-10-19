@@ -232,7 +232,10 @@ function onVisibilityChange() {
     restack()
 }
 
-/** Leaving the page: every pending undo commits now, once, and its toast goes. */
+/**
+ * Leaving the page: every pending undo commits now, once, and its toast goes. Also runs on
+ * `freeze`, since a hidden tab can be frozen and then discarded without a `pagehide`.
+ */
 function onPageHide() {
     for (const rec of [...pendingUndos]) {
         if (!claim(rec)) continue
@@ -253,6 +256,7 @@ function listen() {
     tabHidden = document.visibilityState === 'hidden'
     document.addEventListener('visibilitychange', onVisibilityChange)
     window.addEventListener('pagehide', onPageHide)
+    document.addEventListener('freeze', onPageHide)
 }
 
 function toast(opts: ToastOptions): ToastHandle {
@@ -428,6 +432,7 @@ export function __resetForTests() {
     if (listening) {
         document.removeEventListener('visibilitychange', onVisibilityChange)
         window.removeEventListener('pagehide', onPageHide)
+        document.removeEventListener('freeze', onPageHide)
         listening = false
     }
 }

@@ -21,7 +21,7 @@
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="match">Match app</SelectItem>
-                    <SelectItem value="vs-light">Light</SelectItem>
+                    <SelectItem value="vs">Light</SelectItem>
                     <SelectItem value="vs-dark">Dark</SelectItem>
                 </SelectContent>
             </Select>
@@ -96,12 +96,12 @@ import LoginModal from '@/components/auth/LoginModal.vue'
 
 import { ref, watch, computed } from 'vue'
 import { isAxiosError } from 'axios'
-import { useToast } from '@/composables/useToast'
+import { useToast, type ToastHandle } from '@/composables/useToast'
 import { useCooldown } from '@/composables/useCooldown'
 import { useTheme } from '@/composables/useTheme'
 import { getErrorMessage } from '@/lib/errorMessage'
 import { retryAfterSeconds } from '@/lib/retryAfter'
-import { submissionToasts } from '@/lib/submissionToasts'
+import { shouldShowTooFast, submissionToasts } from '@/lib/submissionToasts'
 import submissionService from '@/services/submissionService'
 import type { Submission, SubmissionRequest } from '@/types/submission'
 import { getMonacoLanguage } from '@/utils/editorUtils'
@@ -120,7 +120,7 @@ const emit = defineEmits<{
     (e: 'success', submission: Submission): void
 }>()
 
-const { triggerToast, loading, error: errorToast, countdown } = useToast()
+const { toasts, triggerToast, loading, error: errorToast, countdown } = useToast()
 
 const selectedLanguage = ref<Language>()
 const sourceCode = ref('')
@@ -130,10 +130,10 @@ const isResetOpen = ref(false)
 let editorInstance: CodeEditorInstance | null = null
 
 // "Match app" follows the site theme; Light and Dark pin the editor to one.
-const themeChoice = ref<'match' | 'vs-light' | 'vs-dark'>('match')
+const themeChoice = ref<'match' | 'vs' | 'vs-dark'>('match')
 const { isDark } = useTheme()
 const editorTheme = computed(() =>
-    themeChoice.value === 'match' ? (isDark.value ? 'vs-dark' : 'vs-light') : themeChoice.value,
+    themeChoice.value === 'match' ? (isDark.value ? 'vs-dark' : 'vs') : themeChoice.value,
 )
 
 // Matches the API's oj.submission.cooldown-seconds (10s); a 429's Retry-After overrides it.
@@ -172,8 +172,16 @@ const beginCooldown = (seconds: number) => {
     startCooldown(seconds)
     cooldownUntil = Date.now() + seconds * 1000
 }
-const showTooFast = () =>
-    countdown('You are submitting too fast', { until: Math.max(cooldownUntil, Date.now() + 1000) })
+// One "too fast" toast at a time: presses while it counts down don't stack more of them.
+let tooFast: ToastHandle | undefined
+// The cooldown end that toast counts to, so a 429 that moves the end updates it.
+let tooFastFor = 0
+const showTooFast = () => {
+    const until = Math.max(cooldownUntil, Date.now() + 1000)
+    if (shouldShowTooFast(tooFast?.id, toasts.value)) tooFast = countdown('You are submitting too fast', { until })
+    else if (tooFast && tooFastFor !== cooldownUntil) tooFast.update({ until })
+    tooFastFor = cooldownUntil
+}
 
 const handleSubmit = async () => {
     if (isSubmitting.value) return

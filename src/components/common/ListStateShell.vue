@@ -36,7 +36,8 @@
                             <SearchX class="size-5" />
                         </span>
                         <h4 class="text-sm font-semibold text-foreground">
-                            No results match <span v-if="filterSummary" class="font-mono">{{ filterSummary }}</span>
+                            <template v-if="filterSummary">No results match <span class="font-mono">{{ filterSummary }}</span></template>
+                            <template v-else>No results match your filters</template>
                         </h4>
                         <p class="max-w-xs text-sm text-muted-foreground">Try a different word, or remove a filter.</p>
                         <Button variant="secondary" size="sm" @click="emit('clear-filters')">Clear filters</Button>

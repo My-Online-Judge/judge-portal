@@ -66,4 +66,20 @@ describe('VerdictConsole', () => {
         expect(scroll).toHaveBeenCalledWith({ block: 'nearest' })
         expect(showConsole.mock.invocationCallOrder[0]).toBeLessThan(scroll.mock.invocationCallOrder[0]!)
     })
+
+    it('verdictAfterUnmountHasNoViewAction', async () => {
+        let resolve!: (v: unknown) => void
+        getById.mockReturnValue(new Promise((res) => (resolve = res)) as never)
+        const update = vi.fn()
+        submissionToasts.set(base.id, { id: 1, update, dismiss: vi.fn() })
+        const w = mount(VerdictConsole, { props: { submission: pending } })
+        // The verdict lands without details, so the console fetches them, and the user leaves meanwhile.
+        watchVerdict.mock.calls[0][1]({ ...base, status: 0, result: 0 } as unknown as Submission)
+        w.unmount()
+        resolve({ data: { data: full } })
+        await flushPromises()
+        const patch = update.mock.calls.at(-1)![0]
+        expect(patch).toMatchObject({ type: 'verdict', verdictStatus: 0 })
+        expect(patch).toHaveProperty('action', undefined)
+    })
 })
