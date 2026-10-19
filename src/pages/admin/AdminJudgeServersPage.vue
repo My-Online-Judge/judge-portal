@@ -1,16 +1,13 @@
 <template>
     <div class="flex flex-col gap-[22px]">
-        <!-- Page header -->
-        <div class="flex flex-wrap items-start justify-between gap-4">
-            <div class="min-w-0">
-                <h1 class="text-[24px] font-semibold leading-tight tracking-tight text-foreground">Judge servers</h1>
-                <p class="mt-1 text-sm text-muted-foreground">Registered judge servers and their health.</p>
-            </div>
-            <Button variant="outline" class="h-[38px]" :disabled="isLoading" @click="load">
-                <RefreshCw class="size-4" :class="isLoading && 'animate-spin'" />
-                Refresh
-            </Button>
-        </div>
+        <AdminPageHeader title="Judge servers" description="Registered judge servers and their health.">
+            <template #actions>
+                <Button variant="outline" :disabled="isLoading" @click="load">
+                    <RefreshCw class="size-4" :class="isLoading && 'animate-spin'" />
+                    Refresh
+                </Button>
+            </template>
+        </AdminPageHeader>
 
         <!-- Servers card -->
         <div class="rounded-xl border border-border bg-card">
@@ -29,8 +26,8 @@
 
             <!-- Error -->
             <div v-else-if="error" class="p-[18px]">
-                <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-err/40 bg-err/5 px-6 py-10 text-center">
-                    <TriangleAlert class="size-6 text-err" />
+                <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-destructive/40 bg-destructive/5 px-6 py-10 text-center">
+                    <TriangleAlert class="size-6 text-destructive" />
                     <p class="text-sm font-medium text-foreground">Couldn't load judge servers.</p>
                     <p class="max-w-xs text-xs text-muted-foreground">
                         The request failed. Check your connection and try again.
@@ -110,6 +107,7 @@
 import { computed, onMounted } from 'vue'
 import { Server, RefreshCw, TriangleAlert } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { useFetch } from '@/composables/useFetch'
 import judgeServerService from '@/services/judgeServerService'

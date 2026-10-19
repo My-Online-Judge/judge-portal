@@ -111,16 +111,6 @@
 
                 <div class="flex-1"></div>
 
-                <!-- Search affordance (visual placeholder) -->
-                <div
-                    class="hidden h-[34px] w-[220px] items-center gap-2 rounded-md border border-input bg-background px-2.5 text-muted-foreground sm:flex"
-                    aria-hidden="true"
-                >
-                    <Search class="size-4 shrink-0" />
-                    <span class="flex-1 text-[13px]">Search…</span>
-                    <kbd class="rounded border border-border px-1 font-mono text-[11px] leading-4">⌘K</kbd>
-                </div>
-
                 <!-- Theme toggle (functional) -->
                 <button
                     type="button"
@@ -132,15 +122,6 @@
                     <Moon v-else class="size-4" />
                 </button>
 
-                <!-- Notifications (decorative) -->
-                <button
-                    type="button"
-                    class="relative flex size-[34px] shrink-0 items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    aria-label="Notifications"
-                >
-                    <Bell class="size-4" />
-                    <span class="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-err" />
-                </button>
             </header>
 
             <!-- Routed content — full-width; pages own their own max-width -->
@@ -167,10 +148,8 @@ import {
     X,
     ChevronRight,
     ChevronsUpDown,
-    Search,
     Moon,
     Sun,
-    Bell,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { ROUTE_PATH } from '@/constants/routePath'

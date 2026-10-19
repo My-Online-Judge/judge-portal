@@ -1,24 +1,20 @@
 <template>
+    <div class="flex flex-col gap-[22px]">
+        <AdminPageHeader title="Roles" description="Roles and the permissions attached to them.">
+            <template #actions>
+                <Button v-if="canCreate" @click="openCreate">
+                    <Plus class="size-4" />
+                    New role
+                </Button>
+                <Button variant="outline" :disabled="isLoading" @click="reload">
+                    <RefreshCw class="size-4" :class="isLoading && 'animate-spin'" />
+                    Refresh
+                </Button>
+            </template>
+        </AdminPageHeader>
+
     <Card>
-        <CardHeader class="space-y-1">
-            <div class="flex flex-wrap items-start justify-between gap-4">
-                <div class="min-w-0">
-                    <CardTitle class="text-base">Roles</CardTitle>
-                    <CardDescription>Roles and the permissions attached to them.</CardDescription>
-                </div>
-                <div class="flex items-center gap-2">
-                    <Button v-if="canCreate" size="sm" class="h-[34px]" @click="openCreate">
-                        <Plus class="size-4" />
-                        Create role
-                    </Button>
-                    <Button variant="outline" size="sm" class="h-[34px]" :disabled="isLoading" @click="reload">
-                        <RefreshCw class="size-4" :class="isLoading && 'animate-spin'" />
-                        Refresh
-                    </Button>
-                </div>
-            </div>
-        </CardHeader>
-        <CardContent>
+        <CardContent class="pt-6">
             <!-- Loading -->
             <div v-if="isLoading" class="space-y-2.5">
                 <div v-for="n in 4" :key="n" class="h-16 w-full rounded bg-muted animate-ojpulse" />
@@ -26,8 +22,8 @@
 
             <!-- Error -->
             <div v-else-if="error">
-                <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-err/40 bg-err/5 px-6 py-10 text-center">
-                    <TriangleAlert class="size-6 text-err" />
+                <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-destructive/40 bg-destructive/5 px-6 py-10 text-center">
+                    <TriangleAlert class="size-6 text-destructive" />
                     <p class="text-sm font-medium text-foreground">Couldn't load roles.</p>
                     <p class="max-w-xs text-xs text-muted-foreground">The request failed. Check your connection and try again.</p>
                     <Button variant="outline" size="sm" @click="reload">
@@ -96,37 +92,15 @@
 
                             <!-- Actions -->
                             <TableCell class="px-4 py-3 text-right align-top">
-                                <div class="flex items-center justify-end gap-2">
-                                    <span
-                                        v-if="isAdminRole(role)"
-                                        class="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[12px] text-muted-foreground"
-                                        title="The ADMIN role always holds every permission and cannot be edited."
-                                    >
-                                        <Lock class="size-3.5" />
-                                        Locked · full access
-                                    </span>
-                                    <Button
-                                        v-else-if="canUpdate"
-                                        variant="outline"
-                                        size="sm"
-                                        class="h-[32px]"
-                                        @click="openEdit(role)"
-                                    >
-                                        <Pencil class="size-3.5" />
-                                        Edit permissions
-                                    </Button>
-                                    <Button
-                                        v-if="canDelete && !isSystemRole(role)"
-                                        variant="outline"
-                                        size="sm"
-                                        class="h-[32px] text-err hover:text-err"
-                                        title="Delete this role"
-                                        @click="openDelete(role)"
-                                    >
-                                        <Trash2 class="size-3.5" />
-                                        Delete
-                                    </Button>
-                                </div>
+                                <span
+                                    v-if="isLocked(role)"
+                                    class="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[12px] text-muted-foreground"
+                                    title="This role always holds every permission and cannot be changed."
+                                >
+                                    <Lock class="size-3.5" />
+                                    Locked
+                                </span>
+                                <RowActionsMenu v-else-if="rowActions(role).length" :items="rowActions(role)" :label="role.name" />
                             </TableCell>
                         </TableRow>
                     </TableBody>
@@ -202,9 +176,9 @@
     <Dialog v-model:open="createOpen">
         <DialogContent class="sm:max-w-md">
             <DialogHeader>
-                <DialogTitle>Create role</DialogTitle>
+                <DialogTitle>New role</DialogTitle>
                 <DialogDescription>
-                    Add a new role. It starts with no permissions — grant them afterwards with "Edit permissions".
+                    Add a new role. It starts with no permissions — grant them afterwards with "Permissions".
                 </DialogDescription>
             </DialogHeader>
 
@@ -222,7 +196,7 @@
                     <p class="text-[11px] text-muted-foreground">
                         Uppercase letters, digits, and underscores. Must start with a letter.
                     </p>
-                    <p v-if="createName.trim() && !createValid" class="text-[11px] text-err">
+                    <p v-if="createName.trim() && !createValid" class="text-xs text-destructive">
                         Not a valid role name.
                     </p>
                 </div>
@@ -243,31 +217,23 @@
     </Dialog>
 
     <!-- Delete role confirmation -->
-    <Dialog v-model:open="deleteOpen">
-        <DialogContent class="sm:max-w-md">
-            <DialogHeader>
-                <DialogTitle>Delete role</DialogTitle>
-                <DialogDescription>
-                    Delete the <span class="font-mono text-foreground">{{ deletingRole?.name }}</span> role?
-                    This can't be undone.
-                </DialogDescription>
-            </DialogHeader>
-            <DialogFooter class="gap-2">
-                <Button variant="outline" :disabled="deleting" @click="deleteOpen = false">Cancel</Button>
-                <Button variant="destructive" :disabled="deleting" @click="confirmDelete">
-                    <Loader2 v-if="deleting" class="size-4 animate-spin" />
-                    Delete
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+        :open="deleteOpen"
+        :title="`Delete role “${deletingRole?.name ?? ''}”?`"
+        description="This cannot be undone. A role still assigned to users cannot be deleted (the API answers 409 ROLE_IN_USE, shown as a toast)."
+        confirm-label="Delete"
+        :busy="deleting"
+        @update:open="(v) => (deleteOpen = v)"
+        @confirm="confirmDelete"
+    />
+    </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { RefreshCw, TriangleAlert, ShieldCheck, Lock, Pencil, Loader2, Plus, Trash2 } from 'lucide-vue-next'
+import { RefreshCw, TriangleAlert, ShieldCheck, Lock, KeyRound, Loader2, Plus, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -275,6 +241,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
+import RowActionsMenu from '@/components/common/RowActionsMenu.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import type { RowAction } from '@/components/common/rowActions'
 import { useFetch } from '@/composables/useFetch'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
@@ -311,10 +281,19 @@ const reload = () => {
 const canUpdate = computed(() => authStore.hasPermission('role:update'))
 const canCreate = computed(() => authStore.hasPermission('role:create'))
 const canDelete = computed(() => authStore.hasPermission('role:delete'))
-// The ADMIN role is immutable — it always holds every permission (managed server-side).
-const isAdminRole = (role: Role) => role.name === 'ADMIN'
-// Seeded system roles can't be deleted (matches the server guard).
-const isSystemRole = (role: Role) => role.name === 'ADMIN' || role.name === 'USER'
+// SYS_ROOT and ADMIN always hold every permission, so they show a Locked badge instead of a menu.
+const isLocked = (role: Role) => role.name === 'SYS_ROOT' || role.name === 'ADMIN'
+// USER is protected from deletion by the API (ROLE_PROTECTED) but its permissions can be edited.
+const isProtectedFromDelete = (role: Role) => role.name === 'USER'
+
+const rowActions = (role: Role): RowAction[] => {
+    const items: RowAction[] = []
+    if (canUpdate.value) items.push({ label: 'Permissions', icon: KeyRound, onSelect: () => openEdit(role) })
+    if (canDelete.value && !isProtectedFromDelete(role)) {
+        items.push({ label: 'Delete…', icon: Trash2, destructive: true, onSelect: () => openDelete(role) })
+    }
+    return items
+}
 
 const permByName = computed(() => new Map(permissions.value.map((p) => [p.name, p])))
 const descOf = (name: string) => permByName.value.get(name)?.description
@@ -419,7 +398,7 @@ const openDelete = (role: Role) => {
 }
 
 const confirmDelete = async () => {
-    if (!deletingRole.value) return
+    if (!deletingRole.value || deleting.value) return
     deleting.value = true
     try {
         await roleService.remove(deletingRole.value.id)

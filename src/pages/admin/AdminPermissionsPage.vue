@@ -1,18 +1,16 @@
 <template>
-    <Card>
-        <CardHeader class="space-y-1">
-            <div class="flex flex-wrap items-start justify-between gap-4">
-                <div class="min-w-0">
-                    <CardTitle class="text-base">Permissions</CardTitle>
-                    <CardDescription>The full permission catalog, grouped by resource. Read-only.</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" class="h-[34px]" :disabled="isLoading" @click="load">
+    <div class="flex flex-col gap-[22px]">
+        <AdminPageHeader title="Permissions" description="The full permission catalog, grouped by resource. Read-only.">
+            <template #actions>
+                <Button variant="outline" :disabled="isLoading" @click="load">
                     <RefreshCw class="size-4" :class="isLoading && 'animate-spin'" />
                     Refresh
                 </Button>
-            </div>
-        </CardHeader>
-        <CardContent>
+            </template>
+        </AdminPageHeader>
+
+    <Card>
+        <CardContent class="pt-6">
             <!-- Loading -->
             <div v-if="isLoading" class="space-y-2.5">
                 <div v-for="n in 5" :key="n" class="h-12 w-full rounded bg-muted animate-ojpulse" />
@@ -20,8 +18,8 @@
 
             <!-- Error -->
             <div v-else-if="error">
-                <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-err/40 bg-err/5 px-6 py-10 text-center">
-                    <TriangleAlert class="size-6 text-err" />
+                <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-destructive/40 bg-destructive/5 px-6 py-10 text-center">
+                    <TriangleAlert class="size-6 text-destructive" />
                     <p class="text-sm font-medium text-foreground">Couldn't load permissions.</p>
                     <p class="max-w-xs text-xs text-muted-foreground">The request failed. Check your connection and try again.</p>
                     <Button variant="outline" size="sm" @click="load">
@@ -67,14 +65,16 @@
             </div>
         </CardContent>
     </Card>
+    </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RefreshCw, TriangleAlert, KeyRound } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableRow, TableCell } from '@/components/ui/table'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 import { useFetch } from '@/composables/useFetch'
 import permissionService from '@/services/permissionService'
 import { groupByResource } from '@/lib/permissionDisplay'

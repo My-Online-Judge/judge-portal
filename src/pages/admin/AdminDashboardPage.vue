@@ -1,18 +1,15 @@
 <template>
     <div class="flex flex-col gap-[22px]">
-        <!-- Page header -->
-        <div class="flex flex-wrap items-start justify-between gap-4">
-            <div class="min-w-0">
-                <h1 class="text-[24px] font-semibold leading-tight tracking-tight text-foreground">Dashboard</h1>
-                <p class="mt-1 text-sm text-muted-foreground">Content, infrastructure and access at a glance.</p>
-            </div>
-            <RouterLink v-if="hasPermission('problem:create')" :to="ROUTE_PATH.ADMIN_PROBLEMS">
-                <Button class="h-[38px]">
-                    <Plus class="size-4" />
-                    Create problem
+        <AdminPageHeader title="Dashboard" description="Content, infrastructure and access at a glance.">
+            <template v-if="hasPermission('problem:create')" #actions>
+                <Button as-child>
+                    <RouterLink :to="CREATE_PROBLEM_PATH">
+                        <Plus class="size-4" />
+                        New problem
+                    </RouterLink>
                 </Button>
-            </RouterLink>
-        </div>
+            </template>
+        </AdminPageHeader>
 
         <!-- KPI row -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -50,16 +47,18 @@
                 <p class="mt-2 text-[12px] text-muted-foreground">{{ judgeKpiContext }}</p>
             </div>
 
-            <!-- Users (pending — Phase 4) -->
+            <!-- Users (live) -->
             <div class="rounded-xl border border-border bg-card p-[18px]">
                 <div class="flex items-start justify-between gap-3">
                     <span class="text-[13px] font-medium text-muted-foreground">Users</span>
                     <Users class="size-[18px] shrink-0 text-muted-foreground" />
                 </div>
                 <div class="mt-3 flex h-[30px] items-center">
-                    <p class="font-mono text-[30px] font-semibold leading-none text-muted-foreground/60">—</p>
+                    <div v-if="canReadUsers && usersLoading" class="h-5 w-[88px] rounded bg-muted animate-ojpulse" />
+                    <p v-else-if="!canReadUsers || usersError || totalUsers === null" class="font-mono text-[30px] font-semibold leading-none text-muted-foreground/60">—</p>
+                    <p v-else class="font-mono text-[30px] font-semibold leading-none tracking-tight text-foreground">{{ totalUsers }}</p>
                 </div>
-                <p class="mt-2 text-[12px] text-muted-foreground">Lands in the Users section.</p>
+                <p class="mt-2 text-[12px] text-muted-foreground">{{ usersContext }}</p>
             </div>
         </div>
 
@@ -96,8 +95,8 @@
 
                     <!-- Error -->
                     <div v-else-if="canReadJudgeServers && judgeError">
-                        <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-err/40 bg-err/5 px-6 py-10 text-center">
-                            <TriangleAlert class="size-6 text-err" />
+                        <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-destructive/40 bg-destructive/5 px-6 py-10 text-center">
+                            <TriangleAlert class="size-6 text-destructive" />
                             <p class="text-sm font-medium text-foreground">Couldn't load judge servers.</p>
                             <p class="max-w-[15rem] text-xs text-muted-foreground">
                                 The request failed. Check your connection and try again.
@@ -160,8 +159,8 @@
 
                 <!-- Error -->
                 <div v-else-if="error" class="p-[18px]">
-                    <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-err/40 bg-err/5 px-6 py-10 text-center">
-                        <TriangleAlert class="size-6 text-err" />
+                    <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-destructive/40 bg-destructive/5 px-6 py-10 text-center">
+                        <TriangleAlert class="size-6 text-destructive" />
                         <p class="text-sm font-medium text-foreground">Couldn't load problems.</p>
                         <p class="max-w-xs text-xs text-muted-foreground">
                             The request failed. Check your connection and try again.
@@ -178,12 +177,12 @@
                     <div class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-10 text-center">
                         <ListChecks class="size-6 text-muted-foreground" />
                         <p class="text-sm font-medium text-foreground">No problems yet — create one.</p>
-                        <RouterLink :to="ROUTE_PATH.ADMIN_PROBLEMS">
-                            <Button variant="outline" size="sm">
+                        <Button v-if="hasPermission('problem:create')" variant="outline" size="sm" as-child>
+                            <RouterLink :to="CREATE_PROBLEM_PATH">
                                 <Plus class="size-4" />
-                                Create problem
-                            </Button>
-                        </RouterLink>
+                                New problem
+                            </RouterLink>
+                        </Button>
                     </div>
                 </div>
 
@@ -198,7 +197,6 @@
                                     <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Difficulty</th>
                                     <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Status</th>
                                     <th class="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Updated</th>
-                                    <th class="px-[18px] py-2.5"><span class="sr-only">Actions</span></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -228,15 +226,6 @@
                                     <td class="whitespace-nowrap px-3 py-3 font-mono text-[12px] text-muted-foreground">
                                         {{ relativeTime(problem.updatedAt) }}
                                     </td>
-                                    <td class="whitespace-nowrap px-[18px] py-3 text-right">
-                                        <button
-                                            type="button"
-                                            class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                            aria-label="Problem actions"
-                                        >
-                                            <MoreHorizontal class="size-4" />
-                                        </button>
-                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -248,12 +237,12 @@
                             Showing <span class="font-mono text-foreground">{{ shownCount }}</span> of
                             <span class="font-mono text-foreground">{{ totalProblems ?? shownCount }}</span>
                         </p>
-                        <div class="flex items-center gap-2">
-                            <Button variant="outline" size="sm" disabled>Previous</Button>
+                        <Button variant="outline" size="sm" as-child>
                             <RouterLink :to="ROUTE_PATH.ADMIN_PROBLEMS">
-                                <Button variant="outline" size="sm">Next</Button>
+                                View all
+                                <ArrowRight class="size-4" />
                             </RouterLink>
-                        </div>
+                        </Button>
                     </div>
                 </template>
             </div>
@@ -272,17 +261,20 @@ import {
     TriangleAlert,
     RefreshCw,
     Plus,
-    MoreHorizontal,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
 import { useFetch } from '@/composables/useFetch'
 import problemService from '@/services/problemService'
+import userService from '@/services/userService'
 import judgeServerService from '@/services/judgeServerService'
 import { useAuthStore } from '@/stores/auth'
 import { ROUTE_PATH } from '@/constants/routePath'
 import { shortId, difficultyLabel, statusLabel, statusDotClass, relativeTime } from '@/lib/problemDisplay'
 import { serverHealth, healthDotClass } from '@/lib/judgeServerDisplay'
 import type { JudgeServer } from '@/types/judgeServer'
+
+const CREATE_PROBLEM_PATH = `${ROUTE_PATH.ADMIN_PROBLEMS}/new`
 
 const authStore = useAuthStore()
 const hasPermission = (permission: string) => authStore.hasPermission(permission)
@@ -324,8 +316,25 @@ const judgeKpiContext = computed(() => {
     return judgeStale.value > 0 ? `${judgeStale.value} stale/offline` : 'All reporting'
 })
 
+// --- Users KPI: only the total is needed, so ask for a single row ---
+const canReadUsers = computed(() => hasPermission('user:read'))
+const {
+    data: usersData,
+    isLoading: usersLoading,
+    error: usersError,
+    execute: usersExecute,
+} = useFetch(userService.list, { immediate: false })
+
+const totalUsers = computed(() => usersData.value?.pagination?.totalElements ?? null)
+const usersContext = computed(() => {
+    if (!canReadUsers.value) return 'Needs the user:read permission.'
+    if (usersError.value) return "Couldn't load"
+    return 'Registered accounts'
+})
+
 onMounted(() => {
     load()
+    if (canReadUsers.value) usersExecute({ size: 1 })
     if (canReadJudgeServers.value) loadJudgeServers()
 })
 </script>
