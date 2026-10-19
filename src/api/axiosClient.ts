@@ -3,12 +3,13 @@ import axios, { type AxiosError, type AxiosResponse } from 'axios'
 import { getDeviceId } from '@/lib/deviceId'
 import { API_ROUTES } from '@/constants/apiPath'
 import { createRefreshOn401 } from './refreshSession'
+import { API_BASE_URL } from './baseUrl'
 
 // Auth rides on the HttpOnly accessToken cookie the API sets during the Google
 // callback. JS cannot read it (that is the point), so there is no token to attach
 // by hand — withCredentials sends it and the API reads it off the cookie.
 const axiosClient = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
+    baseURL: API_BASE_URL,
     timeout: 10000,
     headers: {
         'Content-Type': 'application/json',

@@ -2,8 +2,9 @@ import { getCurrentInstance, onBeforeUnmount } from 'vue'
 import submissionService from '@/services/submissionService'
 import { API_ROUTES } from '@/constants/apiPath'
 import { isTerminalStatus, type Submission } from '@/types/submission'
+import { API_BASE_URL } from '@/api/baseUrl'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
+const BASE_URL = API_BASE_URL
 const FALLBACK_TIMEOUT_MS = 20_000
 
 type VerdictHandler = (verdict: Submission) => void
