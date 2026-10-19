@@ -10,7 +10,7 @@
     </main>
 
     <footer class="border-t border-border py-8 text-center">
-      <p class="text-sm text-muted-foreground">MyOJ — practice, submit, get judged in real time.</p>
+      <p class="text-sm text-muted-foreground">MyOJ. Practice, submit and get judged in real time.</p>
       <p class="mt-1 text-xs text-muted-foreground/60">© {{ new Date().getFullYear() }} MyOJ</p>
     </footer>
   </div>

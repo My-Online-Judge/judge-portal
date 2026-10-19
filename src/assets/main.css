@@ -479,3 +479,10 @@
     animation: none;
   }
 }
+
+/* Test-strip mark: the logo, and the broken strip on the 403 page */
+.strip { display: inline-grid; grid-template-columns: repeat(3, 7px); gap: 2px; }
+.strip i { width: 7px; height: 7px; border-radius: 2px; background: var(--foreground); opacity: 0.9; display: block; }
+.strip i.ok { background: var(--v-ac); opacity: 1; }
+.strip i.p { background: var(--primary); opacity: 1; }
+.strip i.dim { opacity: 0.22; }
