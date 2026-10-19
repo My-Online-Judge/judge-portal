@@ -6,6 +6,9 @@
                 <DialogDescription v-if="oversized">
                     Too large to edit here — replace the files.
                 </DialogDescription>
+                <DialogDescription v-else-if="useFiles">
+                    Choose the input and expected output files.
+                </DialogDescription>
                 <DialogDescription v-else>
                     Contestants judge against the new tests from the next submission.
                 </DialogDescription>
@@ -16,9 +19,9 @@
                     <div class="space-y-1.5">
                         <div class="flex items-center justify-between">
                             <Label for="tc-input">Input</Label>
-                            <span v-if="!oversized" class="text-xs text-muted-foreground">{{ lines(inputText) }} lines</span>
+                            <span v-if="!showPickers" class="text-xs text-muted-foreground">{{ lines(inputText) }} lines</span>
                         </div>
-                        <FilePicker v-if="oversized" v-model="inputFile" accept=".in,.txt" label="Replace .in" />
+                        <FilePicker v-if="showPickers" v-model="inputFile" accept=".in,.txt" label="Replace .in" />
                         <Textarea
                             v-else
                             id="tc-input"
@@ -31,9 +34,9 @@
                     <div class="space-y-1.5">
                         <div class="flex items-center justify-between">
                             <Label for="tc-output">Expected output</Label>
-                            <span v-if="!oversized" class="text-xs text-muted-foreground">{{ lines(outputText) }} lines</span>
+                            <span v-if="!showPickers" class="text-xs text-muted-foreground">{{ lines(outputText) }} lines</span>
                         </div>
-                        <FilePicker v-if="oversized" v-model="outputFile" accept=".out,.txt" label="Replace .out" />
+                        <FilePicker v-if="showPickers" v-model="outputFile" accept=".out,.txt" label="Replace .out" />
                         <Textarea
                             v-else
                             id="tc-output"
@@ -46,6 +49,16 @@
                 </div>
 
                 <DialogFooter>
+                    <Button
+                        v-if="!oversized"
+                        type="button"
+                        variant="ghost"
+                        class="sm:mr-auto"
+                        :disabled="busy"
+                        @click="useFiles = !useFiles"
+                    >
+                        {{ useFiles ? 'Type instead' : 'Upload files instead' }}
+                    </Button>
                     <Button type="button" variant="outline" :disabled="busy" @click="requestClose">
                         Cancel
                     </Button>
@@ -102,6 +115,8 @@ const outputText = ref('')
 const inputFile = ref<File | null>(null)
 const outputFile = ref<File | null>(null)
 const discardOpen = ref(false)
+const useFiles = ref(false)
+const showPickers = computed(() => !!props.oversized || useFiles.value)
 
 // Re-seed whenever the dialog opens (or its source content arrives).
 watch(
@@ -113,6 +128,7 @@ watch(
         inputFile.value = null
         outputFile.value = null
         discardOpen.value = false
+        useFiles.value = false
     },
     { immediate: true },
 )
@@ -120,14 +136,14 @@ watch(
 const lines = (s: string) => (s === '' ? 0 : s.split('\n').length)
 
 const dirty = computed(() =>
-    props.oversized
+    showPickers.value
         ? !!inputFile.value || !!outputFile.value
         : inputText.value !== (props.initial?.input ?? '') || outputText.value !== (props.initial?.output ?? ''),
 )
 
 const canSave = computed(() => {
     if (props.busy) return false
-    if (props.oversized) return !!inputFile.value && !!outputFile.value
+    if (showPickers.value) return !!inputFile.value && !!outputFile.value
     return inputText.value.trim() !== '' && outputText.value.trim() !== ''
 })
 
@@ -149,7 +165,7 @@ function discard() {
 
 function onSave() {
     if (!canSave.value) return
-    if (props.oversized) {
+    if (showPickers.value) {
         emit('save', { input: inputFile.value!, output: outputFile.value! })
     } else {
         emit('save', { input: new Blob([inputText.value]), output: new Blob([outputText.value]) })

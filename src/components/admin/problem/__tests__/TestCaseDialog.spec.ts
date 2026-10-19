@@ -73,4 +73,28 @@ describe('TestCaseDialog', () => {
         expect(await payload.input.text()).toBe('4 5')
         expect(await payload.output.text()).toBe('9')
     })
+
+    it('addCanSwitchToFilePickers', async () => {
+        const w = mountDialog({ mode: 'add', initial: null })
+        await nextTick()
+        expect(document.body.querySelector('textarea')).not.toBeNull()
+        button('Upload files instead').click()
+        await nextTick()
+        expect(document.body.querySelector('textarea')).toBeNull()
+        const files = [...document.body.querySelectorAll('input[type="file"]')] as HTMLInputElement[]
+        expect(files).toHaveLength(2)
+        expect(document.body.textContent).toContain('Choose the input and expected output files.')
+        const pick = (el: HTMLInputElement, f: File) => {
+            Object.defineProperty(el, 'files', { value: [f], configurable: true })
+            el.dispatchEvent(new Event('change', { bubbles: true }))
+        }
+        pick(files[0], new File(['big in'], 'a.in'))
+        pick(files[1], new File(['big out'], 'a.out'))
+        await nextTick()
+        button('Save').click()
+        await nextTick()
+        const [payload] = w.emitted('save')![0] as [{ input: Blob; output: Blob }]
+        expect(await payload.input.text()).toBe('big in')
+        expect(await payload.output.text()).toBe('big out')
+    })
 })
