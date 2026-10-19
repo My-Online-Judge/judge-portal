@@ -1,9 +1,8 @@
 <script lang="ts">
 /**
  * Repeatable input/output pair editor for a problem's judge test data.
- * Create-only: the backend has no endpoint to modify test cases after
- * creation, so this is never mounted on the detail/edit page. The hosting
- * page zips the pairs client-side (`1.in`/`1.out`, …) into the create body.
+ * Used on the create page: the hosting page zips the pairs client-side
+ * (`1.in`/`1.out`, …) into the create body.
  */
 export interface TestCasePair {
     input: string
