@@ -7,55 +7,58 @@
             </div>
 
             <div v-else>
-                <Table>
-                    <TableHeader>
-                        <TableRow class="border-border bg-muted/30 hover:bg-muted/30">
-                            <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">ID</TableHead>
-                            <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">When</TableHead>
-                            <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</TableHead>
-                            <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Time</TableHead>
-                            <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Memory</TableHead>
-                            <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Language</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <template v-if="isLoading">
-                            <TableRow v-for="n in 5" :key="`sk-${n}`" class="border-border hover:bg-transparent">
-                                <TableCell v-for="c in 6" :key="c" class="py-4">
-                                    <div class="h-3.5 animate-pulse rounded bg-muted" :class="c === 3 ? 'w-16' : 'w-20'"></div>
-                                </TableCell>
+                <ListStateShell
+                    :loading="isLoading"
+                    :error="error ? 'error' : null"
+                    :has-data="!!response || displayRows.length > 0"
+                    :empty="displayRows.length === 0"
+                    @retry="fetchSubmissions"
+                >
+                    <template #empty>
+                        <div class="py-16 text-center">
+                            <p class="font-display text-2xl text-foreground">No submissions yet</p>
+                            <p class="mt-1.5 text-sm text-muted-foreground">Solve it from the Submit tab — your attempts show up here in real time.</p>
+                        </div>
+                    </template>
+                    <Table>
+                        <TableHeader>
+                            <TableRow class="border-border bg-muted/30 hover:bg-muted/30">
+                                <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">ID</TableHead>
+                                <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">When</TableHead>
+                                <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</TableHead>
+                                <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Time</TableHead>
+                                <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Memory</TableHead>
+                                <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Language</TableHead>
                             </TableRow>
-                        </template>
-                        <TableRow v-else-if="error" class="hover:bg-transparent">
-                            <TableCell colspan="6" class="py-10 text-center text-destructive">
-                                Couldn't load submissions. Please try again.
-                            </TableCell>
-                        </TableRow>
-                        <TableRow v-else-if="displayRows.length === 0" class="hover:bg-transparent">
-                            <TableCell colspan="6" class="py-16 text-center">
-                                <p class="font-display text-2xl text-foreground">No submissions yet</p>
-                                <p class="mt-1.5 text-sm text-muted-foreground">Solve it from the Submit tab — your attempts show up here in real time.</p>
-                            </TableCell>
-                        </TableRow>
-                        <TableRow v-else v-for="sub in displayRows" :key="sub.id" class="border-border transition-colors hover:bg-muted/40">
-                            <TableCell class="tabular text-sm text-muted-foreground">#{{ sub.id.substring(0, 8) }}</TableCell>
-                            <TableCell class="text-sm text-muted-foreground">{{ formatDateTime(sub.createdAt) }}</TableCell>
-                            <TableCell>
-                                <Badge :class="getStatusChipClass(sub.status)">
-                                    <Loader2 v-if="!isTerminalStatus(sub.status)" class="mr-1 inline h-3 w-3 animate-spin" />
-                                    {{ getSubmissionStatus(sub.status) }}
-                                </Badge>
-                            </TableCell>
-                            <TableCell class="tabular text-sm">
-                                {{ sub.cpuTime != null ? `${sub.cpuTime} ms` : '—' }}
-                            </TableCell>
-                            <TableCell class="tabular text-sm">
-                                {{ sub.memory ? `${(sub.memory / (1024 * 1024)).toFixed(1)} MB` : '—' }}
-                            </TableCell>
-                            <TableCell class="text-sm text-muted-foreground">{{ sub.language?.name }}</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow
+                                v-for="sub in displayRows"
+                                :key="sub.id"
+                                tabindex="0"
+                                class="cursor-pointer border-border transition-colors hover:bg-muted/40"
+                                @click="openDetail(sub.id)"
+                                @keydown.enter="openDetail(sub.id)"
+                            >
+                                <TableCell class="tabular text-sm text-muted-foreground">#{{ sub.id.substring(0, 8) }}</TableCell>
+                                <TableCell class="text-sm text-muted-foreground">{{ formatDateTime(sub.createdAt) }}</TableCell>
+                                <TableCell>
+                                    <Badge :class="getStatusChipClass(sub.status)">
+                                        <Loader2 v-if="!isTerminalStatus(sub.status)" class="mr-1 inline h-3 w-3 animate-spin" />
+                                        {{ getSubmissionStatus(sub.status) }}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell class="tabular text-sm">
+                                    {{ sub.cpuTime != null ? `${sub.cpuTime} ms` : '—' }}
+                                </TableCell>
+                                <TableCell class="tabular text-sm">
+                                    {{ sub.memory ? `${(sub.memory / (1024 * 1024)).toFixed(1)} MB` : '—' }}
+                                </TableCell>
+                                <TableCell class="text-sm text-muted-foreground">{{ sub.language?.name }}</TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                </ListStateShell>
 
                 <div class="px-6 pb-6">
                     <PaginationFooter :pagination="pagination" @change-page="onPageChange" @update:size="onSizeChange" />
@@ -63,6 +66,7 @@
             </div>
         </CardContent>
         <LoginModal v-model:open="isLoginOpen" />
+        <SubmissionDetailDialog v-model:open="isDetailOpen" :submission-id="detailId" />
     </Card>
 </template>
 
@@ -81,6 +85,8 @@ import {
 } from '@/components/ui/table'
 import LoginModal from '@/components/auth/LoginModal.vue'
 import PaginationFooter from '@/components/common/PaginationFooter.vue'
+import ListStateShell from '@/components/common/ListStateShell.vue'
+import SubmissionDetailDialog from './SubmissionDetailDialog.vue'
 import { useAuthStore } from '@/stores/auth'
 import submissionService from '@/services/submissionService'
 import { useFetch } from '@/composables/useFetch'
@@ -100,6 +106,13 @@ const emit = defineEmits<{ (e: 'consumed'): void }>()
 
 const authStore = useAuthStore()
 const isLoginOpen = ref(false)
+const isDetailOpen = ref(false)
+const detailId = ref<string | null>(null)
+
+const openDetail = (id: string) => {
+    detailId.value = id
+    isDetailOpen.value = true
+}
 const page = ref(0)
 const size = ref(10)
 
