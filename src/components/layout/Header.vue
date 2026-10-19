@@ -57,6 +57,7 @@
                             <DropdownMenuItem @click="router.push(ROUTE_PATH.ACCOUNT_PASSWORD)">
                                 Change password
                             </DropdownMenuItem>
+                            <ThemeMenu />
                             <DropdownMenuItem @click="handleLogout">
                                 Log out
                             </DropdownMenuItem>
@@ -80,6 +81,7 @@ import { ref, computed, onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Home, List, Trophy, ShieldCheck } from 'lucide-vue-next'
 import LoginModal from '@/components/auth/LoginModal.vue'
+import ThemeMenu from '@/components/layout/ThemeMenu.vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ROUTE_PATH } from '@/constants/routePath'

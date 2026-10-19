@@ -111,17 +111,31 @@
 
                 <div class="flex-1"></div>
 
-                <!-- Theme toggle (functional) -->
-                <button
-                    type="button"
-                    class="flex size-[34px] shrink-0 items-center justify-center rounded-md border border-input text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    :aria-label="isDark ? 'Switch to light theme' : 'Switch to dark theme'"
-                    @click="toggleTheme"
-                >
-                    <Sun v-if="isDark" class="size-4" />
-                    <Moon v-else class="size-4" />
-                </button>
-
+                <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                        <button
+                            type="button"
+                            class="shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            aria-label="Account menu"
+                        >
+                            <Avatar class="size-8 rounded-lg">
+                                <AvatarImage v-if="user?.avatar" :src="user.avatar" :alt="user.username" />
+                                <AvatarFallback class="rounded-lg">{{ initials }}</AvatarFallback>
+                            </Avatar>
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent class="w-56" align="end">
+                        <DropdownMenuLabel class="font-normal">
+                            <div class="flex flex-col space-y-1">
+                                <p class="text-sm font-medium leading-none">{{ displayName }}</p>
+                                <p class="text-xs leading-none text-muted-foreground">{{ user?.email }}</p>
+                            </div>
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <ThemeMenu />
+                        <DropdownMenuItem @click="authStore.logout()">Log out</DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </header>
 
             <!-- Routed content — full-width; pages own their own max-width -->
@@ -133,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, type Component } from 'vue'
+import { computed, ref, type Component } from 'vue'
 import { RouterLink, RouterView, useRoute, type RouteLocationRaw } from 'vue-router'
 import {
     Binary,
@@ -148,10 +162,18 @@ import {
     X,
     ChevronRight,
     ChevronsUpDown,
-    Moon,
-    Sun,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
+import ThemeMenu from '@/components/layout/ThemeMenu.vue'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { ROUTE_PATH } from '@/constants/routePath'
 
 const route = useRoute()
@@ -261,28 +283,5 @@ const initials = computed(() => {
     const parts = source.split(/\s+/).filter(Boolean)
     if (parts.length >= 2) return `${parts[0]!.charAt(0)}${parts[1]!.charAt(0)}`.toUpperCase()
     return source.slice(0, 2).toUpperCase()
-})
-
-// Theme toggle — dark class on <html> + localStorage persistence.
-const isDark = ref(false)
-
-const applyTheme = (dark: boolean) => {
-    isDark.value = dark
-    document.documentElement.classList.toggle('dark', dark)
-}
-
-const toggleTheme = () => {
-    const next = !isDark.value
-    applyTheme(next)
-    localStorage.setItem('theme', next ? 'dark' : 'light')
-}
-
-onMounted(() => {
-    const stored = localStorage.getItem('theme')
-    if (stored === 'dark' || stored === 'light') {
-        applyTheme(stored === 'dark')
-    } else {
-        isDark.value = document.documentElement.classList.contains('dark')
-    }
 })
 </script>
