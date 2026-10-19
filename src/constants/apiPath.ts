@@ -9,6 +9,7 @@ export const API_ROUTES = {
     USERS: {
         ROOT: '/users',
         ME: '/users/me',
+        ME_PASSWORD: '/users/me/password',
         PROFILE: (id: number | string) => `/users/${id}`,
         STATUS: (id: string) => `/users/${id}/status`,
         ROLES: (id: string) => `/users/${id}/roles`,

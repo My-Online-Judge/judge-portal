@@ -4,6 +4,7 @@ export const ROUTE_PATH = {
     FORBIDDEN: '/403',
     ADMIN: '/admin',
     ADMIN_LOGIN: '/admin/login',
+    ACCOUNT_PASSWORD: '/account/password',
     ADMIN_PROBLEMS: '/admin/problems',
     ADMIN_JUDGE_SERVERS: '/admin/judge-servers',
     ADMIN_ROLES: '/admin/roles',

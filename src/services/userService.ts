@@ -38,6 +38,12 @@ class UserService {
         return axiosClient.post<ApiResponse<void>>(API_ROUTES.USERS.RESET_PASSWORD(id), { newPassword })
     }
 
+    // Change the signed-in user's own password. On success the server clears both
+    // auth cookies, so the caller must treat the session as ended.
+    async changeOwnPassword(currentPassword: string, newPassword: string): Promise<void> {
+        await axiosClient.put<ApiResponse<void>>(API_ROUTES.USERS.ME_PASSWORD, { currentPassword, newPassword })
+    }
+
     // Soft-delete (status -> DELETED). Server keeps the record + submissions.
     remove(id: string): Promise<AxiosResponse<ApiResponse<void>>> {
         return axiosClient.delete<ApiResponse<void>>(API_ROUTES.USERS.PROFILE(id))

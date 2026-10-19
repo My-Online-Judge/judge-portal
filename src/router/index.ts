@@ -14,6 +14,7 @@ import AdminRolesPage from '@/pages/admin/AdminRolesPage.vue'
 import AdminPermissionsPage from '@/pages/admin/AdminPermissionsPage.vue'
 import AdminUsersPage from '@/pages/admin/AdminUsersPage.vue'
 import AdminSecurityPage from '@/pages/admin/AdminSecurityPage.vue'
+import ChangePasswordPage from '@/pages/user/account/ChangePasswordPage.vue'
 import { resolveAdminAccess } from '@/router/adminGuard'
 import { useAuthStore } from '@/stores/auth'
 
@@ -36,6 +37,12 @@ const router = createRouter({
       path: ROUTE_PATH.FORBIDDEN,
       name: 'Forbidden',
       component: ForbiddenPage
+    },
+    {
+      path: ROUTE_PATH.ACCOUNT_PASSWORD,
+      name: 'ChangePassword',
+      component: ChangePasswordPage,
+      meta: { requiresAuth: true }
     },
     {
       path: ROUTE_PATH.ADMIN_LOGIN,
@@ -61,8 +68,8 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  const meta = (to.meta ?? {}) as { permissions?: string[] }
-  if (!meta.permissions) return true
+  const meta = (to.meta ?? {}) as { permissions?: string[]; requiresAuth?: boolean }
+  if (!meta.permissions && !meta.requiresAuth) return true
   const authStore = useAuthStore()
   if (!authStore.user) await authStore.ensureLoaded()
   const access = resolveAdminAccess(meta, { isAuthenticated: authStore.isAuthenticated, hasPermission: authStore.hasPermission })

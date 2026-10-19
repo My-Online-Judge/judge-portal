@@ -54,8 +54,8 @@
                                 </div>
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                                Profile
+                            <DropdownMenuItem @click="router.push(ROUTE_PATH.ACCOUNT_PASSWORD)">
+                                Change password
                             </DropdownMenuItem>
                             <DropdownMenuItem @click="handleLogout">
                                 Log out
@@ -80,6 +80,7 @@ import { ref, computed, onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Home, List, Trophy, ShieldCheck } from 'lucide-vue-next'
 import LoginModal from '@/components/auth/LoginModal.vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ROUTE_PATH } from '@/constants/routePath'
 import {
@@ -98,6 +99,7 @@ import {
 
 const isLoginOpen = ref(false)
 const authStore = useAuthStore()
+const router = useRouter()
 
 const ADMIN_ANY = ['problem:create', 'problem:update', 'problem:delete', 'judgeserver:read', 'role:read', 'user:read']
 const isAdmin = computed(() => ADMIN_ANY.some((p) => authStore.hasPermission(p)))
