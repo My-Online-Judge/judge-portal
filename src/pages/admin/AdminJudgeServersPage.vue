@@ -1,13 +1,13 @@
 <template>
     <div class="flex flex-col gap-[22px]">
-        <AdminPageHeader title="Judge servers" description="Registered judge servers and their health.">
+        <PageHeader title="Judge servers" description="Registered judge servers and their health.">
             <template #actions>
                 <Button variant="outline" :disabled="isLoading" @click="load">
                     <RefreshCw class="size-4" :class="isLoading && 'animate-spin'" />
                     Refresh
                 </Button>
             </template>
-        </AdminPageHeader>
+        </PageHeader>
 
         <!-- Servers card -->
         <div class="rounded-xl border border-border bg-card">
@@ -107,7 +107,7 @@
 import { computed, onMounted } from 'vue'
 import { Server, RefreshCw, TriangleAlert } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { useFetch } from '@/composables/useFetch'
 import judgeServerService from '@/services/judgeServerService'

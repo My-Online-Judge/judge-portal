@@ -1,13 +1,13 @@
 <template>
     <div class="flex flex-col gap-[22px]">
-        <AdminPageHeader title="Permissions" description="The full permission catalog, grouped by resource. Read-only.">
+        <PageHeader title="Permissions" description="The full permission catalog, grouped by resource. Read-only.">
             <template #actions>
                 <Button variant="outline" :disabled="isLoading" @click="load">
                     <RefreshCw class="size-4" :class="isLoading && 'animate-spin'" />
                     Refresh
                 </Button>
             </template>
-        </AdminPageHeader>
+        </PageHeader>
 
         <Card>
             <CardContent class="pt-6">
@@ -74,7 +74,7 @@ import { RefreshCw, TriangleAlert, KeyRound } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableRow, TableCell } from '@/components/ui/table'
-import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import { useFetch } from '@/composables/useFetch'
 import permissionService from '@/services/permissionService'
 import { groupByResource } from '@/lib/permissionDisplay'

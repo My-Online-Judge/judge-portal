@@ -79,12 +79,12 @@ export const STATUS_CONFIG = {
     [SubmissionStatus.JUDGING]: { label: 'Judging', color: '#3b82f6', fullName: 'Judging' } // Blue 500
 }
 
-export const getLevelInfo = (level: number): { text: string, class: string } => {
+export const getLevelInfo = (level: number): { text: string } => {
     switch (level) {
-        case 1: return { text: 'Easy', class: 'bg-[#EAF3EA] text-[#356635]' }
-        case 2: return { text: 'Medium', class: 'bg-[#FBF2D8] text-[#8A5A00]' }
-        case 3: return { text: 'Hard', class: 'bg-[#FBEBEC] text-[#9E2F2D]' }
-        default: return { text: 'Unknown', class: 'bg-[#F0EFEC] text-[#6B6862]' }
+        case 1: return { text: 'Easy' }
+        case 2: return { text: 'Medium' }
+        case 3: return { text: 'Hard' }
+        default: return { text: 'Unknown' }
     }
 }
 

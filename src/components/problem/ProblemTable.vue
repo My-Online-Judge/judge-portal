@@ -31,9 +31,7 @@
                         </div>
                     </TableCell>
                     <TableCell>
-                        <Badge :class="getLevelInfo(problem.hardnessLevel).class" class="rounded-md border-0 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">
-                            {{ getLevelInfo(problem.hardnessLevel).text }}
-                        </Badge>
+                        <DifficultyBadge :level="problem.hardnessLevel" />
                     </TableCell>
                     <TableCell>
                         <span class="tabular text-sm text-muted-foreground">{{ problem.totalSubmission }}</span>
@@ -65,7 +63,8 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { type Problem, getLevelInfo } from '@/types/problem'
+import DifficultyBadge from '@/components/common/DifficultyBadge.vue'
+import type { Problem } from '@/types/problem'
 
 withDefaults(defineProps<{
     problems: Problem[]

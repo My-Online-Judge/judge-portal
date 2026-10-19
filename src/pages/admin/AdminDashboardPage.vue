@@ -1,6 +1,6 @@
 <template>
     <div class="flex flex-col gap-[22px]">
-        <AdminPageHeader title="Dashboard" description="Content, infrastructure and access at a glance.">
+        <PageHeader title="Dashboard" description="Content, infrastructure and access at a glance.">
             <template v-if="hasPermission('problem:create')" #actions>
                 <Button as-child>
                     <RouterLink :to="CREATE_PROBLEM_PATH">
@@ -9,7 +9,7 @@
                     </RouterLink>
                 </Button>
             </template>
-        </AdminPageHeader>
+        </PageHeader>
 
         <!-- KPI row -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -263,7 +263,7 @@ import {
     Plus,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import { useFetch } from '@/composables/useFetch'
 import problemService from '@/services/problemService'
 import userService from '@/services/userService'

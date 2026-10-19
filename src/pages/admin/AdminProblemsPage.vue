@@ -1,13 +1,13 @@
 <template>
     <div class="flex flex-col gap-[22px]">
-        <AdminPageHeader title="Problems" description="Create, edit and remove problems.">
+        <PageHeader title="Problems" description="Create, edit and remove problems.">
             <template v-if="canCreate" #actions>
                 <Button @click="goCreate">
                     <Plus class="size-4" />
                     New problem
                 </Button>
             </template>
-        </AdminPageHeader>
+        </PageHeader>
 
         <!-- List card -->
         <div class="min-w-0 rounded-xl border border-border bg-card">
@@ -103,7 +103,7 @@ import { watchDebounced } from '@vueuse/core'
 import { Plus, Search, ListChecks, Eye, Pencil, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import ListStateShell from '@/components/common/ListStateShell.vue'
 import PaginationFooter from '@/components/common/PaginationFooter.vue'
 import RowActionsMenu from '@/components/common/RowActionsMenu.vue'

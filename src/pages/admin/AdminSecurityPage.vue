@@ -1,13 +1,13 @@
 <template>
     <div class="flex flex-col gap-[22px]">
-        <AdminPageHeader title="Security" description="Watch login attempts and block abusive IPs or devices.">
+        <PageHeader title="Security" description="Watch login attempts and block abusive IPs or devices.">
             <template v-if="canCreate && tab === 'bans'" #actions>
                 <Button @click="openBanDialog('IP', '')">
                     <Plus class="size-4" />
                     New ban
                 </Button>
             </template>
-        </AdminPageHeader>
+        </PageHeader>
 
         <Tabs v-model="tab" class="gap-[22px]">
             <TabsList class="w-fit">
@@ -225,7 +225,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import ListStateShell from '@/components/common/ListStateShell.vue'
 import PaginationFooter from '@/components/common/PaginationFooter.vue'
 import RowActionsMenu from '@/components/common/RowActionsMenu.vue'

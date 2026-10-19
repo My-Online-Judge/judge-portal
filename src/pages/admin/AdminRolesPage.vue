@@ -1,6 +1,6 @@
 <template>
     <div class="flex flex-col gap-[22px]">
-        <AdminPageHeader title="Roles" description="Roles and the permissions attached to them.">
+        <PageHeader title="Roles" description="Roles and the permissions attached to them.">
             <template #actions>
                 <Button v-if="canCreate" @click="openCreate">
                     <Plus class="size-4" />
@@ -11,7 +11,7 @@
                     Refresh
                 </Button>
             </template>
-        </AdminPageHeader>
+        </PageHeader>
 
         <Card>
             <CardContent class="pt-6">
@@ -241,7 +241,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import RowActionsMenu from '@/components/common/RowActionsMenu.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import type { RowAction } from '@/components/common/rowActions'

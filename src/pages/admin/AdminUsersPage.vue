@@ -1,13 +1,13 @@
 <template>
     <div class="flex flex-col gap-[22px]">
-        <AdminPageHeader title="Users" description="Manage accounts and the roles assigned to them.">
+        <PageHeader title="Users" description="Manage accounts and the roles assigned to them.">
             <template v-if="canCreate" #actions>
                 <Button @click="openCreate">
                     <Plus class="size-4" />
                     New user
                 </Button>
             </template>
-        </AdminPageHeader>
+        </PageHeader>
 
         <!-- List card -->
         <div class="min-w-0 rounded-xl border border-border bg-card">
@@ -327,7 +327,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import AdminPageHeader from '@/components/admin/AdminPageHeader.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import ListStateShell from '@/components/common/ListStateShell.vue'
 import PaginationFooter from '@/components/common/PaginationFooter.vue'
 import RowActionsMenu from '@/components/common/RowActionsMenu.vue'
