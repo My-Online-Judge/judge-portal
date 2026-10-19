@@ -56,7 +56,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useEventListener } from '@vueuse/core'
+import { useSlashFocus } from '@/composables/useSlashFocus'
 import SearchBar from '@/components/problem/SearchBar.vue'
 import ProblemTable from '@/components/problem/ProblemTable.vue'
 import TagCloud from '@/components/problem/TagCloud.vue'
@@ -147,14 +147,7 @@ const onSizeChange = (newSize: number) => {
     fetchProblems()
 }
 
-// "/" jumps to the search field unless the user is already typing somewhere.
-useEventListener(window, 'keydown', (e: KeyboardEvent) => {
-    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return
-    const el = e.target as HTMLElement | null
-    if (el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))) return
-    e.preventDefault()
-    searchBar.value?.focus()
-})
+useSlashFocus(searchBar)
 
 // Initial fetch
 fetchProblems()
