@@ -7,10 +7,7 @@
         <VerdictTiles v-else-if="terminal" :submission="current" />
         <div v-else class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
             <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Verdict</span>
-            <Badge :class="view.chipClass">
-                <Loader2 class="mr-1 inline h-3 w-3 animate-spin" />
-                {{ view.label }}
-            </Badge>
+            <VerdictChip :status="current.status" />
             <span class="tabular text-muted-foreground">#{{ current.id.substring(0, 8) }}</span>
         </div>
     </div>
@@ -18,9 +15,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { Loader2, Terminal } from 'lucide-vue-next'
-import { Badge } from '@/components/ui/badge'
-import { STATUS_CHIP_BASE } from '@/lib/submissionDisplay'
+import { Terminal } from 'lucide-vue-next'
+import VerdictChip from '@/components/common/VerdictChip.vue'
 import { isTerminalStatus, type Submission } from '@/types/submission'
 import VerdictTiles from './VerdictTiles.vue'
 import submissionService from '@/services/submissionService'
@@ -67,11 +63,4 @@ watch(
     },
     { immediate: true },
 )
-
-// While the verdict is still pending/judging show a spinner and a neutral "Judging…" chip;
-// terminal submissions render VerdictTiles instead.
-const view = {
-    label: 'Judging…',
-    chipClass: `${STATUS_CHIP_BASE} bg-muted text-muted-foreground`,
-}
 </script>

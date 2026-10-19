@@ -409,18 +409,20 @@
 .vchip.lg svg.lucide { width: 16px; height: 16px; }
 .vchip.sm { height: 20px; padding: 0 6px 0 5px; font-size: 11px; gap: 4px; }
 .vchip.sm svg.lucide { width: 12px; height: 12px; }
-.v-AC { --vc: var(--v-ac); --vi: var(--v-ac-ink); }
-.v-WA { --vc: var(--v-wa); --vi: var(--v-wa-ink); }
-.v-TLE { --vc: var(--v-tle); --vi: var(--v-tle-ink); }
-.v-MLE { --vc: var(--v-mle); --vi: var(--v-mle-ink); }
-.v-RE { --vc: var(--v-re); --vi: var(--v-re-ink); }
-.v-CE { --vc: var(--v-ce); --vi: var(--v-ce-ink); }
-.v-SE { --vc: var(--v-se); --vi: var(--v-se-ink); }
-.v-PA { --vc: var(--v-pa); --vi: var(--v-pa-ink); }
-.v-PENDING { --vc: var(--v-pending); --vi: var(--v-pending-ink); }
-.v-JUDGING { --vc: var(--v-judging); --vi: var(--v-judging-ink); }
-.vchip.v-PENDING { border-style: dashed; }
-.vchip.v-JUDGING::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, color-mix(in oklch, var(--vc) 22%, transparent) 50%, transparent 80%); background-size: 220% 100%; animation: sweep 1.2s linear infinite; }
+.vchip .spin { width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: vchipspin 0.8s linear infinite; flex: none; }
+@keyframes vchipspin { to { transform: rotate(360deg); } }
+.v-ac { --vc: var(--v-ac); --vi: var(--v-ac-ink); }
+.v-wa { --vc: var(--v-wa); --vi: var(--v-wa-ink); }
+.v-tle { --vc: var(--v-tle); --vi: var(--v-tle-ink); }
+.v-mle { --vc: var(--v-mle); --vi: var(--v-mle-ink); }
+.v-re { --vc: var(--v-re); --vi: var(--v-re-ink); }
+.v-ce { --vc: var(--v-ce); --vi: var(--v-ce-ink); }
+.v-se { --vc: var(--v-se); --vi: var(--v-se-ink); }
+.v-pa { --vc: var(--v-pa); --vi: var(--v-pa-ink); }
+.v-pending { --vc: var(--v-pending); --vi: var(--v-pending-ink); }
+.v-judging { --vc: var(--v-judging); --vi: var(--v-judging-ink); }
+.vchip.v-pending { border-style: dashed; }
+.vchip.v-judging::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, color-mix(in oklch, var(--vc) 22%, transparent) 50%, transparent 80%); background-size: 220% 100%; animation: sweep 1.2s linear infinite; }
 
 /* Submission tiles */
 .tiles { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -434,7 +436,7 @@
 .tile.open::after { content: ""; position: absolute; left: 50%; bottom: 3px; width: 10px; height: 2px; border-radius: 1px; transform: translateX(-50%); background: currentColor; opacity: 0.5; }
 .tile.open:hover { transform: translateY(-1px); }
 .tile[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--ring); }
-.tile.v-PENDING { border-style: dashed; background: transparent; }
+.tile.v-pending { border-style: dashed; background: transparent; }
 .tile.running { --vc: var(--v-judging); --vi: var(--v-judging-ink); animation: tilepulse 1s ease-in-out infinite; }
 @keyframes tilepulse { 50% { background: color-mix(in oklch, var(--vc) 26%, var(--card)); } }
 
@@ -443,8 +445,11 @@
     animation: none;
     background: var(--skeleton);
   }
-  .vchip.v-JUDGING::after {
+  .vchip.v-judging::after {
     display: none;
+  }
+  .vchip .spin {
+    animation: none;
   }
   .tile.running {
     animation: none;

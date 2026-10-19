@@ -2,7 +2,7 @@
     <div class="space-y-2 text-sm">
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
             <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Verdict</span>
-            <Badge :class="getStatusChipClass(submission.status)">{{ getSubmissionStatus(submission.status) }}</Badge>
+            <VerdictChip :status="submission.status" />
             <span v-if="firstFail" class="tabular text-muted-foreground" data-test="first-fail">
                 Test {{ firstFail.name }} · {{ formatMs(firstFail.cpuTime) }} · {{ formatMem(firstFail.memory) }}
             </span>
@@ -55,14 +55,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { Lock } from 'lucide-vue-next'
-import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import TestCaseDetailPane from './TestCaseDetailPane.vue'
-import { getStatusChipClass } from '@/lib/submissionDisplay'
+import VerdictChip from '@/components/common/VerdictChip.vue'
 import { defaultSelection, passedCount, resultName, sortTests, tileLabel } from '@/lib/verdictTiles'
 import { formatMem, formatMs } from '@/lib/verdictFormat'
 import {
-    getSubmissionStatus,
     SubmissionResult,
     type Submission,
     type TestCaseResult,

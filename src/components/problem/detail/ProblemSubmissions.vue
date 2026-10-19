@@ -45,10 +45,7 @@
                                 <TableCell class="tabular text-sm text-muted-foreground">#{{ sub.id.substring(0, 8) }}</TableCell>
                                 <TableCell class="text-sm text-muted-foreground">{{ formatDateTime(sub.createdAt) }}</TableCell>
                                 <TableCell>
-                                    <Badge :class="getStatusChipClass(sub.status)">
-                                        <Loader2 v-if="!isTerminalStatus(sub.status)" class="mr-1 inline h-3 w-3 animate-spin" />
-                                        {{ getSubmissionStatus(sub.status) }}
-                                    </Badge>
+                                    <VerdictChip :status="sub.status" />
                                 </TableCell>
                                 <TableCell class="tabular text-sm">
                                     {{ sub.cpuTime != null ? `${sub.cpuTime} ms` : '—' }}
@@ -75,7 +72,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
     Table,
@@ -94,11 +90,10 @@ import submissionService from '@/services/submissionService'
 import { useFetch } from '@/composables/useFetch'
 
 import { formatDateTime } from '@/utils/dateTimeUtils'
-import { Loader2 } from 'lucide-vue-next'
 import { useSubmissionStream } from '@/composables/useSubmissionStream'
 import type { Submission } from '@/types/submission'
-import { getSubmissionStatus, isTerminalStatus } from '@/types/submission'
-import { getStatusChipClass } from '@/lib/submissionDisplay'
+import { isTerminalStatus } from '@/types/submission'
+import VerdictChip from '@/components/common/VerdictChip.vue'
 
 const props = defineProps<{
     problemSlug: string
