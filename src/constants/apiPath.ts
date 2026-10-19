@@ -22,6 +22,7 @@ export const API_ROUTES = {
         TEST_CASES: (slug: string) => `/problems/${slug}/test-cases`,
         TEST_CASES_IMPORT: (slug: string) => `/problems/${slug}/test-cases/import`,
         TEST_CASE: (slug: string, id: string) => `/problems/${slug}/test-cases/${id}`,
+        REJUDGE: (slug: string) => `/problems/${slug}/rejudge`,
     },
     LANGUAGES: {
         ROOT: '/languages',
@@ -30,6 +31,7 @@ export const API_ROUTES = {
         ROOT: '/submissions',
         DETAIL: (id: string) => `/submissions/${id}`,
         STREAM: (id: string) => `/submissions/${id}/stream`,
+        REJUDGE: (id: string) => `/submissions/${id}/rejudge`,
         BY_USER_PROBLEM: (userId: string | number, problemSlug: string) =>
             `/submissions/user/${userId}/problem/${problemSlug}`,
     },

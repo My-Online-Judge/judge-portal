@@ -123,10 +123,10 @@ import { useAuthStore } from '@/stores/auth'
 import LoginModal from '@/components/auth/LoginModal.vue'
 
 import { ref, watch, computed } from 'vue'
-import { isAxiosError } from 'axios'
 import { useToast } from '@/composables/useToast'
 import { useCooldown } from '@/composables/useCooldown'
 import { getErrorMessage } from '@/lib/errorMessage'
+import { retryAfterSeconds } from '@/lib/submitErrors'
 import submissionService from '@/services/submissionService'
 import type { Submission, SubmissionRequest } from '@/types/submission'
 import { getMonacoLanguage } from '@/utils/editorUtils'
@@ -203,9 +203,9 @@ const handleSubmit = async () => {
 
         emit('success', res.data.data)
     } catch (error) {
-        if (isAxiosError(error) && error.response?.status === 429) {
-            const ra = Number(error.response.headers?.['retry-after'])
-            startCooldown(Number.isFinite(ra) && ra > 0 ? ra : COOLDOWN_SECONDS)
+        const wait = retryAfterSeconds(error, COOLDOWN_SECONDS)
+        if (wait !== null) {
+            startCooldown(wait)
             triggerToast(getErrorMessage(error, 'You are submitting too fast'), 'error')
         } else {
             triggerToast(getErrorMessage(error, 'An error occurred'), 'error')

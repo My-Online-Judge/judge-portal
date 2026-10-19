@@ -21,6 +21,10 @@
                         </span>
                     </div>
                     <VerdictTiles :submission="submission" />
+                    <Button v-if="canRejudge && isTerminalStatus(submission.status)" data-test="rejudge" variant="outline"
+                        size="sm" :disabled="rejudging" @click="rejudge">
+                        Rejudge
+                    </Button>
                 </div>
             </ListStateShell>
         </DialogContent>
@@ -28,15 +32,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import ListStateShell from '@/components/common/ListStateShell.vue'
+import { Button } from '@/components/ui/button'
 import VerdictTiles from './VerdictTiles.vue'
 import submissionService from '@/services/submissionService'
-import type { Submission } from '@/types/submission'
+import { isTerminalStatus, type Submission } from '@/types/submission'
+import { useAuthStore } from '@/stores/auth'
+import { useToast } from '@/composables/useToast'
+import { getErrorMessage } from '@/lib/errorMessage'
 
 const props = defineProps<{ open: boolean; submissionId: string | null }>()
 const emit = defineEmits<{ (e: 'update:open', value: boolean): void }>()
+
+const authStore = useAuthStore()
+const { triggerToast } = useToast()
+const canRejudge = computed(() => authStore.hasPermission('submission:rejudge'))
+const rejudging = ref(false)
 
 const submission = ref<Submission | null>(null)
 const isLoading = ref(false)
@@ -54,6 +67,21 @@ async function load() {
         if (props.submissionId === id) error.value = true
     } finally {
         if (props.submissionId === id) isLoading.value = false
+    }
+}
+
+async function rejudge() {
+    const id = props.submissionId
+    if (!id || rejudging.value) return
+    rejudging.value = true
+    try {
+        await submissionService.rejudge(id)
+        triggerToast('Rejudge queued', 'success')
+        await load()
+    } catch (err) {
+        triggerToast(getErrorMessage(err, 'Could not rejudge the submission.'), 'error')
+    } finally {
+        rejudging.value = false
     }
 }
 
