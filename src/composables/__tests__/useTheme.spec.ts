@@ -79,4 +79,29 @@ describe('useTheme', () => {
         listeners.forEach((l) => l({ matches: true }))
         expect(document.documentElement.classList.contains('dark')).toBe(false)
     })
+
+    it('initAppliesStoredDark', async () => {
+        localStorage.setItem('theme', 'dark')
+        const { useTheme } = await load()
+        const t = useTheme()
+        expect(t.mode.value).toBe('dark')
+        expect(document.documentElement.classList.contains('dark')).toBe(true)
+    })
+
+    it('initAppliesStoredLight', async () => {
+        localStorage.setItem('theme', 'light')
+        osDark = true
+        const { useTheme } = await load()
+        useTheme()
+        expect(document.documentElement.classList.contains('dark')).toBe(false)
+    })
+
+    it('startupInitFollowsOsChangeWithoutMenu', async () => {
+        const { useTheme } = await load()
+        useTheme() // app start only; no setMode, no menu mounted
+        expect(document.documentElement.classList.contains('dark')).toBe(false)
+        osDark = true
+        listeners.forEach((l) => l({ matches: true }))
+        expect(document.documentElement.classList.contains('dark')).toBe(true)
+    })
 })
