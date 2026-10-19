@@ -1,19 +1,15 @@
 <template>
-    <Tabs v-model="tab" default-value="description" class="flex h-full min-h-0 flex-col">
-        <div class="border-b border-border px-3">
-            <TabsList class="h-auto w-full justify-start gap-1 rounded-none bg-transparent p-0">
-                <TabsTrigger value="description"
-                    class="rounded-none border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none">
-                    Description
-                </TabsTrigger>
-                <TabsTrigger value="submissions"
-                    class="rounded-none border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none">
-                    Submissions
+    <Tabs v-model="tab" default-value="description" class="flex h-full min-h-0 flex-col gap-0 bg-card">
+        <div class="flex-none border-b border-border px-3">
+            <TabsList class="h-auto w-full justify-start gap-0.5 rounded-none bg-transparent p-0">
+                <TabsTrigger v-for="t in tabs" :key="t.value" :value="t.value">
+                    <component :is="t.icon" aria-hidden="true" />
+                    {{ t.label }}
                 </TabsTrigger>
             </TabsList>
         </div>
 
-        <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+        <div class="min-h-0 flex-1 overflow-y-auto px-[22px] pt-[18px] pb-7">
             <TabsContent value="description" class="mt-0">
                 <ProblemDescription :problem="problem" />
             </TabsContent>
@@ -27,6 +23,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { FileText, History } from 'lucide-vue-next'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ProblemDescription from './ProblemDescription.vue'
 import ProblemSubmissions from './ProblemSubmissions.vue'
@@ -42,4 +39,8 @@ defineProps<{
 defineEmits<{ (e: 'consumed'): void }>()
 
 const tab = ref('description')
+const tabs = [
+    { value: 'description', label: 'Description', icon: FileText },
+    { value: 'submissions', label: 'Submissions', icon: History },
+]
 </script>

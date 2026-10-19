@@ -1,34 +1,29 @@
 <template>
     <Card class="border-border py-0 shadow-none">
         <CardContent class="p-0">
-            <div v-if="!authStore.isAuthenticated" class="flex flex-col items-center justify-center gap-4 p-14 text-center">
-                <p class="text-muted-foreground">Sign in to see your submissions for this problem.</p>
-                <Button @click="isLoginOpen = true">Sign in</Button>
+            <div v-if="!authStore.isAuthenticated" class="flex min-h-60 flex-col items-center justify-center gap-2.5 px-5 py-10 text-center">
+                <span class="grid size-10 place-items-center rounded-xl bg-muted text-muted-foreground">
+                    <LogIn class="size-5" aria-hidden="true" />
+                </span>
+                <h4 class="text-sm font-semibold text-foreground">Log in to see your submissions</h4>
+                <p class="max-w-xs text-sm text-muted-foreground">Your past attempts for this problem appear here.</p>
+                <Button size="sm" @click="isLoginOpen = true">Log in</Button>
             </div>
 
             <div v-else>
                 <ListStateShell
                     :loading="isLoading"
-                    :error="error ? 'error' : null"
+                    :error="error ? 'Check your connection and try again.' : null"
                     :has-data="!!response || displayRows.length > 0"
                     :empty="displayRows.length === 0"
+                    empty-title="No submissions yet"
+                    empty-hint="Submit from the editor. Each attempt is listed here with its verdict."
                     @retry="fetchSubmissions"
                 >
-                    <template #empty>
-                        <div class="py-16 text-center">
-                            <p class="font-display text-2xl text-foreground">No submissions yet</p>
-                            <p class="mt-1.5 text-sm text-muted-foreground">Solve it from the Submit tab — your attempts show up here in real time.</p>
-                        </div>
-                    </template>
                     <Table>
                         <TableHeader>
                             <TableRow class="border-border bg-muted/30 hover:bg-muted/30">
-                                <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">ID</TableHead>
-                                <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">When</TableHead>
-                                <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</TableHead>
-                                <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Time</TableHead>
-                                <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Memory</TableHead>
-                                <TableHead class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Language</TableHead>
+                                <TableHead v-for="head in heads" :key="head" class="text-xs font-medium text-muted-foreground">{{ head }}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -37,23 +32,23 @@
                                 :key="sub.id"
                                 tabindex="0"
                                 role="button"
-                                class="cursor-pointer border-border transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                class="cursor-pointer border-border hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 @click="openDetail(sub.id)"
                                 @keydown.enter="openDetail(sub.id)"
                                 @keydown.space.prevent="openDetail(sub.id)"
                             >
-                                <TableCell class="tabular text-sm text-muted-foreground">#{{ sub.id.substring(0, 8) }}</TableCell>
+                                <TableCell class="tabular font-mono text-xs text-muted-foreground">#{{ sub.id.substring(0, 8) }}</TableCell>
                                 <TableCell class="text-sm text-muted-foreground">{{ formatDateTime(sub.createdAt) }}</TableCell>
                                 <TableCell>
                                     <VerdictChip :status="sub.status" />
                                 </TableCell>
-                                <TableCell class="tabular text-sm">
-                                    {{ sub.cpuTime != null ? `${sub.cpuTime} ms` : '—' }}
+                                <TableCell class="tabular font-mono text-xs">
+                                    {{ sub.cpuTime != null ? `${sub.cpuTime} ms` : '-' }}
                                 </TableCell>
-                                <TableCell class="tabular text-sm">
-                                    {{ sub.memory ? `${(sub.memory / (1024 * 1024)).toFixed(1)} MB` : '—' }}
+                                <TableCell class="tabular font-mono text-xs">
+                                    {{ sub.memory ? `${(sub.memory / (1024 * 1024)).toFixed(1)} MB` : '-' }}
                                 </TableCell>
-                                <TableCell class="text-sm text-muted-foreground">{{ sub.language?.name }}</TableCell>
+                                <TableCell class="text-sm text-muted-foreground">{{ sub.language?.name ?? '-' }}</TableCell>
                             </TableRow>
                         </TableBody>
                     </Table>
@@ -71,6 +66,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { LogIn } from 'lucide-vue-next'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -112,6 +108,7 @@ const openDetail = (id: string) => {
 }
 const page = ref(0)
 const size = ref(10)
+const heads = ['ID', 'When', 'Verdict', 'Time', 'Memory', 'Language']
 
 const {
     data: response,

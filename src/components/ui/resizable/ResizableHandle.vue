@@ -5,7 +5,6 @@ import {
     type SplitterResizeHandleProps,
     useForwardProps,
 } from 'reka-ui'
-import { GripVertical } from 'lucide-vue-next'
 import { cn } from '@/lib/utils'
 
 const props = withDefaults(
@@ -23,14 +22,17 @@ const forwarded = useForwardProps(delegated)
 <template>
     <SplitterResizeHandle v-bind="forwarded"
         :class="cn(
-            'relative flex w-px items-center justify-center bg-border transition-colors',
-            'after:absolute after:inset-y-0 after:left-1/2 after:w-3 after:-translate-x-1/2',
-            'hover:bg-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            'group/handle relative w-2 shrink-0 cursor-col-resize bg-background outline-none',
+            'before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-border',
+            'after:absolute after:inset-y-0 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:bg-primary after:opacity-0 after:transition-opacity',
+            'hover:after:opacity-100 data-[state=drag]:after:opacity-100 data-[state=hover]:after:opacity-100',
+            'focus-visible:rounded-[4px] focus-visible:shadow-[inset_0_0_0_2px_var(--ring)] focus-visible:after:bg-ring focus-visible:after:opacity-100',
+            'motion-reduce:after:transition-none',
             props.class,
         )">
-        <div v-if="withHandle"
-            class="z-10 flex h-6 w-3 items-center justify-center rounded-sm border border-border bg-background">
-            <GripVertical class="h-2.5 w-2.5 text-muted-foreground" />
-        </div>
+        <!-- 8 px hit area around a 1 px hairline. Hover, drag (reka's data-state) and keyboard focus lay a 2 px
+             primary line over it and show the grip; only opacity moves. reka keeps the arrow, Home and End keys. -->
+        <span v-if="withHandle" aria-hidden="true"
+            class="absolute top-1/2 left-1/2 z-10 h-7 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-[3px] border border-input bg-card opacity-0 transition-opacity group-hover/handle:opacity-100 group-focus-visible/handle:opacity-100 group-data-[state=drag]/handle:opacity-100 group-data-[state=hover]/handle:opacity-100 motion-reduce:transition-none" />
     </SplitterResizeHandle>
 </template>
