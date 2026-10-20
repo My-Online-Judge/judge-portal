@@ -43,27 +43,33 @@ export function useFetch<T = unknown, R = T>(
             abortController.abort()
         }
 
-        abortController = new AbortController()
+        const ctl = new AbortController()
+        abortController = ctl
         isLoading.value = true
         error.value = null
 
         try {
             // Pass signal as the FIRST argument
-            const response = await serviceFn(abortController.signal, ...args)
+            const response = await serviceFn(ctl.signal, ...args)
+            // A newer call (or abort) owns the state now; this answer is stale.
+            if (abortController !== ctl) return
             if (transform) {
                 data.value = transform(response.data as T)
             } else {
                 data.value = response.data as unknown as R
             }
         } catch (err) {
+            if (abortController !== ctl) return
             if (axios.isCancel(err)) {
                 console.log('Request canceled')
             } else {
                 error.value = err as AxiosError
             }
         } finally {
-            isLoading.value = false
-            abortController = null
+            if (abortController === ctl) {
+                isLoading.value = false
+                abortController = null
+            }
         }
     }
 
@@ -71,6 +77,7 @@ export function useFetch<T = unknown, R = T>(
         if (abortController) {
             abortController.abort()
             abortController = null
+            isLoading.value = false
         }
     }
 
