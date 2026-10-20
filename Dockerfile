@@ -12,7 +12,8 @@ COPY . .
 ARG VITE_API_BASE_URL=/api/v1
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
-RUN npm run build-only
+# The manifest exists for scripts/check-initial-js.mjs (CI's size check) only; nginx must not serve /.vite/manifest.json.
+RUN npm run build-only && rm -rf dist/.vite
 
 # Production stage
 FROM nginx:stable-alpine AS production-stage

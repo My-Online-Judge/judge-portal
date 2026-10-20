@@ -42,6 +42,10 @@ jobs:
       - name: Build to verify
         run: npm run build-only
 
+      - name: Initial JS budget of /problems
+        # At most 409 600 bytes gzip; reads the manifest of the build above and exits 1 over budget.
+        run: npm run size:check
+
   image:
     needs: test-and-lint
     runs-on: ubuntu-latest
@@ -60,6 +64,9 @@ jobs:
 
       - name: Runs as uid 101
         run: test "$(docker run --rm --entrypoint id "$IMAGE:${{ github.sha }}" -u)" = 101
+
+      - name: Serves no build manifest
+        run: docker run --rm --entrypoint test "$IMAGE:${{ github.sha }}" ! -e /usr/share/nginx/html/.vite
 
       - name: Trivy (CRITICAL with a fix fails the build)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
