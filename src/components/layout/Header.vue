@@ -70,7 +70,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
-import { ListChecks, ShieldCheck, KeyRound, LogOut, UserRound } from 'lucide-vue-next'
+import { ListChecks, ShieldCheck, KeyRound, LogOut, Trophy, UserRound } from 'lucide-vue-next'
 import LoginModal from '@/components/auth/LoginModal.vue'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import ThemeMenu from '@/components/layout/ThemeMenu.vue'
@@ -96,12 +96,24 @@ const loginPrompt = useLoginPrompt()
 const authStore = useAuthStore()
 const router = useRouter()
 
-const ADMIN_ANY = ['problem:create', 'problem:update', 'problem:delete', 'judgeserver:read', 'role:read', 'user:read']
+const ADMIN_ANY = [
+    'problem:create',
+    'problem:update',
+    'problem:delete',
+    'submission:read_any',
+    'contest:create',
+    'contest:update',
+    'contest:delete',
+    'judgeserver:read',
+    'role:read',
+    'user:read',
+]
 const isAdmin = computed(() => ADMIN_ANY.some((p) => authStore.hasPermission(p)))
 
-// One array for the desktop nav and the mobile sheet; more sections (Contests) are added here.
+// One array for the desktop nav and the mobile sheet.
 const navItems = computed(() => [
-    { to: '/problems', label: 'Problems', icon: ListChecks },
+    { to: ROUTE_PATH.PROBLEM as string, label: 'Problems', icon: ListChecks },
+    { to: ROUTE_PATH.CONTESTS as string, label: 'Contests', icon: Trophy },
     ...(isAdmin.value ? [{ to: ROUTE_PATH.ADMIN as string, label: 'Admin', icon: ShieldCheck }] : []),
 ])
 

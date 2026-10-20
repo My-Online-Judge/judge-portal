@@ -4,7 +4,8 @@
              (ProblemSubmit registers the same shortcut there) and stops them before they get here. -->
         <div class="min-h-0 flex-1">
             <ProblemSubmit ref="submitRef" :languages="languages || undefined" :problem-slug="slug"
-                :submit-bar-to="submitBarTo" @success="onSubmit" />
+                :submit-bar-to="submitBarTo" :contest-slug="contestSlug" :disabled-reason="disabledReason"
+                @success="onSubmit" @contest-not-running="emit('contest-not-running')" />
         </div>
         <VerdictConsole :submission="latest" @judged="(s) => emit('judged', s)" />
     </div>
@@ -22,10 +23,14 @@ defineProps<{
     slug: string
     // Passed on to ProblemSubmit: where to render the submit bar instead of below the editor.
     submitBarTo?: string
+    // Passed on to ProblemSubmit: the running contest submissions count for, and why submitting is off.
+    contestSlug?: string
+    disabledReason?: string
 }>()
 const emit = defineEmits<{
     (e: 'success', submission: Submission): void
     (e: 'judged', submission: Submission): void
+    (e: 'contest-not-running'): void
 }>()
 
 // This pane owns language loading: it fetches on mount. The store caches, so the call is idempotent.

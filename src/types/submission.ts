@@ -5,6 +5,8 @@ export interface SubmissionRequest {
     sourceCode: string
     languageIdentifier: string
     problemSlug: string
+    /** The running contest this counts for; left out for practice. */
+    contestSlug?: string
 }
 
 export interface TestCaseResult {

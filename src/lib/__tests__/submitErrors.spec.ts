@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AxiosError, AxiosHeaders } from 'axios'
-import { busyFallbackMessage, retryAfterSeconds } from '../submitErrors'
+import { busyFallbackMessage, isContestNotRunning, retryAfterSeconds } from '../submitErrors'
 
 const axiosErr = (status: number, headers: Record<string, string> = {}) =>
   new AxiosError('x', 'ERR', undefined, undefined, {
@@ -38,5 +38,20 @@ describe('busyFallbackMessage', () => {
       status: 503, data: { message: 'Judge is busy' }, statusText: '', headers: new AxiosHeaders(), config: { headers: new AxiosHeaders() },
     })
     expect(busyFallbackMessage(err)).toBe('Judge is busy')
+  })
+})
+
+describe('isContestNotRunning', () => {
+  const withBody = (status: number, message: string) =>
+    new AxiosError('x', 'ERR', undefined, undefined, {
+      status, data: { status, message }, statusText: '', headers: new AxiosHeaders(), config: { headers: new AxiosHeaders() },
+    })
+  it('aContestSubmitAfterTheEndIsRecognised', () => {
+    expect(isContestNotRunning(withBody(400, 'Contest is not running'))).toBe(true)
+  })
+  it('otherBadRequestsAreNot', () => {
+    expect(isContestNotRunning(withBody(400, 'Invalid request'))).toBe(false)
+    expect(isContestNotRunning(withBody(404, 'Contest is not running'))).toBe(false)
+    expect(isContestNotRunning(new Error('Contest is not running'))).toBe(false)
   })
 })

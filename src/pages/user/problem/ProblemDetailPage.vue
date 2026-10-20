@@ -1,21 +1,28 @@
 <template>
     <div class="animate-enter">
-        <div v-if="isLoading" class="flex justify-center py-20">
+        <div v-if="isLoading || contestLoading" class="flex justify-center py-20">
             <Loading />
         </div>
 
-        <div v-else-if="error" class="py-20 text-center text-destructive">
+        <div v-else-if="error || contestError" class="flex flex-col items-center gap-3 py-20 text-center text-destructive">
             Couldn't load this problem. Please try again.
+            <RouterLink v-if="contestSlug" :to="backTo" class="text-sm font-medium text-link hover:underline">Back to the contest</RouterLink>
         </div>
 
         <template v-else-if="problem">
             <!-- Page head: back link, title, meta bar (opens the statistics), tags -->
             <div class="mb-4 flex flex-col gap-3">
-                <RouterLink :to="ROUTE_PATH.PROBLEM"
+                <RouterLink :to="backTo"
                     class="inline-flex items-center gap-1 self-start text-[13px] text-muted-foreground hover:text-foreground">
-                    <ChevronLeft class="size-4" aria-hidden="true" /> Problems
+                    <ChevronLeft class="size-4" aria-hidden="true" /> {{ backLabel }}
                 </RouterLink>
                 <ProblemHeader :problem="problem" />
+                <!-- In a contest that is not running, submissions are practice: say so above the editor. -->
+                <p v-if="contestNote" role="status"
+                    class="flex items-center gap-2 rounded-lg bg-warning-soft px-3.5 py-2.5 text-[13px] text-warning-ink">
+                    <Info class="size-4 shrink-0" aria-hidden="true" />
+                    {{ contestNote }}
+                </p>
             </div>
 
             <!-- 900 px and up: resizable split-pane (statement | solve) -->
@@ -70,17 +77,18 @@
             </Teleport>
             <Teleport defer :to="isDesktop ? '#problem-pane-code' : '#problem-view-code'">
                 <SolvePane :slug="slug" :submit-bar-to="isDesktop ? undefined : `#${SUBMIT_BAR_ID}`"
-                    @success="handleSubmissionSuccess" @judged="refreshStats" />
+                    :contest-slug="submitContestSlug" :disabled-reason="disabledReason"
+                    @success="handleSubmissionSuccess" @judged="refreshStats" @contest-not-running="loadContest" />
             </Teleport>
         </template>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, watchEffect, onBeforeUnmount, provide } from 'vue'
+import { ref, computed, shallowRef, watch, watchEffect, onBeforeUnmount, provide } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useElementSize, useMediaQuery } from '@vueuse/core'
-import { ChevronLeft, CodeXml, FileText } from 'lucide-vue-next'
+import { ChevronLeft, CodeXml, FileText, Info } from 'lucide-vue-next'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import ProblemHeader from '@/components/problem/detail/ProblemHeader.vue'
 import StatementPane from '@/components/problem/detail/StatementPane.vue'
@@ -91,12 +99,25 @@ import Loading from '@/components/common/Loading.vue'
 import { ROUTE_PATH } from '@/constants/routePath'
 import { useFetch } from '@/composables/useFetch'
 import problemService from '@/services/problemService'
+import contestService from '@/services/contestService'
+import { useAuthStore } from '@/stores/auth'
+import type { ContestDetail } from '@/types/contest'
 import type { Submission } from '@/types/submission'
 
 const route = useRoute()
-// Reactive so the value stays correct (and flows to child panes) across
-// client-side navigation between two problems, which reuses this component.
-const slug = computed(() => route.params.slug as string)
+const authStore = useAuthStore()
+
+// Two routes render this page: /problems/:slug, and /contests/:contestSlug/problems/:label (contest mode), which reads
+// the problem through the contest. Navigating between them reuses this component, so everything follows the route.
+const contestSlug = computed(() => (route.params.contestSlug as string | undefined) ?? '')
+const label = computed(() => (route.params.label as string | undefined) ?? '')
+const routeKey = computed(() => (contestSlug.value ? `contest:${contestSlug.value}/${label.value}` : `problem:${route.params.slug}`))
+
+const fetchProblem = (signal: AbortSignal) =>
+    contestSlug.value
+        ? contestService.getProblem(signal, contestSlug.value, label.value)
+        : problemService.getProblemBySlug(signal, route.params.slug as string)
+
 const pendingSubmission = ref<Submission | null>(null)
 
 const isDesktop = useMediaQuery('(min-width: 900px)')
@@ -147,21 +168,73 @@ const {
     isLoading,
     error,
     execute,
-} = useFetch(problemService.getProblemBySlug, {
-    params: slug.value,
+} = useFetch(fetchProblem, {
     transform: (res) => res.data,
 })
 
-// Navigating problem → problem reuses this component, so setup() does not re-run
-// and the mount-time fetch never fires again. Refetch + reset state on slug change.
-watch(
-    () => route.params.slug,
-    (newSlug) => {
-        pendingSubmission.value = null
-        mobileView.value = 'problem'
-        execute(newSlug as string)
-    },
+// The problem's own slug: the editor's drafts and the submissions list are kept by it, in a contest too.
+const slug = computed(() => (contestSlug.value ? (problem.value?.problemSlug ?? '') : (route.params.slug as string)))
+
+// --- Contest mode: the contest's phase decides how a submission counts ---
+const contest = shallowRef<ContestDetail | null>(null)
+const contestLoading = ref(false)
+const contestError = ref<unknown>(null)
+let contestSeq = 0
+
+// Read on entry, and again when a submit finds the contest no longer running. A failed re-read keeps the last answer.
+const loadContest = async () => {
+    const mine = ++contestSeq
+    if (!contestSlug.value) {
+        contest.value = null
+        contestError.value = null
+        contestLoading.value = false
+        return
+    }
+    if (!contest.value) contestLoading.value = true
+    try {
+        const res = await contestService.get(new AbortController().signal, contestSlug.value)
+        if (mine !== contestSeq) return
+        contest.value = res.data.data
+        contestError.value = null
+    } catch (err) {
+        if (mine !== contestSeq) return
+        if (!contest.value) contestError.value = err
+    } finally {
+        if (mine === contestSeq) contestLoading.value = false
+    }
+}
+void loadContest()
+
+const INACTIVE = 0
+// Only a running contest takes the submission; after the end (or before the start, which only editors can see) it is
+// practice.
+const submitContestSlug = computed(() => (contest.value?.phase === 'RUNNING' ? contestSlug.value : undefined))
+const contestNote = computed(() => {
+    if (contest.value?.phase === 'ENDED') return 'Practice: this contest has ended, so submissions do not count.'
+    if (contest.value?.phase === 'UPCOMING') return 'Preview: this contest has not started, so submissions do not count.'
+    return null
+})
+// A contest may hold an unpublished problem: once the contest is over, only problem editors may still submit to it.
+const disabledReason = computed(() =>
+    contest.value?.phase === 'ENDED' && problem.value?.status === INACTIVE && !authStore.hasPermission('problem:update')
+        ? 'This problem opens for practice when an admin makes it public.'
+        : undefined,
 )
+
+const backTo = computed(() => (contestSlug.value ? `${ROUTE_PATH.CONTESTS}/${contestSlug.value}` : ROUTE_PATH.PROBLEM))
+const backLabel = computed(() => (contestSlug.value ? (contest.value?.title ?? 'Contest') : 'Problems'))
+
+// Navigating problem → problem reuses this component, so setup() does not re-run
+// and the mount-time fetch never fires again. Refetch + reset state on route change.
+watch(routeKey, () => {
+    pendingSubmission.value = null
+    mobileView.value = 'problem'
+    execute()
+})
+watch(contestSlug, () => {
+    contest.value = null
+    void loadContest()
+})
 
 const handleSubmissionSuccess = (submission: Submission) => {
     pendingSubmission.value = submission
@@ -172,7 +245,7 @@ const handleSubmissionSuccess = (submission: Submission) => {
 const refreshStats = async () => {
     if (!problem.value) return
     const fresh = await refreshStatsUntilChanged(
-        async () => (await problemService.getProblemBySlug(new AbortController().signal, slug.value)).data.data,
+        async () => (await fetchProblem(new AbortController().signal)).data.data,
         problem.value.totalSubmission ?? 0,
     )
     if (fresh && problem.value) {

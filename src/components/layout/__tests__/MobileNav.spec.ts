@@ -66,6 +66,7 @@ describe('MobileNav', () => {
             history: createMemoryHistory(),
             routes: [
                 { path: '/problems', component: Blank },
+                { path: '/contests', component: Blank },
                 { path: '/admin', component: Blank },
             ],
         })
@@ -92,13 +93,22 @@ describe('MobileNav', () => {
         })
         const w = await mountWithRouter(Header)
         const desktop = w.findAll('nav[aria-label="Main"] a').map((a) => a.text())
-        expect(desktop).toEqual(['Problems', 'Admin'])
+        expect(desktop).toEqual(['Problems', 'Contests', 'Admin'])
 
         await w.get('button[aria-label="Open menu"]').trigger('click')
         await flushPromises()
 
         expect(sheet()).not.toBeNull()
         expect(sheetLabels()).toEqual(desktop)
+    })
+
+    it('theContestsLinkGoesToContests', async () => {
+        h.getMe.mockResolvedValue({ data: { data: { username: 'an.nguyen', name: 'An Nguyen', email: 'a@b.c', permissions: [] } } })
+        const w = await mountWithRouter(Header)
+        await w.get('button[aria-label="Open menu"]').trigger('click')
+        await flushPromises()
+        const link = [...(sheet()?.querySelectorAll('nav a') ?? [])].find((a) => a.textContent?.trim() === 'Contests')
+        expect(link?.getAttribute('href')).toBe('/contests')
     })
 
     it('closesOnNavigation', async () => {

@@ -11,6 +11,14 @@ export function retryAfterSeconds(err: unknown, fallback: number): number | null
     return parseRetryAfter(err.response?.headers?.['retry-after'], fallback)
 }
 
+// The submission service's answer to a contest submit outside the contest's window (CONTEST_NOT_RUNNING).
+const CONTEST_NOT_RUNNING = 'Contest is not running'
+
+// True for that 400: the contest ended (or was withdrawn) while the page was open.
+export function isContestNotRunning(err: unknown): boolean {
+    return isAxiosError(err) && err.response?.status === 400 && getErrorMessage(err, '') === CONTEST_NOT_RUNNING
+}
+
 // Toast text for a 429/503 push-back: the server's message when it sent one, else a status-aware fallback
 // (a 503 with no body is an edge/gateway/upstream outage, not the user submitting too fast).
 export function busyFallbackMessage(err: unknown): string {

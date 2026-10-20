@@ -48,14 +48,14 @@
                 <TagCloud :selected="tag" @select="onTag" />
             </div>
             <div class="order-3 min-w-0 lg:order-none">
-                <Announcements />
+                <UpcomingContests />
             </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
 import { useSlashFocus } from '@/composables/useSlashFocus'
 import SearchBar from '@/components/problem/SearchBar.vue'
 import ProblemTable from '@/components/problem/ProblemTable.vue'
@@ -63,10 +63,13 @@ import TagCloud from '@/components/problem/TagCloud.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import PaginationFooter from '@/components/common/PaginationFooter.vue'
 import ListStateShell from '@/components/common/ListStateShell.vue'
-import Announcements from '@/components/common/Announcements.vue'
 import { useFetch } from '@/composables/useFetch'
 import problemService from '@/services/problemService'
 import { difficultyToHardness } from '@/types/problem'
+
+// The sidebar's contests card loads on its own, so no contest code joins the /problems initial closure. It shows
+// nothing until it has something to show anyway.
+const UpcomingContests = defineAsyncComponent(() => import('@/components/contest/UpcomingContests.vue'))
 
 const page = ref(0)
 const size = ref(10)

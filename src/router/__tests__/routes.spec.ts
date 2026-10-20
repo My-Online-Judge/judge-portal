@@ -24,4 +24,18 @@ describe('routes', () => {
     const dashboard = router.getRoutes().find((r) => r.name === 'AdminDashboard')
     expect(dashboard?.meta.permissions).toContain('submission:read_any')
   })
+
+  it('contestRoutesReuseTheProblemPageAndNeedASignInForProblems', () => {
+    const byName = (name: string) => router.getRoutes().find((r) => r.name === name)
+    expect(byName('Contests')?.path).toBe('/contests')
+    expect(byName('ContestDetail')?.path).toBe('/contests/:slug')
+    const problem = byName('ContestProblem')
+    expect(problem?.path).toBe('/contests/:contestSlug/problems/:label')
+    expect(problem?.meta.requiresAuth).toBe(true)
+    // The contest list and detail are public.
+    expect(byName('Contests')?.meta.requiresAuth).toBeUndefined()
+    expect(byName('ContestDetail')?.meta.requiresAuth).toBeUndefined()
+    // Same lazy chunk as /problems/:slug.
+    expect(String(problem?.components?.default)).toContain('ProblemDetailPage')
+  })
 })

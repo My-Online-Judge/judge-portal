@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
-import { defineComponent, h as render, onMounted, reactive, type Ref } from 'vue'
+import { defineComponent, h as render, onMounted, type Ref } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
 
 const h = vi.hoisted(() => ({
     isDesktop: null as unknown as Ref<boolean>,
     getProblemBySlug: vi.fn(),
+    getContest: vi.fn(),
+    getContestProblem: vi.fn(),
     solveMounts: 0,
+    route: null as unknown as { params: Record<string, string> },
 }))
 
 vi.mock('@vueuse/core', async (importOriginal) => {
@@ -15,11 +19,13 @@ vi.mock('@vueuse/core', async (importOriginal) => {
     h.isDesktop = ref(true)
     return { ...actual, useMediaQuery: () => h.isDesktop }
 })
-vi.mock('vue-router', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('vue-router')>()),
-    useRoute: () => reactive({ params: { slug: 'tong-tu-1-den-n' } }),
-}))
+vi.mock('vue-router', async (importOriginal) => {
+    const { reactive: r } = await import('vue')
+    h.route = r({ params: { slug: 'tong-tu-1-den-n' } as Record<string, string> })
+    return { ...(await importOriginal<typeof import('vue-router')>()), useRoute: () => h.route }
+})
 vi.mock('@/services/problemService', () => ({ default: { getProblemBySlug: h.getProblemBySlug } }))
+vi.mock('@/services/contestService', () => ({ default: { get: h.getContest, getProblem: h.getContestProblem } }))
 // The real SolvePane is stubbed below, but its import chain still reaches Monaco, which needs a real browser.
 vi.mock('@/lib/monaco', () => ({}))
 
@@ -28,7 +34,8 @@ import ProblemDetailPage from '../ProblemDetailPage.vue'
 // Stands in for the editor pane: it counts its mounts and holds typed text like Monaco does.
 const SolvePane = defineComponent({
     name: 'SolvePane',
-    props: { slug: String, submitBarTo: String },
+    props: { slug: String, submitBarTo: String, contestSlug: String, disabledReason: String },
+    emits: ['success', 'judged', 'contest-not-running'],
     setup() {
         onMounted(() => h.solveMounts++)
         return () => render('textarea', { 'data-testid': 'editor' })
@@ -38,10 +45,22 @@ const Slot = defineComponent({ setup: (_, { slots }) => () => render('div', slot
 
 let wrapper: VueWrapper | null = null
 
+beforeEach(() => setActivePinia(createPinia()))
 afterEach(() => {
     wrapper?.unmount()
     wrapper = null
+    vi.clearAllMocks()
 })
+
+const stubs = {
+    SolvePane,
+    StatementPane: true,
+    ProblemHeader: true,
+    RouterLink: true,
+    ResizablePanelGroup: Slot,
+    ResizablePanel: Slot,
+    ResizableHandle: true,
+}
 
 describe('ProblemDetailPage', () => {
     it('editorSurvivesTheBreakpoint', async () => {
@@ -85,5 +104,77 @@ describe('ProblemDetailPage', () => {
         expect(document.getElementById('problem-view-code')).toBeNull()
         expect(document.querySelector('[data-testid="editor"]')).toBe(editor)
         expect(editor.value).toBe('int main() {}')
+    })
+
+    describe('in a contest', () => {
+        const problem = { problemSlug: 'tong-hai-so', title: 'Tổng hai số', status: 1 }
+        const contest = (phase: string) => ({
+            slug: 'spring-cup', title: 'Spring cup', phase, status: 'PUBLISHED', problems: [], myProgress: {},
+            startsAt: '2026-10-21T09:00:00Z', endsAt: '2026-10-21T11:00:00Z', serverTime: '2026-10-21T10:00:00Z',
+        })
+        const mountContestPage = async () => {
+            h.isDesktop.value = true
+            h.route.params = { contestSlug: 'spring-cup', label: 'A' }
+            wrapper = mount(ProblemDetailPage, { attachTo: document.body, global: { stubs } })
+            await flushPromises()
+            return wrapper
+        }
+        const PRACTICE = 'Practice: this contest has ended, so submissions do not count.'
+
+        afterEach(() => {
+            h.route.params = { slug: 'tong-tu-1-den-n' }
+        })
+
+        it('aRunningContestSubmitsWithItsSlug', async () => {
+            h.getContest.mockResolvedValue({ data: { data: contest('RUNNING') } })
+            h.getContestProblem.mockResolvedValue({ data: { data: problem } })
+            const w = await mountContestPage()
+            expect(h.getContest).toHaveBeenCalledWith(expect.any(AbortSignal), 'spring-cup')
+            expect(h.getContestProblem).toHaveBeenCalledWith(expect.any(AbortSignal), 'spring-cup', 'A')
+            expect(h.getProblemBySlug).not.toHaveBeenCalled()
+            const pane = w.findComponent(SolvePane)
+            expect(pane.props('contestSlug')).toBe('spring-cup')
+            // The editor and the submissions list work on the problem's own slug.
+            expect(pane.props('slug')).toBe('tong-hai-so')
+            expect(pane.props('disabledReason')).toBeUndefined()
+            expect(w.text()).not.toContain(PRACTICE)
+        })
+
+        it('anEndedContestIsPracticeWithABanner', async () => {
+            h.getContest.mockResolvedValue({ data: { data: contest('ENDED') } })
+            h.getContestProblem.mockResolvedValue({ data: { data: problem } })
+            const w = await mountContestPage()
+            expect(w.text()).toContain(PRACTICE)
+            expect(w.findComponent(SolvePane).props('contestSlug')).toBeUndefined()
+            expect(w.findComponent(SolvePane).props('disabledReason')).toBeUndefined()
+        })
+
+        it('anInactiveProblemCannotBePractisedAfterTheEnd', async () => {
+            h.getContest.mockResolvedValue({ data: { data: contest('ENDED') } })
+            h.getContestProblem.mockResolvedValue({ data: { data: { ...problem, status: 0 } } })
+            const w = await mountContestPage()
+            expect(w.findComponent(SolvePane).props('disabledReason')).toBe(
+                'This problem opens for practice when an admin makes it public.',
+            )
+        })
+
+        it('aContestThatEndsWhileOpenSwitchesToPractice', async () => {
+            h.getContest.mockResolvedValueOnce({ data: { data: contest('RUNNING') } })
+            h.getContestProblem.mockResolvedValue({ data: { data: problem } })
+            const w = await mountContestPage()
+            const editor = document.querySelector<HTMLTextAreaElement>('[data-testid="editor"]')!
+            editor.value = 'int main() {}'
+
+            h.getContest.mockResolvedValueOnce({ data: { data: contest('ENDED') } })
+            w.findComponent(SolvePane).vm.$emit('contest-not-running')
+            await flushPromises()
+
+            expect(h.getContest).toHaveBeenCalledTimes(2)
+            expect(w.text()).toContain(PRACTICE)
+            expect(w.findComponent(SolvePane).props('contestSlug')).toBeUndefined()
+            // Same editor, same code: only the submit mode changed.
+            expect(document.querySelector('[data-testid="editor"]')).toBe(editor)
+            expect(editor.value).toBe('int main() {}')
+        })
     })
 })

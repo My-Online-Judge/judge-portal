@@ -24,6 +24,23 @@ const router = createRouter({
       component: () => import('@/pages/user/problem/ProblemDetailPage.vue')
     },
     {
+      path: ROUTE_PATH.CONTESTS,
+      name: 'Contests',
+      component: () => import('@/pages/user/contest/ContestListPage.vue')
+    },
+    {
+      path: ROUTE_PATH.CONTEST_DETAIL,
+      name: 'ContestDetail',
+      component: () => import('@/pages/user/contest/ContestDetailPage.vue')
+    },
+    {
+      // The problem page in contest mode: it reads the problem through the contest and submits with its slug.
+      path: ROUTE_PATH.CONTEST_PROBLEM,
+      name: 'ContestProblem',
+      component: () => import('@/pages/user/problem/ProblemDetailPage.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: ROUTE_PATH.USER_PROFILE,
       name: 'UserProfile',
       component: () => import('@/pages/user/profile/UserProfilePage.vue')

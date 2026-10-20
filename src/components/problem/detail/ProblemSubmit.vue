@@ -50,7 +50,8 @@
         <!-- Submit bar. On a phone the page pins it to the bottom of the screen, outside this pane. -->
         <Teleport defer :to="submitBarTo ?? 'body'" :disabled="!submitBarTo">
             <div class="flex flex-none items-center gap-2.5 border-t border-border bg-card py-2 pr-2.5 pl-3.5">
-                <span class="hidden items-center gap-1 text-xs text-muted-foreground sm:inline-flex" aria-hidden="true">
+                <span v-if="disabledReason" id="submit-disabled-reason" class="min-w-0 text-xs text-muted-foreground">{{ disabledReason }}</span>
+                <span v-else class="hidden items-center gap-1 text-xs text-muted-foreground sm:inline-flex" aria-hidden="true">
                     <kbd v-for="key in ['Ctrl', '↵']" :key="key"
                         class="rounded-[4px] border border-b-2 border-input bg-card px-[5px] font-mono text-[11px] text-foreground">{{ key }}</kbd>
                     submits
@@ -58,7 +59,8 @@
                 <span class="flex-1" />
                 <Button v-if="authStore.isAuthenticated" class="min-w-[122px] aria-disabled:opacity-50"
                     aria-keyshortcuts="Control+Enter Meta+Enter" :aria-disabled="cooldownActive || undefined"
-                    :disabled="isSubmitting || sourceCode.trim() === ''" @click="handleSubmit">
+                    :aria-describedby="disabledReason ? 'submit-disabled-reason' : undefined"
+                    :disabled="isSubmitting || sourceCode.trim() === '' || !!disabledReason" @click="handleSubmit">
                     <Loader2 v-if="isSubmitting" class="animate-spin motion-reduce:animate-none" />
                     <Timer v-else-if="cooldownActive" />
                     <Send v-else />
@@ -100,7 +102,7 @@ import { useToast, type ToastHandle } from '@/composables/useToast'
 import { useCooldown } from '@/composables/useCooldown'
 import { useTheme } from '@/composables/useTheme'
 import { getErrorMessage } from '@/lib/errorMessage'
-import { busyFallbackMessage, retryAfterSeconds } from '@/lib/submitErrors'
+import { busyFallbackMessage, isContestNotRunning, retryAfterSeconds } from '@/lib/submitErrors'
 import { shouldShowTooFast, submissionToasts } from '@/lib/submissionToasts'
 import submissionService from '@/services/submissionService'
 import type { Submission, SubmissionRequest } from '@/types/submission'
@@ -114,10 +116,16 @@ const props = defineProps<{
     problemSlug: string
     // A selector to render the submit bar into instead of below the editor (the page's bar pinned on phones).
     submitBarTo?: string
+    // The running contest the submission counts for; absent for practice.
+    contestSlug?: string
+    // Set when this problem cannot be submitted to: the reason shows in the bar and Submit is off.
+    disabledReason?: string
 }>()
 
 const emit = defineEmits<{
     (e: 'success', submission: Submission): void
+    // The contest stopped running while the page was open: the page reads it again and switches to practice.
+    (e: 'contest-not-running'): void
 }>()
 
 const { toasts, triggerToast, loading, error: errorToast, countdown } = useToast()
@@ -188,7 +196,7 @@ const showTooFast = () => {
 }
 
 const handleSubmit = async () => {
-    if (isSubmitting.value) return
+    if (isSubmitting.value || props.disabledReason) return
     if (cooldownActive.value) {
         showTooFast()
         return
@@ -209,6 +217,7 @@ const handleSubmit = async () => {
             problemSlug: props.problemSlug,
             languageIdentifier: selectedLanguage.value.identifier,
             sourceCode: sourceCode.value,
+            ...(props.contestSlug ? { contestSlug: props.contestSlug } : {}),
         }
 
         const res = await submissionService.submit(data)
@@ -239,6 +248,12 @@ const handleSubmit = async () => {
                 description: "Your submission wasn't sent. Check your connection.",
                 action: { label: 'Retry', onClick: handleSubmit },
             })
+        } else if (isContestNotRunning(error)) {
+            // Nothing was submitted and the code stays in the editor; the page reloads the contest into practice.
+            errorToast(getErrorMessage(error, 'Contest is not running'), {
+                description: 'Your code is still in the editor. Submit again to practice.',
+            })
+            emit('contest-not-running')
         } else {
             triggerToast(getErrorMessage(error, 'Submission failed'), 'error')
         }

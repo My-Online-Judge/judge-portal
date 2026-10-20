@@ -28,6 +28,12 @@ export const API_ROUTES = {
         IMPORT: '/problems/import',
         EXPORT: (slug: string) => `/problems/${slug}/export`,
     },
+    CONTESTS: {
+        ROOT: '/contests',
+        DETAIL: (slug: string) => `/contests/${encodeURIComponent(slug)}`,
+        PROBLEM: (slug: string, label: string) => `/contests/${encodeURIComponent(slug)}/problems/${encodeURIComponent(label)}`,
+        SCOREBOARD: (slug: string) => `/contests/${encodeURIComponent(slug)}/scoreboard`,
+    },
     LANGUAGES: {
         ROOT: '/languages',
     },

@@ -33,13 +33,20 @@ const mountHeader = async (permissions: string[]) => {
 describe('Header nav', () => {
     beforeEach(() => vi.clearAllMocks())
 
-    it('has Problems but no Home or Contests', async () => {
+    it('has Problems and Contests but no Home', async () => {
         const w = await mountHeader([])
-        const links = w.findAll('nav a').map((a) => a.text())
-        expect(links).toContain('Problems')
-        expect(links).not.toContain('Home')
-        expect(links).not.toContain('Contests')
+        const links = w.findAll('nav a')
+        expect(links.map((a) => a.text())).toEqual(['Problems', 'Contests'])
+        expect(links[1]!.attributes('href')).toBe('/contests')
     })
+
+    it.each(['submission:read_any', 'contest:create', 'contest:update', 'contest:delete'])(
+        'showsAdminFor %s',
+        async (permission) => {
+            const w = await mountHeader([permission])
+            expect(w.findAll('nav a').map((a) => a.text())).toContain('Admin')
+        },
+    )
 
     it('shows Admin only with an admin permission', async () => {
         const plain = await mountHeader(['problem:read'])
