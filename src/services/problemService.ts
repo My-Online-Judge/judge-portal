@@ -13,7 +13,7 @@ export function buildProblemFormData(dto: CreateProblemPayload, file: File): For
     return fd
 }
 
-// Packages go up to 50 MB and an export streams from storage: the client's default 10 s is too short.
+// Packages go up to 50 MB: the client's default 10 s is too short for the upload.
 const PACKAGE_TIMEOUT_MS = 120_000
 
 class ProblemService {
@@ -67,13 +67,10 @@ class ProblemService {
         })
     }
 
-    // Download a problem as a package (zip).
-    async exportPackage(slug: string): Promise<Blob> {
-        const res = await axiosClient.get<Blob>(API_ROUTES.PROBLEMS.EXPORT(slug), {
-            responseType: 'blob',
-            timeout: PACKAGE_TIMEOUT_MS,
-        })
-        return res.data
+    // Where a problem's package (zip) downloads from. Open it as a link (lib/download downloadUrl): the zip streams to
+    // disk with the session cookie. A link skips the client's refresh-on-401, so make the session fresh first.
+    exportUrl(slug: string): string {
+        return API_BASE_URL + API_ROUTES.PROBLEMS.EXPORT(slug)
     }
 
     // Same delete for page unload: fetch with keepalive survives the tab closing (axios/XHR does not).

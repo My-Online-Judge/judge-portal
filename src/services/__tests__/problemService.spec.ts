@@ -79,19 +79,15 @@ describe('package import and export', () => {
         for (const call of post.mock.calls) expect((call[1] as FormData).has('slugOverride')).toBe(false)
     })
 
-    it('exportRequestsABlob', async () => {
+    it('exportIsADirectLinkToTheApi', async () => {
         const svc = await load()
-        const blob = await svc.exportPackage('two-sum')
-        expect(get.mock.calls[0]![0]).toBe('/problems/two-sum/export')
-        expect(get.mock.calls[0]![1]).toMatchObject({ responseType: 'blob' })
-        expect(blob).toBeInstanceOf(Blob)
+        expect(svc.exportUrl('two-sum')).toBe('/api/v1/problems/two-sum/export')
+        expect(get).not.toHaveBeenCalled()
     })
 
-    it('uploadsAndDownloadsUseTheLongTimeout', async () => {
+    it('uploadsUseTheLongTimeout', async () => {
         const svc = await load()
         await svc.importPackage(zip())
-        await svc.exportPackage('two-sum')
         expect(post.mock.calls[0]![2]).toMatchObject({ timeout: 120_000 })
-        expect(get.mock.calls[0]![1]).toMatchObject({ timeout: 120_000 })
     })
 })

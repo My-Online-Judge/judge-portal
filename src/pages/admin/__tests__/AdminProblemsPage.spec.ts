@@ -8,8 +8,12 @@ const h = vi.hoisted(() => ({
   getProblems: vi.fn(),
   rejudgeProblem: vi.fn(),
   toast: vi.fn(),
-  exportPackage: vi.fn(),
-  downloadBlob: vi.fn(),
+  exportUrl: vi.fn((slug: string) => `/api/v1/problems/${slug}/export`),
+  downloadUrl: vi.fn(),
+  ensureFreshSession: vi.fn(),
+  loading: vi.fn(),
+  toastUpdate: vi.fn(),
+  toastDismiss: vi.fn(),
 }))
 
 vi.mock('vue-router', async () => {
@@ -18,10 +22,14 @@ vi.mock('vue-router', async () => {
   const RouterLink = defineComponent({ props: ['to'], setup: (_, { slots }) => () => render('a', slots.default?.()) })
   return { useRouter: () => ({ push: vi.fn() }), useRoute: () => ({ query: {}, path: '/admin/problems' }), RouterLink }
 })
-vi.mock('@/services/problemService', () => ({ default: { getProblems: h.getProblems, remove: vi.fn(), exportPackage: h.exportPackage } }))
-vi.mock('@/lib/download', () => ({ downloadBlob: h.downloadBlob }))
+vi.mock('@/services/problemService', () => ({ default: { getProblems: h.getProblems, remove: vi.fn(), exportUrl: h.exportUrl } }))
+vi.mock('@/lib/download', () => ({ downloadUrl: h.downloadUrl }))
+vi.mock('@/api/refreshSession', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/api/refreshSession')>()),
+  ensureFreshSession: h.ensureFreshSession,
+}))
 vi.mock('@/services/submissionService', () => ({ default: { rejudgeProblem: h.rejudgeProblem } }))
-vi.mock('@/composables/useToast', () => ({ useToast: () => ({ triggerToast: h.toast }) }))
+vi.mock('@/composables/useToast', () => ({ useToast: () => ({ triggerToast: h.toast, loading: h.loading }) }))
 
 import AdminProblemsPage from '../AdminProblemsPage.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -46,6 +54,8 @@ async function openMenu() {
 
 beforeEach(() => {
   h.getProblems.mockResolvedValue({ data: { data: [problem] } })
+  h.ensureFreshSession.mockResolvedValue(undefined)
+  h.loading.mockReturnValue({ id: 1, update: h.toastUpdate, dismiss: h.toastDismiss })
 })
 afterEach(() => {
   wrapper?.unmount()
@@ -83,16 +93,49 @@ describe('AdminProblemsPage rejudge', () => {
 })
 
 describe('AdminProblemsPage export', () => {
-  it('exportItemDownloadsTheZip', async () => {
-    const blob = new Blob(['PK'])
-    h.exportPackage.mockResolvedValue(blob)
-    await mountPage(['problem:update'])
+  const exportItem = () =>
+    [...document.body.querySelectorAll('[role="menuitem"]')].find((e) => e.textContent?.trim() === 'Export') as HTMLElement
+  const selectExport = async () => {
     await openMenu()
-    ;[...document.body.querySelectorAll('[role="menuitem"]')].find((e) => e.textContent?.trim() === 'Export')!
-      .dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    exportItem().dispatchEvent(new MouseEvent('click', { bubbles: true }))
     await flushPromises()
-    expect(h.exportPackage).toHaveBeenCalledWith('sum')
-    expect(h.downloadBlob).toHaveBeenCalledWith('sum.zip', blob)
+  }
+
+  it('exportStreamsThroughADirectLink', async () => {
+    await mountPage(['problem:update'])
+    await selectExport()
+    expect(h.loading).toHaveBeenCalledWith('Preparing sum.zip')
+    // A link skips the client's refresh-on-401, so the session is made fresh first.
+    expect(h.ensureFreshSession).toHaveBeenCalled()
+    expect(h.downloadUrl).toHaveBeenCalledWith('/api/v1/problems/sum/export', 'sum.zip')
+    expect(h.ensureFreshSession.mock.invocationCallOrder[0]).toBeLessThan(h.downloadUrl.mock.invocationCallOrder[0]!)
+    expect(h.toastUpdate).toHaveBeenCalledWith({ type: 'success', title: 'Download started', description: 'sum.zip' })
+  })
+
+  it('exportIgnoresASecondStartWhileRunning', async () => {
+    let release!: () => void
+    h.ensureFreshSession.mockReturnValue(new Promise<void>((r) => (release = r)))
+    await mountPage(['problem:update'])
+    await selectExport()
+    await openMenu()
+    expect(exportItem().hasAttribute('data-disabled')).toBe(true)
+    exportItem().dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushPromises()
+    release()
+    await flushPromises()
+    expect(h.loading).toHaveBeenCalledTimes(1)
+    expect(h.downloadUrl).toHaveBeenCalledTimes(1)
+  })
+
+  it('exportStopsWhenTheSessionEnded', async () => {
+    await mountPage(['problem:update'])
+    // A refused refresh logs the user out (and says so with its own toast).
+    h.ensureFreshSession.mockImplementation(async () => {
+      useAuthStore().user = null
+    })
+    await selectExport()
+    expect(h.downloadUrl).not.toHaveBeenCalled()
+    expect(h.toastDismiss).toHaveBeenCalled()
   })
 
   it('exportHiddenWithoutUpdatePermission', async () => {

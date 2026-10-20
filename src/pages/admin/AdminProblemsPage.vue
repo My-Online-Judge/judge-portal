@@ -146,11 +146,12 @@ import submissionService from '@/services/submissionService'
 import { useAuthStore } from '@/stores/auth'
 import type { Problem } from '@/types/problem'
 import { relativeTime } from '@/lib/problemDisplay'
-import { downloadBlob } from '@/lib/download'
+import { downloadUrl } from '@/lib/download'
+import { ensureFreshSession } from '@/api/refreshSession'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { undo, error: errorToast, triggerToast } = useToast()
+const { undo, error: errorToast, triggerToast, loading } = useToast()
 
 const canCreate = computed(() => authStore.hasPermission('problem:create'))
 const canUpdate = computed(() => authStore.hasPermission('problem:update'))
@@ -197,18 +198,34 @@ const goEdit = (slug: string) => router.push({ name: 'AdminProblemDetail', param
 const rowActions = (p: Problem): RowAction[] => {
     const items: RowAction[] = [{ label: 'View', icon: Eye, onSelect: () => goDetail(p.problemSlug) }]
     if (canUpdate.value) items.push({ label: 'Edit', icon: Pencil, onSelect: () => goEdit(p.problemSlug) })
-    if (canUpdate.value) items.push({ label: 'Export', icon: Download, onSelect: () => exportProblem(p) })
+    if (canUpdate.value)
+        items.push({ label: 'Export', icon: Download, disabled: exporting.value.has(p.problemSlug), onSelect: () => exportProblem(p) })
     if (canRejudge.value) items.push({ label: 'Rejudge…', icon: RotateCcw, onSelect: () => openRejudge(p) })
     if (canDelete.value) items.push({ label: 'Delete…', icon: Trash2, destructive: true, onSelect: () => openDelete(p) })
     return items
 }
 
-// --- Export: the package zip, built by the server ---
+// --- Export: the package zip, built by the server and opened as a link, so it streams to disk ---
+// Slugs whose export is starting; their menu item is disabled until the browser has the link.
+const exporting = ref(new Set<string>())
+
 const exportProblem = async (p: Problem) => {
+    const slug = p.problemSlug
+    if (exporting.value.has(slug)) return
+    exporting.value.add(slug)
+    const toast = loading(`Preparing ${slug}.zip`)
     try {
-        downloadBlob(`${p.problemSlug}.zip`, await problemService.exportPackage(p.problemSlug))
-    } catch (err) {
-        triggerToast(getErrorMessage(err, "Couldn't export the problem"), 'error')
+        // The link carries the access cookie but not the client's refresh-on-401.
+        await ensureFreshSession()
+        // A refused refresh has logged out, with its own toast.
+        if (!authStore.user) {
+            toast.dismiss()
+            return
+        }
+        downloadUrl(problemService.exportUrl(slug), `${slug}.zip`)
+        toast.update({ type: 'success', title: 'Download started', description: `${slug}.zip` })
+    } finally {
+        exporting.value.delete(slug)
     }
 }
 
