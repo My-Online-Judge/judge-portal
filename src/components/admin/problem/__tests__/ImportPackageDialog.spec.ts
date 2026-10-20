@@ -219,4 +219,51 @@ describe('ImportPackageDialog', () => {
         await waitForText('The import may have completed. Check the problems list before retrying.')
         expect(h.getProblemBySlug).not.toHaveBeenCalled()
     })
+
+    it.each([408, 502, 503, 504])('aGateway%sAfterTheUploadIsTreatedAsALostResponse', async (status) => {
+        h.getProblemBySlug
+            .mockRejectedValueOnce(failWith(404, 'Not found'))
+            .mockResolvedValueOnce({ data: { data: problem } })
+        h.importPackage.mockRejectedValue(failWith(status, 'Gateway Time-out'))
+        const w = mountDialog()
+        await nextTick()
+        await pick()
+        await typeSlug('two-sum-copy')
+        submit().click()
+        await flushPromises()
+        expect(h.getProblemBySlug).toHaveBeenCalledTimes(2)
+        expect(w.emitted('imported')![0]).toEqual([problem])
+    })
+
+    it('aGatewayTimeoutWithNoProblemReportsFailure', async () => {
+        h.importPackage.mockRejectedValue(failWith(504, 'Gateway Time-out'))
+        const w = mountDialog()
+        await nextTick()
+        await pick()
+        await typeSlug('two-sum-copy')
+        submit().click()
+        await flushPromises()
+        expect(w.emitted('imported')).toBeUndefined()
+        expect(document.body.textContent).toContain('Could not import the package. Check your connection and try again.')
+    })
+
+    it('aCancelAfterTheServerCreatedTheProblemReportsItCreated', async () => {
+        h.getProblemBySlug
+            .mockRejectedValueOnce(failWith(404, 'Not found'))
+            .mockResolvedValueOnce({ data: { data: problem } })
+        h.importPackage.mockImplementation(
+            (_file: File, _slug: string, s: AbortSignal) =>
+                new Promise((_, reject) => s.addEventListener('abort', () => reject(new CanceledError()))),
+        )
+        const w = mountDialog()
+        await nextTick()
+        await pick()
+        await typeSlug('two-sum-copy')
+        submit().click()
+        await vi.waitFor(() => expect(h.importPackage).toHaveBeenCalled())
+        button('Cancel').click()
+        await flushPromises()
+        expect(h.getProblemBySlug).toHaveBeenCalledTimes(2)
+        expect(w.emitted('imported')![0]).toEqual([problem])
+    })
 })

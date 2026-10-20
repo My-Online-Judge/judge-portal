@@ -148,6 +148,11 @@ async function findProblem(slug: string, signal: AbortSignal): Promise<Problem |
     }
 }
 
+// No answer at all, or a gateway or timeout status that a proxy gives while the service may still have finished.
+const AMBIGUOUS_STATUSES = [408, 502, 503, 504]
+const isAmbiguous = (err: unknown) =>
+    axios.isAxiosError(err) && (!err.response || AMBIGUOUS_STATUSES.includes(err.response.status))
+
 // The slug is looked up before the upload, so a taken slug fails without sending the file, and again when the
 // response is lost (a timeout or a dropped connection), so a problem the server did create is reported as created
 // instead of failing with 409 on a retry.
@@ -170,8 +175,14 @@ async function onSubmit() {
             const res = await problemService.importPackage(picked, slugOverride.value, ctl.signal)
             finish(res.data.data)
         } catch (err) {
-            if (axios.isCancel(err) || ctl.signal.aborted) return
-            if (axios.isAxiosError(err) && !err.response) {
+            if (axios.isCancel(err) || ctl.signal.aborted) {
+                // A cancel can arrive after the whole body was sent: if the slug was free before and exists now, the
+                // server created it, so say so instead of closing silently over it.
+                const after = slug && before === null ? await findProblem(slug, new AbortController().signal) : undefined
+                if (after) emit('imported', after)
+                return
+            }
+            if (isAmbiguous(err)) {
                 // Only a slug known to be free before the upload proves the import when it exists now.
                 const after = slug && before === null ? await findProblem(slug, ctl.signal) : undefined
                 if (ctl.signal.aborted) return
