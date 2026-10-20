@@ -22,4 +22,7 @@ COPY nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 80
 
+# Non-root (sp12): the image's own nginx user (uid 101); nginx.conf keeps its pid file and temp paths under /tmp.
+USER 101
+
 CMD ["nginx", "-g", "daemon off;"]
