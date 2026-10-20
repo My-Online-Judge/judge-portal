@@ -12,12 +12,20 @@ export const POLL_DELAYS_MS = [1000, 2000, 4000, 8000]
 /** No poll is scheduled later than this after polling started. */
 export const POLL_DEADLINE_MS = 600_000
 
+/** At most this many EventSources are open per tab; further watches poll from the start. */
+export const MAX_OPEN_STREAMS = 4
+
 type VerdictHandler = (verdict: Submission) => void
+
+interface Subscriber {
+    onVerdict: VerdictHandler
+    onGiveUp?: () => void
+}
 
 interface Watch {
     id: string
-    onVerdict: VerdictHandler
-    onGiveUp?: () => void
+    /** Everyone who asked to watch this submission; the stream and the poller are shared. */
+    subs: Set<Subscriber>
     source: EventSource | null
     /** The stream's safety timer, or the next poll. */
     timer: ReturnType<typeof setTimeout> | null
@@ -29,6 +37,22 @@ interface Watch {
     /** Finished or stopped: late events, refreshes and poll results are ignored. */
     done: boolean
 }
+
+// One shared watch per submission id for the whole tab: the backend keeps a single emitter per id, so two streams
+// for one id would evict each other and leave one of them silent until its fallback fires.
+const shared = new Map<string, Watch>()
+
+/** For tests: drops every shared watch without calling a callback. */
+export function resetSubmissionStreams(): void {
+    for (const w of Array.from(shared.values())) {
+        w.done = true
+        w.source?.close()
+        if (w.timer !== null) clearTimeout(w.timer)
+    }
+    shared.clear()
+}
+
+const openStreams = () => Array.from(shared.values()).filter((w) => w.source !== null).length
 
 const statusOf = (error: unknown): number | undefined =>
     (error as { response?: { status?: number } } | null)?.response?.status
@@ -46,7 +70,8 @@ export interface SubmissionStreamDeps {
  */
 export function useSubmissionStream(deps: SubmissionStreamDeps = {}) {
     const refresh = deps.refresh ?? refreshSession
-    const watches = new Map<string, Watch>()
+    /** This caller's own subscriptions, by submission id. */
+    const mine = new Map<string, { w: Watch; sub: Subscriber }>()
 
     const clearTimer = (w: Watch) => {
         if (w.timer !== null) clearTimeout(w.timer)
@@ -62,12 +87,34 @@ export function useSubmissionStream(deps: SubmissionStreamDeps = {}) {
         w.done = true
         closeSource(w)
         clearTimer(w)
-        if (watches.get(w.id) === w) watches.delete(w.id)
+        if (shared.get(w.id) === w) shared.delete(w.id)
+    }
+
+    // Every subscriber is called even if one throws; the first error is rethrown afterwards.
+    const notify = (subs: Subscriber[], call: (s: Subscriber) => void) => {
+        let failure: unknown
+        let failed = false
+        for (const s of subs) {
+            try {
+                call(s)
+            } catch (e) {
+                if (!failed) failure = e
+                failed = true
+            }
+        }
+        if (failed) throw failure
+    }
+
+    const deliver = (w: Watch, verdict: Submission) => {
+        const subs = Array.from(w.subs)
+        finish(w)
+        notify(subs, (s) => s.onVerdict(verdict))
     }
 
     const giveUp = (w: Watch) => {
+        const subs = Array.from(w.subs)
         finish(w)
-        w.onGiveUp?.()
+        notify(subs, (s) => s.onGiveUp?.())
     }
 
     const scheduleNextPoll = (w: Watch) => {
@@ -84,13 +131,14 @@ export function useSubmissionStream(deps: SubmissionStreamDeps = {}) {
             sub = (await submissionService.getSubmissionById(w.id)).data.data
         } catch (error) {
             if (w.done) return
-            if (statusOf(error) === 404) return giveUp(w)
+            // 404: gone. 401/403: the interceptor already refreshed once and retried, so the session is over.
+            const status = statusOf(error)
+            if (status === 404 || status === 401 || status === 403) return giveUp(w)
             return scheduleNextPoll(w) // a network error: try again later
         }
         if (w.done) return
         if (sub && isTerminalStatus(sub.status)) {
-            finish(w)
-            w.onVerdict(sub)
+            deliver(w, sub)
         } else {
             scheduleNextPoll(w)
         }
@@ -119,6 +167,7 @@ export function useSubmissionStream(deps: SubmissionStreamDeps = {}) {
     }
 
     const open = (w: Watch) => {
+        if (openStreams() >= MAX_OPEN_STREAMS) return startPolling(w)
         const source = new EventSource(`${API_BASE_URL}${API_ROUTES.SUBMISSIONS.STREAM(w.id)}`, {
             withCredentials: true,
         })
@@ -133,8 +182,7 @@ export function useSubmissionStream(deps: SubmissionStreamDeps = {}) {
             } catch {
                 return startPolling(w) // malformed payload: fetch the real value
             }
-            finish(w) // close BEFORE the callback so a throwing onVerdict can't leave the stream open
-            w.onVerdict(verdict)
+            deliver(w, verdict) // closes BEFORE the callbacks so a throwing onVerdict can't leave the stream open
         })
 
         source.addEventListener('error', () => {
@@ -151,31 +199,54 @@ export function useSubmissionStream(deps: SubmissionStreamDeps = {}) {
     }
 
     const watch = (id: string, onVerdict: VerdictHandler, onGiveUp?: () => void) => {
-        if (watches.has(id)) return
-        const w: Watch = {
-            id,
-            onVerdict,
-            onGiveUp,
-            source: null,
-            timer: null,
-            reconnected: false,
-            polling: false,
-            pollStartedAt: 0,
-            polls: 0,
-            done: false,
+        if (mine.has(id)) return
+        const sub: Subscriber = {
+            onVerdict: (v) => {
+                mine.delete(id)
+                onVerdict(v)
+            },
+            onGiveUp: () => {
+                mine.delete(id)
+                onGiveUp?.()
+            },
         }
-        watches.set(id, w)
-        open(w)
+        let w = shared.get(id)
+        if (w) {
+            w.subs.add(sub)
+        } else {
+            w = {
+                id,
+                subs: new Set([sub]),
+                source: null,
+                timer: null,
+                reconnected: false,
+                polling: false,
+                pollStartedAt: 0,
+                polls: 0,
+                done: false,
+            }
+            shared.set(id, w)
+            open(w)
+        }
+        mine.set(id, { w, sub })
     }
 
-    /** Stops watching without calling either callback; an in-flight refresh or poll is ignored. */
+    const release = ({ w, sub }: { w: Watch; sub: Subscriber }) => {
+        w.subs.delete(sub)
+        if (w.subs.size === 0) finish(w)
+    }
+
+    /** Stops this caller's watch without calling its callbacks; the last subscriber out closes the shared watch. */
     const stop = (id: string) => {
-        const w = watches.get(id)
-        if (w) finish(w)
+        const m = mine.get(id)
+        if (!m) return
+        mine.delete(id)
+        release(m)
     }
 
     const stopAll = () => {
-        for (const w of Array.from(watches.values())) finish(w)
+        for (const m of Array.from(mine.values())) release(m)
+        mine.clear()
     }
 
     // Auto-clean when used inside a component; safe to skip in a bare unit test.

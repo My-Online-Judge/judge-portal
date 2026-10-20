@@ -105,7 +105,9 @@ export function markSessionFresh(): void {
  * anyway, and the next protected request's 401 ends the session as usual.
  */
 export async function ensureFreshSession(): Promise<void> {
-    if (lastFreshAt !== null && Date.now() - lastFreshAt < SESSION_REFRESH_AFTER_MS) return
+    // A negative age means the clock stepped back: treat it as stale.
+    const age = lastFreshAt === null ? -1 : Date.now() - lastFreshAt
+    if (age >= 0 && age < SESSION_REFRESH_AFTER_MS) return
     try {
         // Lazy: the store imports authService, and the client imports this module.
         const { useAuthStore } = await import('@/stores/auth')

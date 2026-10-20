@@ -121,7 +121,7 @@ const {
 
 const pagination = computed(() => response.value?.pagination)
 
-const { watch: watchVerdict, stop: stopVerdict } = useSubmissionStream()
+const { watch: watchVerdict, stop: stopVerdict, stopAll: stopAllVerdicts } = useSubmissionStream()
 const liveRows = ref<Submission[]>([])
 // Streamed verdicts by submission id, merged over the row they belong to. A row fetched with a final status is
 // already newer than any verdict streamed before, so only rows still judging take the override.
@@ -198,6 +198,7 @@ watch(
         if (isAuthenticated) {
             fetchSubmissions()
         } else {
+            stopAllVerdicts() // logged out: a watch could only poll a 401
             isLoginOpen.value = true
         }
     },

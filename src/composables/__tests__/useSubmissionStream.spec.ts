@@ -13,6 +13,8 @@ import {
   FALLBACK_TIMEOUT_MS,
   POLL_DELAYS_MS,
   POLL_DEADLINE_MS,
+  MAX_OPEN_STREAMS,
+  resetSubmissionStreams,
 } from '@/composables/useSubmissionStream'
 import { SubmissionResult } from '@/types/submission'
 
@@ -70,6 +72,7 @@ beforeEach(() => {
   h.refreshSession.mockResolvedValue(undefined)
 })
 afterEach(() => {
+  resetSubmissionStreams()
   vi.unstubAllGlobals()
   vi.useRealTimers()
 })
@@ -391,5 +394,71 @@ describe('useSubmissionStream', () => {
     expect(streamed.onVerdict).toHaveBeenCalledTimes(1)
     expect(polled.onGiveUp).not.toHaveBeenCalled()
     expect(streamed.onGiveUp).not.toHaveBeenCalled()
+  })
+
+  it('two callers watching one id share one EventSource and both hear the verdict once', () => {
+    const a = vi.fn()
+    const b = vi.fn()
+    useSubmissionStream().watch('s1', a)
+    useSubmissionStream().watch('s1', b)
+    expect(MockEventSource.instances).toHaveLength(1)
+    MockEventSource.instances[0].emit('verdict', verdictEvent(SubmissionResult.SUCCESS))
+    expect(a).toHaveBeenCalledTimes(1)
+    expect(b).toHaveBeenCalledTimes(1)
+  })
+
+  it('onGiveUp reaches every subscriber, and a stopped one hears nothing', async () => {
+    const g1 = vi.fn()
+    const g2 = vi.fn()
+    const g3 = vi.fn()
+    const s1 = useSubmissionStream()
+    s1.watch('s1', () => {}, g1)
+    useSubmissionStream().watch('s1', () => {}, g2)
+    const s3 = useSubmissionStream()
+    s3.watch('s1', () => {}, g3)
+    s3.stop('s1')
+    getById.mockImplementation(() => Promise.reject(notFound()))
+    MockEventSource.instances[0].emit('error', {})
+    await vi.advanceTimersByTimeAsync(POLL_DELAYS_MS[0])
+    expect(g1).toHaveBeenCalledTimes(1)
+    expect(g2).toHaveBeenCalledTimes(1)
+    expect(g3).not.toHaveBeenCalled()
+  })
+
+  it('the last subscriber out closes the shared stream', () => {
+    const a = useSubmissionStream()
+    const b = useSubmissionStream()
+    a.watch('s1', () => {})
+    b.watch('s1', () => {})
+    a.stop('s1')
+    expect(MockEventSource.instances[0].closed).toBe(false)
+    b.stop('s1')
+    expect(MockEventSource.instances[0].closed).toBe(true)
+  })
+
+  it('a poll answered 401 or 403 gives up at once, with no second request', async () => {
+    for (const status of [401, 403]) {
+      MockEventSource.instances = []
+      callTimes = []
+      const onGiveUp = vi.fn()
+      useSubmissionStream().watch('s1', () => {}, onGiveUp)
+      getById.mockImplementationOnce(() => {
+        callTimes.push(Date.now() - t0)
+        return Promise.reject(Object.assign(new Error('denied'), { response: { status } }))
+      })
+      MockEventSource.instances[0].emit('error', {})
+      await vi.advanceTimersByTimeAsync(POLL_DEADLINE_MS)
+      expect(onGiveUp).toHaveBeenCalledTimes(1)
+      expect(callTimes).toHaveLength(1)
+    }
+  })
+
+  it('opens at most MAX_OPEN_STREAMS EventSources; the rest poll', async () => {
+    const stream = useSubmissionStream()
+    for (let i = 0; i < 8; i++) stream.watch(`r${i}`, () => {})
+    expect(MockEventSource.instances).toHaveLength(MAX_OPEN_STREAMS)
+    getById.mockClear()
+    await vi.advanceTimersByTimeAsync(POLL_DELAYS_MS[0])
+    expect(getById).toHaveBeenCalledTimes(8 - MAX_OPEN_STREAMS)
   })
 })

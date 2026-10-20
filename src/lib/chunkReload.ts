@@ -40,7 +40,7 @@ export function installChunkReload(router: Pick<Router, 'onError' | 'afterEach'>
   // Without a target, reload the current page.
   const reload = (target?: string) => {
     reloading = true
-    if (target) win.location.assign(target)
+    if (target) win.location.assign(import.meta.env.BASE_URL.replace(/\/$/, '') + target)
     else win.location.reload()
   }
 
