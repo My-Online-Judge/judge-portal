@@ -7,6 +7,7 @@ import { AxiosError, AxiosHeaders } from 'axios'
 
 const h = vi.hoisted(() => ({
     watched: new Map<string, { onVerdict: (v: unknown) => void; onGiveUp?: () => void }>(),
+    watchCalls: [] as string[],
     stopped: [] as string[],
     search: vi.fn(),
     rejudge: vi.fn(),
@@ -27,7 +28,10 @@ vi.mock('@/services/submissionService', () => ({
 }))
 vi.mock('@/composables/useSubmissionStream', () => ({
     useSubmissionStream: () => ({
-        watch: (id: string, onVerdict: (v: unknown) => void, onGiveUp?: () => void) => h.watched.set(id, { onVerdict, onGiveUp }),
+        watch: (id: string, onVerdict: (v: unknown) => void, onGiveUp?: () => void) => {
+            h.watchCalls.push(id)
+            h.watched.set(id, { onVerdict, onGiveUp })
+        },
         stop: (id: string) => {
             h.watched.delete(id)
             h.stopped.push(id)
@@ -115,7 +119,9 @@ beforeEach(() => {
     h.search.mockResolvedValue({ data: { data: [row], pagination } })
 })
 afterEach(() => {
+    vi.useRealTimers()
     h.watched.clear()
+    h.watchCalls.length = 0
     h.stopped.length = 0
     wrapper?.unmount()
     wrapper = undefined
@@ -270,6 +276,90 @@ describe('AdminSubmissionsPage', () => {
             await flushPromises()
             expect(h.search).toHaveBeenCalledTimes(2)
         })
+    })
+
+    describe('many rows still being judged', () => {
+        // Ten rows queued by a problem rejudge, newest first.
+        const pending = (n: number, status = 6) =>
+            Array.from({ length: n }, (_, i) => ({ ...row, id: `p${i}-0000000`, status, cpuTime: null, memory: null }))
+        const answer = (list: unknown[]) => ({ data: { data: list, pagination } })
+        beforeEach(() => {
+            vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+            // A fresh object per answer, as axios gives.
+            h.search.mockImplementation(async () => answer(pending(10)))
+        })
+
+        it('watchesAtMostFourRowsAndRefreshesTheListForTheRest', async () => {
+            await mountPage()
+            expect([...h.watched.keys()]).toEqual(['p0-0000000', 'p1-0000000', 'p2-0000000', 'p3-0000000'])
+            expect(h.search).toHaveBeenCalledTimes(1)
+
+            // One list read instead of a poll per row: 5 s, then 10 s, 20 s, and 30 s from then on.
+            await vi.advanceTimersByTimeAsync(4999)
+            expect(h.search).toHaveBeenCalledTimes(1)
+            await vi.advanceTimersByTimeAsync(1)
+            expect(h.search).toHaveBeenCalledTimes(2)
+            await vi.advanceTimersByTimeAsync(10_000)
+            expect(h.search).toHaveBeenCalledTimes(3)
+            await vi.advanceTimersByTimeAsync(20_000)
+            expect(h.search).toHaveBeenCalledTimes(4)
+            await vi.advanceTimersByTimeAsync(30_000)
+            expect(h.search).toHaveBeenCalledTimes(5)
+            await vi.advanceTimersByTimeAsync(30_000)
+            expect(h.search).toHaveBeenCalledTimes(6)
+            // Still the same four streams.
+            expect(h.watchCalls).toHaveLength(4)
+        })
+
+        it('aFinishedWatchHandsItsSlotToTheNextRow', async () => {
+            await mountPage()
+            h.watched.get('p0-0000000')!.onVerdict({ status: 0, cpuTime: 1, memory: 1 })
+            await flushPromises()
+            expect(h.watchCalls).toEqual(['p0-0000000', 'p1-0000000', 'p2-0000000', 'p3-0000000', 'p4-0000000'])
+        })
+
+        it('theListRefreshStopsOnceEveryRowIsFinished', async () => {
+            await mountPage()
+            h.search.mockImplementation(async () => answer(pending(10, -1)))
+            await vi.advanceTimersByTimeAsync(5000)
+            expect(h.search).toHaveBeenCalledTimes(2)
+            await vi.advanceTimersByTimeAsync(600_000)
+            expect(h.search).toHaveBeenCalledTimes(2)
+        })
+
+        it('theListRefreshStopsAfterTenMinutes', async () => {
+            await mountPage()
+            await vi.advanceTimersByTimeAsync(600_000)
+            const calls = h.search.mock.calls.length
+            // 5 + 10 + 20, then every 30 s, and nothing scheduled past ten minutes.
+            expect(calls).toBe(1 + 3 + Math.floor((600_000 - 35_000) / 30_000))
+            await vi.advanceTimersByTimeAsync(600_000)
+            expect(h.search).toHaveBeenCalledTimes(calls)
+        })
+
+        it('leavingThePageStopsTheListRefresh', async () => {
+            await mountPage()
+            wrapper!.unmount()
+            wrapper = undefined
+            await vi.advanceTimersByTimeAsync(60_000)
+            expect(h.search).toHaveBeenCalledTimes(1)
+        })
+    })
+
+    it('aRowThatGaveUpIsNotWatchedAgain', async () => {
+        const stuck = { ...row, status: 6, cpuTime: null, memory: null }
+        h.search.mockImplementation(async () => ({ data: { data: [stuck], pagination } }))
+        await mountPage()
+        expect(h.watchCalls).toEqual([row.id])
+        // The watch ends without a verdict (judge down): the list is read again and the row is still pending.
+        h.watched.get(row.id)!.onGiveUp!()
+        await flushPromises()
+        expect(h.search).toHaveBeenCalledTimes(2)
+        expect(h.watchCalls).toEqual([row.id])
+        // An explicit reload (here: the next page) may try it again.
+        wrapper!.findComponent({ name: 'PaginationFooter' }).vm.$emit('change-page', 0)
+        await flushPromises()
+        expect(h.watchCalls).toEqual([row.id, row.id])
     })
 
     it('aTerminalRowIsNotWatched', async () => {

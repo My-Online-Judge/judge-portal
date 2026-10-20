@@ -151,7 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { watchDebounced } from '@vueuse/core'
 import { isAxiosError } from 'axios'
@@ -245,6 +245,7 @@ let loadSeq = 0
 const load = () => {
     if (!rangeValid.value) return
     loadSeq += 1
+    resetLiveRows()
     return execute(searchParams())
 }
 
@@ -260,9 +261,18 @@ const refreshQuietly = async () => {
     }
 }
 
-// --- Rows still being judged: each one is watched, and its verdict patches the row in place ---
+// --- Rows still being judged ---
+// A few are watched live, and a verdict patches the row in place. The rest (a problem rejudge queues hundreds) wait for
+// one list read on a backoff timer instead of a poll per row each.
+const MAX_WATCHED_ROWS = 4
+const LIST_REFRESH_FIRST_MS = 5000
+const LIST_REFRESH_MAX_MS = 30_000
+const LIST_REFRESH_DEADLINE_MS = 600_000
+
 const stream = useSubmissionStream()
 const watched = new Set<string>()
+// Rows whose watch ended without a verdict: not watched again until the next explicit load.
+const gaveUp = new Set<string>()
 
 const patchRow = (id: string, verdict: Submission) => {
     const current = data.value
@@ -275,35 +285,74 @@ const patchRow = (id: string, verdict: Submission) => {
     }
 }
 
-watch(
-    rows,
-    (list) => {
-        const open = new Set(list.filter((r) => !isTerminalStatus(r.status)).map((r) => r.id))
-        for (const id of Array.from(watched)) {
-            if (!open.has(id)) {
-                stream.stop(id)
+let listTimer: ReturnType<typeof setTimeout> | null = null
+let listDelay = LIST_REFRESH_FIRST_MS
+// When the list refresh of this load started; null until rows needed it.
+let listStartedAt: number | null = null
+let listExpired = false
+
+const stopListRefresh = () => {
+    if (listTimer !== null) clearTimeout(listTimer)
+    listTimer = null
+}
+const resetLiveRows = () => {
+    stopListRefresh()
+    listDelay = LIST_REFRESH_FIRST_MS
+    listStartedAt = null
+    listExpired = false
+    gaveUp.clear()
+}
+
+const scheduleListRefresh = () => {
+    if (listTimer !== null || listExpired) return
+    const now = Date.now()
+    listStartedAt ??= now
+    if (now + listDelay - listStartedAt > LIST_REFRESH_DEADLINE_MS) {
+        listExpired = true
+        return
+    }
+    listTimer = setTimeout(async () => {
+        listTimer = null
+        listDelay = Math.min(listDelay * 2, LIST_REFRESH_MAX_MS)
+        await refreshQuietly()
+        // A failed read leaves the rows as they were, so the watcher does not run: decide again here.
+        followLiveRows(rows.value)
+    }, listDelay)
+}
+
+function followLiveRows(list: SubmissionListItem[]) {
+    const open = list.filter((r) => !isTerminalStatus(r.status)).map((r) => r.id)
+    const openSet = new Set(open)
+    for (const id of Array.from(watched)) {
+        if (!openSet.has(id)) {
+            stream.stop(id)
+            watched.delete(id)
+        }
+    }
+    for (const id of open) {
+        if (watched.size >= MAX_WATCHED_ROWS) break
+        if (watched.has(id) || gaveUp.has(id)) continue
+        watched.add(id)
+        stream.watch(
+            id,
+            (verdict) => {
                 watched.delete(id)
-            }
-        }
-        for (const id of open) {
-            if (watched.has(id)) continue
-            watched.add(id)
-            stream.watch(
-                id,
-                (verdict) => {
-                    watched.delete(id)
-                    patchRow(id, verdict)
-                },
-                // The watch ended without a verdict: read the list again instead of leaving a stale row.
-                () => {
-                    watched.delete(id)
-                    void refreshQuietly()
-                },
-            )
-        }
-    },
-    { immediate: true },
-)
+                patchRow(id, verdict)
+            },
+            // The watch ended without a verdict: read the list again instead of leaving a stale row.
+            () => {
+                watched.delete(id)
+                gaveUp.add(id)
+                void refreshQuietly()
+            },
+        )
+    }
+    if (open.some((id) => !watched.has(id))) scheduleListRefresh()
+    else stopListRefresh()
+}
+
+watch(rows, followLiveRows, { immediate: true })
+onBeforeUnmount(stopListRefresh)
 
 const clearFilters = () => {
     fProblem.value = ''
