@@ -69,4 +69,11 @@ describe('ProblemPicker', () => {
         expect(option('two-sum')).toBeUndefined()
         expect(option('two-pointers')).toBeTruthy()
     })
+
+    it('placeholderPromisesOnlyTitleSearch', async () => {
+        mountPicker()
+        await flushPromises()
+        const input = document.body.querySelector('input[aria-label="Search problems"]') as HTMLInputElement
+        expect(input.placeholder).toBe('Search title')
+    })
 })

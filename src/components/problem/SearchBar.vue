@@ -2,7 +2,7 @@
     <div ref="root" class="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2.5">
         <div class="relative w-full sm:w-[280px]">
             <Search class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-            <Input v-model="localSearch" type="search" placeholder="Search by title or slug" aria-label="Search problems" class="pl-8" />
+            <Input v-model="localSearch" type="search" placeholder="Search by title" aria-label="Search problems" class="pl-8" />
         </div>
 
         <div role="group" aria-label="Difficulty" class="inline-flex gap-0.5 rounded-lg border border-border bg-muted p-0.5">
