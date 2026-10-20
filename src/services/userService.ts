@@ -1,4 +1,4 @@
-import axiosClient from '@/api/axiosClient'
+import axiosClient, { API_BASE_URL } from '@/api/axiosClient'
 import type { AxiosResponse } from 'axios'
 import type { ApiResponse } from '@/types/common'
 import type { UserResponse, UserListParams, CreateUserPayload, UpdateUserPayload } from '@/types/user'
@@ -27,6 +27,17 @@ class UserService {
     // Enable/disable only (ACTIVE/DISABLED); soft-delete goes through remove().
     updateStatus(id: string, status: number): Promise<AxiosResponse<ApiResponse<UserResponse>>> {
         return axiosClient.patch<ApiResponse<UserResponse>>(API_ROUTES.USERS.STATUS(id), { status })
+    }
+
+    // Same status change for page unload: fetch with keepalive survives the tab closing (axios/XHR does not).
+    updateStatusKeepalive(id: string, status: number): void {
+        void fetch(API_BASE_URL + API_ROUTES.USERS.STATUS(id), {
+            method: 'PATCH',
+            credentials: 'include',
+            keepalive: true,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status }),
+        }).catch(() => undefined)
     }
 
     // Replace the user's whole role set. The server rejects SYS_ROOT (409).

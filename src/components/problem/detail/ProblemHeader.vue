@@ -1,25 +1,19 @@
 <template>
-    <div class="mb-5 space-y-3">
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <h1 class="font-display text-4xl text-foreground">{{ problem.title }}</h1>
-            <Badge :class="getLevelInfo(problem.hardnessLevel).class"
-                class="rounded-md border-0 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">
-                {{ getLevelInfo(problem.hardnessLevel).text }}
-            </Badge>
-        </div>
-
-        <div v-if="problem.tags?.length" class="flex flex-wrap gap-2">
-            <Badge v-for="tag in problem.tags" :key="tag" variant="secondary"
-                class="rounded-md text-[11px] font-medium text-muted-foreground">
+    <div class="flex flex-col gap-2.5">
+        <h1 class="text-[20px] leading-tight font-bold tracking-[-0.02em] text-foreground">{{ problem.title }}</h1>
+        <ProblemMetaBar :problem="problem" />
+        <div v-if="problem.tags?.length" class="flex flex-wrap gap-1.5">
+            <span v-for="tag in problem.tags" :key="tag"
+                class="inline-flex h-[22px] items-center rounded-md border border-border bg-card px-2 font-mono text-[11.5px] whitespace-nowrap text-foreground">
                 {{ tag }}
-            </Badge>
+            </span>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { Badge } from '@/components/ui/badge'
-import { type Problem, getLevelInfo } from '@/types/problem'
+import ProblemMetaBar from './ProblemMetaBar.vue'
+import type { Problem } from '@/types/problem'
 
 defineProps<{
     problem: Problem

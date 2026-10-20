@@ -5,19 +5,19 @@
 
         <!-- Subject -->
         <div>
-            <h3 class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Subject</h3>
+            <h3 class="mb-2 text-sm font-semibold text-foreground">Subject</h3>
             <RichContent :html="problem.subject" />
         </div>
 
         <!-- Input -->
         <div>
-            <h3 class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Input</h3>
+            <h3 class="mb-2 text-sm font-semibold text-foreground">Input</h3>
             <RichContent :html="problem.inputDescription" />
         </div>
 
         <!-- Output -->
         <div>
-            <h3 class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Output</h3>
+            <h3 class="mb-2 text-sm font-semibold text-foreground">Output</h3>
             <RichContent :html="problem.outputDescription" />
         </div>
 
@@ -65,7 +65,7 @@
 
         <!-- Hint -->
         <div v-if="problem.hint">
-            <h3 class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Hint</h3>
+            <h3 class="mb-2 text-sm font-semibold text-foreground">Hint</h3>
             <RichContent :html="problem.hint" />
         </div>
     </div>
@@ -91,6 +91,6 @@ const { copy } = useClipboard()
 
 const onCopy = (text: string) => {
     copy(text)
-    triggerToast('Copied!')
+    triggerToast('Copied to clipboard')
 }
 </script>

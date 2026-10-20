@@ -9,6 +9,7 @@ const { get, post, del } = vi.hoisted(() => ({
 
 vi.mock('@/api/axiosClient', () => ({
     default: { get, post, delete: del },
+    API_BASE_URL: 'http://api.test/v1',
 }))
 
 beforeEach(() => {
@@ -45,5 +46,25 @@ describe('securityService', () => {
     it('deleteBan targets the id', async () => {
         await securityService.deleteBan('b-1')
         expect(del).toHaveBeenCalledWith('/security/bans/b-1')
+    })
+})
+
+describe('deleteBanKeepalive', () => {
+    it('deleteBanKeepaliveUsesFetchKeepalive', () => {
+        const fetchMock = vi.fn(() => Promise.resolve(new Response(null)))
+        vi.stubGlobal('fetch', fetchMock)
+        try {
+            securityService.deleteBanKeepalive('b1')
+            expect(fetchMock).toHaveBeenCalledWith('http://api.test/v1/security/bans/b1', {
+                method: 'DELETE',
+                credentials: 'include',
+                keepalive: true,
+            })
+            const init = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1]
+            expect(init.body).toBeUndefined()
+            expect(del).not.toHaveBeenCalled()
+        } finally {
+            vi.unstubAllGlobals()
+        }
     })
 })

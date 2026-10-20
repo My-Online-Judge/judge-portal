@@ -18,4 +18,14 @@ describe('TagCloud', () => {
         await buttons[0].trigger('click')
         expect(w.emitted('select')?.[0]).toEqual(['t0'])
     })
+
+    it('pressedTagShowsCheck', async () => {
+        const w = mount(TagCloud, { props: { selected: 't1' } })
+        await flushPromises()
+        const buttons = w.findAll('button')
+        expect(buttons[1].attributes('aria-pressed')).toBe('true')
+        expect(buttons[1].find('svg').exists()).toBe(true)
+        expect(buttons[0].attributes('aria-pressed')).toBe('false')
+        expect(buttons[0].find('svg').exists()).toBe(false)
+    })
 })

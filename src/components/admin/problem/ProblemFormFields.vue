@@ -1,6 +1,6 @@
 <script lang="ts">
 /**
- * Shared, presentational body of the problem form — used by both the create
+ * Shared, presentational body of the problem form, used by both the create
  * page and the detail page's edit mode. It owns no service calls, no submit
  * button and no navigation; the hosting page validates, builds the payload
  * and drives the actions. Number fields carry `number | string` because the
@@ -79,7 +79,7 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
             <div class="space-y-4 p-5">
                 <!-- Title -->
                 <div class="space-y-1.5">
-                    <Label for="pf-title">Title <span class="text-destructive">*</span></Label>
+                    <Label for="pf-title">Title <span class="text-destructive-ink">*</span></Label>
                     <Input
                         id="pf-title"
                         :model-value="modelValue.title"
@@ -87,12 +87,12 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
                         :aria-invalid="invalid('title')"
                         @update:model-value="(v) => set('title', String(v))"
                     />
-                    <p v-if="errorFor('title')" class="text-xs text-destructive">{{ errorFor('title') }}</p>
+                    <p v-if="errorFor('title')" class="text-xs text-destructive-ink">{{ errorFor('title') }}</p>
                 </div>
 
                 <!-- Slug (create only) -->
                 <div v-if="mode === 'create'" class="space-y-1.5">
-                    <Label for="pf-slug">Slug <span class="text-destructive">*</span></Label>
+                    <Label for="pf-slug">Slug <span class="text-destructive-ink">*</span></Label>
                     <Input
                         id="pf-slug"
                         :model-value="modelValue.problemSlug"
@@ -102,13 +102,13 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
                         :aria-invalid="invalid('problemSlug')"
                         @update:model-value="(v) => set('problemSlug', String(v))"
                     />
-                    <p v-if="errorFor('problemSlug')" class="text-xs text-destructive">{{ errorFor('problemSlug') }}</p>
+                    <p v-if="errorFor('problemSlug')" class="text-xs text-destructive-ink">{{ errorFor('problemSlug') }}</p>
                     <p v-else class="text-xs text-muted-foreground">Letters, numbers and hyphens only. Can't be changed later.</p>
                 </div>
 
                 <!-- Subject -->
                 <div class="space-y-1.5">
-                    <Label for="pf-subject">Subject <span class="text-destructive">*</span></Label>
+                    <Label for="pf-subject">Subject <span class="text-destructive-ink">*</span></Label>
                     <Input
                         id="pf-subject"
                         :model-value="modelValue.subject"
@@ -116,13 +116,13 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
                         :aria-invalid="invalid('subject')"
                         @update:model-value="(v) => set('subject', String(v))"
                     />
-                    <p v-if="errorFor('subject')" class="text-xs text-destructive">{{ errorFor('subject') }}</p>
+                    <p v-if="errorFor('subject')" class="text-xs text-destructive-ink">{{ errorFor('subject') }}</p>
                 </div>
 
                 <!-- Limits + difficulty + status -->
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div class="space-y-1.5">
-                        <Label for="pf-time">Time limit (ms) <span class="text-destructive">*</span></Label>
+                        <Label for="pf-time">Time limit (ms) <span class="text-destructive-ink">*</span></Label>
                         <Input
                             id="pf-time"
                             type="number"
@@ -132,11 +132,11 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
                             :aria-invalid="invalid('timeLimit')"
                             @update:model-value="(v) => set('timeLimit', v)"
                         />
-                        <p v-if="errorFor('timeLimit')" class="text-xs text-destructive">{{ errorFor('timeLimit') }}</p>
+                        <p v-if="errorFor('timeLimit')" class="text-xs text-destructive-ink">{{ errorFor('timeLimit') }}</p>
                     </div>
 
                     <div class="space-y-1.5">
-                        <Label for="pf-memory">Memory limit (MB) <span class="text-destructive">*</span></Label>
+                        <Label for="pf-memory">Memory limit (MB) <span class="text-destructive-ink">*</span></Label>
                         <Input
                             id="pf-memory"
                             type="number"
@@ -146,11 +146,11 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
                             :aria-invalid="invalid('memoryLimit')"
                             @update:model-value="(v) => set('memoryLimit', v)"
                         />
-                        <p v-if="errorFor('memoryLimit')" class="text-xs text-destructive">{{ errorFor('memoryLimit') }}</p>
+                        <p v-if="errorFor('memoryLimit')" class="text-xs text-destructive-ink">{{ errorFor('memoryLimit') }}</p>
                     </div>
 
                     <div class="space-y-1.5">
-                        <Label for="pf-difficulty">Difficulty <span class="text-destructive">*</span></Label>
+                        <Label for="pf-difficulty">Difficulty <span class="text-destructive-ink">*</span></Label>
                         <Select
                             :model-value="String(modelValue.hardnessLevel)"
                             @update:model-value="(v) => set('hardnessLevel', Number(v))"
@@ -191,7 +191,7 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
                         :suggestions="suggestions"
                         @update:model-value="(v) => set('tags', v)"
                     />
-                    <p v-if="errorFor('tags')" class="text-xs text-destructive">{{ errorFor('tags') }}</p>
+                    <p v-if="errorFor('tags')" class="text-xs text-destructive-ink">{{ errorFor('tags') }}</p>
                     <p v-else class="text-xs text-muted-foreground">Up to 10. Press Enter or comma to add.</p>
                 </div>
             </div>
@@ -205,33 +205,33 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
             </div>
             <div class="space-y-4 p-5">
                 <div class="space-y-1.5">
-                    <Label>Description <span class="text-destructive">*</span></Label>
+                    <Label>Description <span class="text-destructive-ink">*</span></Label>
                     <RichTextEditor
                         :model-value="modelValue.description"
                         placeholder="Describe the problem. Use headings, lists and code blocks as needed."
                         @update:model-value="(v) => set('description', v)"
                     />
-                    <p v-if="errorFor('description')" class="text-xs text-destructive">{{ errorFor('description') }}</p>
+                    <p v-if="errorFor('description')" class="text-xs text-destructive-ink">{{ errorFor('description') }}</p>
                 </div>
 
                 <div class="space-y-1.5">
-                    <Label>Input description <span class="text-destructive">*</span></Label>
+                    <Label>Input description <span class="text-destructive-ink">*</span></Label>
                     <RichTextEditor
                         :model-value="modelValue.inputDescription"
                         placeholder="Describe the input format."
                         @update:model-value="(v) => set('inputDescription', v)"
                     />
-                    <p v-if="errorFor('inputDescription')" class="text-xs text-destructive">{{ errorFor('inputDescription') }}</p>
+                    <p v-if="errorFor('inputDescription')" class="text-xs text-destructive-ink">{{ errorFor('inputDescription') }}</p>
                 </div>
 
                 <div class="space-y-1.5">
-                    <Label>Output description <span class="text-destructive">*</span></Label>
+                    <Label>Output description <span class="text-destructive-ink">*</span></Label>
                     <RichTextEditor
                         :model-value="modelValue.outputDescription"
                         placeholder="Describe the expected output."
                         @update:model-value="(v) => set('outputDescription', v)"
                     />
-                    <p v-if="errorFor('outputDescription')" class="text-xs text-destructive">{{ errorFor('outputDescription') }}</p>
+                    <p v-if="errorFor('outputDescription')" class="text-xs text-destructive-ink">{{ errorFor('outputDescription') }}</p>
                 </div>
             </div>
         </section>
@@ -244,7 +244,7 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
             </div>
             <div class="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
                 <div class="space-y-1.5">
-                    <Label for="pf-sample-in">Sample input <span class="text-destructive">*</span></Label>
+                    <Label for="pf-sample-in">Sample input <span class="text-destructive-ink">*</span></Label>
                     <Textarea
                         id="pf-sample-in"
                         rows="4"
@@ -254,11 +254,11 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
                         :aria-invalid="invalid('sampleInput')"
                         @update:model-value="(v) => set('sampleInput', String(v))"
                     />
-                    <p v-if="errorFor('sampleInput')" class="text-xs text-destructive">{{ errorFor('sampleInput') }}</p>
+                    <p v-if="errorFor('sampleInput')" class="text-xs text-destructive-ink">{{ errorFor('sampleInput') }}</p>
                 </div>
 
                 <div class="space-y-1.5">
-                    <Label for="pf-sample-out">Sample output <span class="text-destructive">*</span></Label>
+                    <Label for="pf-sample-out">Sample output <span class="text-destructive-ink">*</span></Label>
                     <Textarea
                         id="pf-sample-out"
                         rows="4"
@@ -268,7 +268,7 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
                         :aria-invalid="invalid('sampleOutput')"
                         @update:model-value="(v) => set('sampleOutput', String(v))"
                     />
-                    <p v-if="errorFor('sampleOutput')" class="text-xs text-destructive">{{ errorFor('sampleOutput') }}</p>
+                    <p v-if="errorFor('sampleOutput')" class="text-xs text-destructive-ink">{{ errorFor('sampleOutput') }}</p>
                 </div>
             </div>
         </section>
@@ -284,10 +284,10 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
                     <Label>Hint</Label>
                     <RichTextEditor
                         :model-value="modelValue.hint"
-                        placeholder="Optional — a gentle hint toward the intended approach."
+                        placeholder="Optional. A gentle hint toward the intended approach."
                         @update:model-value="(v) => set('hint', v)"
                     />
-                    <p v-if="errorFor('hint')" class="text-xs text-destructive">{{ errorFor('hint') }}</p>
+                    <p v-if="errorFor('hint')" class="text-xs text-destructive-ink">{{ errorFor('hint') }}</p>
                 </div>
             </div>
         </section>

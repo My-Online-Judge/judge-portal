@@ -4,10 +4,12 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 
-const h = vi.hoisted(() => ({ getRoles: vi.fn(), remove: vi.fn(), getPermissions: vi.fn(), toast: vi.fn() }))
+const h = vi.hoisted(() => ({
+  getRoles: vi.fn(), remove: vi.fn(), getPermissions: vi.fn(), updatePermissions: vi.fn(), toast: vi.fn(),
+}))
 
 vi.mock('@/services/roleService', () => ({
-  default: { getRoles: h.getRoles, remove: h.remove, updatePermissions: vi.fn(), create: vi.fn() },
+  default: { getRoles: h.getRoles, remove: h.remove, updatePermissions: h.updatePermissions, create: vi.fn() },
 }))
 vi.mock('@/services/permissionService', () => ({ default: { getPermissions: h.getPermissions } }))
 vi.mock('@/composables/useToast', () => ({ useToast: () => ({ triggerToast: h.toast }) }))
@@ -59,6 +61,28 @@ describe('AdminRolesPage', () => {
     expect(wrapper!.findAll('button[aria-label="Actions for SYS_ROOT"]')).toHaveLength(0)
     expect(wrapper!.findAll('button[aria-label="Actions for ADMIN"]')).toHaveLength(0)
     expect(wrapper!.text().match(/Locked/g)).toHaveLength(2)
+    expect(wrapper!.text().match(/All, locked/g)).toHaveLength(2)
+  })
+
+  it('countThenSavingThenSaved', async () => {
+    h.getPermissions.mockResolvedValue({ data: { data: [{ name: 'problem:create' }, { name: 'problem:update' }] } })
+    let release!: () => void
+    h.updatePermissions.mockReturnValue(new Promise<void>((r) => { release = r }))
+    await mountPage()
+    const editorRow = () => wrapper!.findAll('tbody tr').find((r) => r.text().includes('EDITOR'))!
+    expect(editorRow().text()).toContain('0 of 2')
+
+    await openMenu('EDITOR')
+    menuItem('Permissions').click()
+    await flushPromises()
+    bodyButton('Save permissions')!.click()
+    await flushPromises()
+    expect(editorRow().text()).toContain('Saving…')
+
+    release()
+    await flushPromises()
+    expect(editorRow().text()).toContain('Saved')
+    expect(h.updatePermissions).toHaveBeenCalledTimes(1)
   })
 
   it('deleteAsksThenCalls', async () => {
@@ -68,7 +92,7 @@ describe('AdminRolesPage', () => {
     await flushPromises()
     expect(h.remove).not.toHaveBeenCalled()
     expect(document.body.textContent).toContain('Delete role “EDITOR”?')
-    const confirm = bodyButton('Delete')!
+    const confirm = bodyButton('Delete role')!
     confirm.click()
     confirm.click()
     await flushPromises()
@@ -82,7 +106,7 @@ describe('AdminRolesPage', () => {
     await openMenu('EDITOR')
     menuItem('Delete…').click()
     await flushPromises()
-    bodyButton('Delete')!.click()
+    bodyButton('Delete role')!.click()
     await flushPromises()
     expect(h.toast).toHaveBeenCalledWith(expect.any(String), 'error')
   })

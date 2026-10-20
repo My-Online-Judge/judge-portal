@@ -1,64 +1,66 @@
 <template>
-    <div class="animate-enter grid grid-cols-1 gap-6 lg:grid-cols-[9.5fr_2.5fr]">
-        <!-- Main Content (Left) -->
-        <div>
-            <div class="rounded-xl border border-border bg-card">
+    <div class="animate-enter flex flex-col gap-[18px]">
+        <PageHeader
+            title="Problems"
+            :description="description" />
+
+        <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_264px]">
+            <div class="order-2 min-w-0 overflow-hidden rounded-xl border border-border bg-card lg:order-none lg:row-span-2">
                 <SearchBar
+                    ref="searchBar"
                     :search="search"
                     :difficulty="difficulty"
-                    :show-tags="showTags"
+                    :tag="tag"
+                    :filtered="isFiltered"
                     @update:search="onSearch"
                     @update:difficulty="onDifficulty"
-                    @update:show-tags="showTags = $event"
-                    @refresh="fetchProblems" />
-                <div class="px-6 pb-6">
-                    <div v-if="tag" class="pt-4">
-                        <span class="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs text-primary-foreground">
-                            Tag: {{ tag }}
-                            <button type="button" class="opacity-80 hover:opacity-100" aria-label="Clear tag filter"
-                                @click="onTag('')">
-                                <X class="size-3" />
-                            </button>
-                        </span>
-                    </div>
-                    <ListStateShell
-                        :loading="isLoading"
-                        :error="error ? 'error' : null"
-                        :has-data="!!response"
-                        :empty="false"
-                        @retry="fetchProblems"
-                    >
-                        <template #skeleton>
-                            <div class="space-y-3 py-5">
-                                <div v-for="n in 6" :key="n" class="flex items-center gap-4">
-                                    <div class="h-4 w-6 shrink-0 animate-pulse rounded bg-muted"></div>
-                                    <div class="h-4 w-full max-w-[220px] animate-pulse rounded bg-muted"></div>
-                                    <div class="ml-auto h-5 w-14 shrink-0 animate-pulse rounded bg-muted"></div>
-                                    <div class="h-4 w-20 shrink-0 animate-pulse rounded bg-muted"></div>
-                                </div>
+                    @clear-tag="onTag('')"
+                    @clear-filters="clearFilters" />
+                <ListStateShell
+                    :loading="isLoading"
+                    :error="error ? 'error' : null"
+                    :has-data="!!response"
+                    :empty="problems.length === 0"
+                    :filtered="isFiltered"
+                    :filter-summary="filterSummary"
+                    empty-title="No problems yet"
+                    empty-hint="Problems appear here once an admin publishes them."
+                    @retry="fetchProblems"
+                    @clear-filters="clearFilters"
+                >
+                    <template #skeleton>
+                        <div class="flex flex-col" aria-busy="true">
+                            <div v-for="n in 8" :key="n" class="flex h-[52px] items-center gap-4 border-b border-border px-4 last:border-b-0">
+                                <span class="sk w-full max-w-[260px]" />
+                                <span class="sk ml-auto w-16 shrink-0" />
+                                <span class="sk hidden w-12 shrink-0 sm:block" />
                             </div>
-                        </template>
-                        <ProblemTable :problems="problems" :show-tags="showTags" />
-                    </ListStateShell>
+                        </div>
+                    </template>
+                    <ProblemTable :problems="problems" />
+                </ListStateShell>
+                <div class="px-4">
                     <PaginationFooter :pagination="pagination" @change-page="onPageChange" @update:size="onSizeChange" />
                 </div>
             </div>
-        </div>
 
-        <!-- Sidebar (Right) -->
-        <aside class="space-y-6">
-            <TagCloud :selected="tag" @select="onTag" />
-            <Announcements />
-        </aside>
+            <div class="order-1 min-w-0 lg:order-none">
+                <TagCloud :selected="tag" @select="onTag" />
+            </div>
+            <div class="order-3 min-w-0 lg:order-none">
+                <Announcements />
+            </div>
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { X } from 'lucide-vue-next'
+import { useSlashFocus } from '@/composables/useSlashFocus'
 import SearchBar from '@/components/problem/SearchBar.vue'
 import ProblemTable from '@/components/problem/ProblemTable.vue'
 import TagCloud from '@/components/problem/TagCloud.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import PaginationFooter from '@/components/common/PaginationFooter.vue'
 import ListStateShell from '@/components/common/ListStateShell.vue'
 import Announcements from '@/components/common/Announcements.vue'
@@ -70,8 +72,8 @@ const page = ref(0)
 const size = ref(10)
 const search = ref('')
 const difficulty = ref('all')
-const showTags = ref(false)
 const tag = ref('')
+const searchBar = ref<InstanceType<typeof SearchBar> | null>(null)
 
 const { data: response, isLoading, error, execute } = useFetch(problemService.getProblems, {
     immediate: false
@@ -79,6 +81,22 @@ const { data: response, isLoading, error, execute } = useFetch(problemService.ge
 
 const problems = computed(() => response.value?.data || [])
 const pagination = computed(() => response.value?.pagination)
+
+const description = computed(() => {
+    const total = pagination.value?.totalElements
+    const tail = 'from your first loop to graphs and dynamic programming.'
+    if (total === undefined) return `From your first loop to graphs and dynamic programming.`
+    return `${total} ${total === 1 ? 'problem' : 'problems'}, ${tail}`
+})
+
+const isFiltered = computed(() => !!search.value || difficulty.value !== 'all' || !!tag.value)
+const filterSummary = computed(() => {
+    const parts: string[] = []
+    if (search.value) parts.push(search.value)
+    if (difficulty.value !== 'all') parts.push(difficulty.value.charAt(0).toUpperCase() + difficulty.value.slice(1))
+    if (tag.value) parts.push(tag.value)
+    return parts.join(', ')
+})
 
 const fetchProblems = () => {
     execute({
@@ -92,6 +110,7 @@ const fetchProblems = () => {
 
 // Any filter change resets to the first page.
 const onSearch = (value: string) => {
+    if (value === search.value) return
     search.value = value
     page.value = 0
     fetchProblems()
@@ -110,6 +129,14 @@ const onTag = (value: string) => {
     fetchProblems()
 }
 
+const clearFilters = () => {
+    search.value = ''
+    difficulty.value = 'all'
+    tag.value = ''
+    page.value = 0
+    fetchProblems()
+}
+
 const onPageChange = (newPage: number) => {
     page.value = newPage
     fetchProblems()
@@ -120,6 +147,8 @@ const onSizeChange = (newSize: number) => {
     page.value = 0
     fetchProblems()
 }
+
+useSlashFocus(searchBar)
 
 // Initial fetch
 fetchProblems()

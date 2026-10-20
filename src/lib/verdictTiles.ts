@@ -1,21 +1,10 @@
 import type { TestCaseResult } from '@/types/submission'
+import { verdictMeta } from '@/lib/verdict'
 
 export const DISPLAY_MAX_CHARS = 16384
 export const DISPLAY_MAX_LINES = 200
 
-const LABELS: Record<number, string> = { 0: '✓', [-1]: 'WA', 1: 'TLE', 2: 'TLE', 3: 'MLE', 4: 'RE', 5: 'SE' }
-const NAMES: Record<number, string> = {
-    0: 'Accepted',
-    [-1]: 'Wrong Answer',
-    1: 'Time Limit Exceeded',
-    2: 'Time Limit Exceeded',
-    3: 'Memory Limit Exceeded',
-    4: 'Runtime Error',
-    5: 'System Error',
-}
-
-export const tileLabel = (result: number): string => LABELS[result] ?? '?'
-export const resultName = (result: number): string => NAMES[result] ?? 'Unknown'
+export const tileLabel = (result: number): string => verdictMeta(result).code
 
 const NUMERIC = /^\d+$/
 
@@ -43,4 +32,19 @@ export function clipForDisplay(text: string): { shown: string; clipped: boolean;
     const lines = shown.split('\n')
     if (lines.length > DISPLAY_MAX_LINES) shown = lines.slice(0, DISPLAY_MAX_LINES).join('\n')
     return { shown, clipped: shown.length < totalChars, totalChars }
+}
+
+const normalizeLines = (text: string): string[] => {
+    const lines = text.split('\n').map((l) => l.replace(/\s+$/, ''))
+    while (lines.length && lines[lines.length - 1] === '') lines.pop()
+    return lines
+}
+
+/** 1-based number of the first line where the two outputs differ, or null when they match. */
+export function firstDiffLine(expected: string, actual: string): number | null {
+    const e = normalizeLines(expected)
+    const a = normalizeLines(actual)
+    const n = Math.max(e.length, a.length)
+    for (let i = 0; i < n; i++) if (e[i] !== a[i]) return i + 1
+    return null
 }

@@ -75,4 +75,19 @@ describe('ConfirmDialog', () => {
     await new Promise((r) => setTimeout(r, 20))
     expect(document.activeElement).toBe(button('Cancel'))
   })
+
+  it('confirmDialogFocusesCancel', async () => {
+    mountDialog()
+    await nextTick()
+    await new Promise((r) => setTimeout(r, 20))
+    expect(document.activeElement).toBe(button('Cancel'))
+    expect(document.body.querySelector('[data-slot="confirm-icon"]')).toBeTruthy()
+    expect(document.body.querySelector('[data-slot="confirm-icon"]')?.hasAttribute('tabindex')).toBe(false)
+  })
+
+  it('toneWinsOverDestructive', async () => {
+    mountDialog({ destructive: true, tone: 'neutral' })
+    await nextTick()
+    expect(document.body.querySelector('[data-slot="confirm-icon"]')?.getAttribute('data-tone')).toBe('neutral')
+  })
 })

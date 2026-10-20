@@ -5,6 +5,7 @@ import './assets/main.css'
 
 import App from './App.vue'
 import router from './router'
+import { useTheme } from './composables/useTheme'
 
 import { install as VueMonacoEditorPlugin } from '@guolao/vue-monaco-editor'
 
@@ -17,5 +18,8 @@ app.use(VueMonacoEditorPlugin, {
         vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs'
     }
 })
+
+// Start following the OS theme for everyone, signed in or not, before any menu exists.
+useTheme()
 
 app.mount('#app')

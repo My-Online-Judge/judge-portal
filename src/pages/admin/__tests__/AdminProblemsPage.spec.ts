@@ -6,7 +6,12 @@ import { createPinia, setActivePinia } from 'pinia'
 
 const h = vi.hoisted(() => ({ getProblems: vi.fn(), rejudgeProblem: vi.fn(), toast: vi.fn() }))
 
-vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
+vi.mock('vue-router', async () => {
+  const { defineComponent, h: render } = await import('vue')
+  // The redesigned page renders row titles as RouterLinks; a plain anchor is enough here.
+  const RouterLink = defineComponent({ props: ['to'], setup: (_, { slots }) => () => render('a', slots.default?.()) })
+  return { useRouter: () => ({ push: vi.fn() }), useRoute: () => ({ query: {}, path: '/admin/problems' }), RouterLink }
+})
 vi.mock('@/services/problemService', () => ({ default: { getProblems: h.getProblems, remove: vi.fn() } }))
 vi.mock('@/services/submissionService', () => ({ default: { rejudgeProblem: h.rejudgeProblem } }))
 vi.mock('@/composables/useToast', () => ({ useToast: () => ({ triggerToast: h.toast }) }))

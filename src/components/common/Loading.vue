@@ -1,14 +1,14 @@
 <template>
-    <div class="flex flex-col items-center justify-center p-8 text-slate-500 w-full">
+    <div class="flex flex-col items-center justify-center p-8 text-muted-foreground w-full">
         <!-- Spinner Variant -->
         <template v-if="variant === 'spinner'">
-            <Loader2 class="h-10 w-10 animate-spin text-blue-600 mb-3" />
+            <Loader2 class="h-10 w-10 animate-spin text-primary mb-3" />
         </template>
 
         <!-- Progress Bar Variant -->
         <template v-else-if="variant === 'progress'">
-            <div class="w-64 h-1.5 bg-slate-100 rounded-full overflow-hidden mb-3 relative">
-                <div class="absolute top-0 left-0 h-full bg-blue-600 rounded-full animate-indeterminate w-full origin-left"></div>
+            <div class="w-64 h-1.5 bg-muted rounded-full overflow-hidden mb-3 relative">
+                <div class="absolute top-0 left-0 h-full bg-primary rounded-full animate-indeterminate w-full origin-left"></div>
             </div>
         </template>
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { X } from 'lucide-vue-next'
+import { Badge } from '@/components/ui/badge'
 import { MAX_TAGS, normalizeTag } from '@/lib/tags'
 
 const props = defineProps<{
@@ -56,36 +57,42 @@ const onInput = (e: Event) => {
 </script>
 
 <template>
-    <div class="relative space-y-1.5">
-        <div class="flex flex-wrap items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1.5">
-            <span v-for="tag in modelValue" :key="tag"
-                class="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs text-foreground">
+    <div class="relative flex flex-col gap-1.5">
+        <div
+            class="flex flex-wrap items-center gap-1.5 rounded-md border border-input bg-card p-1.5 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/25"
+            :class="error && 'border-destructive'"
+        >
+            <Badge v-for="tag in modelValue" :key="tag" variant="mono" class="gap-1 pr-1">
                 {{ tag }}
-                <button type="button" class="text-muted-foreground hover:text-foreground"
-                    :aria-label="`Remove tag ${tag}`" @click="remove(tag)">
-                    <X class="size-3" />
+                <button
+                    type="button"
+                    class="grid size-4 cursor-pointer place-items-center rounded-[4px] text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    :aria-label="`Remove tag ${tag}`"
+                    @click="remove(tag)"
+                >
+                    <X class="size-3" aria-hidden="true" />
                 </button>
-            </span>
+            </Badge>
             <input
                 :value="draft"
                 :disabled="full"
                 :placeholder="full ? `Maximum ${MAX_TAGS} tags` : 'Add a tag…'"
                 :aria-invalid="error ? true : undefined"
                 aria-label="Add tag"
-                class="min-w-[8rem] flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
+                class="h-[22px] min-w-[8rem] flex-1 bg-transparent font-mono text-[12.5px] text-foreground outline-none placeholder:font-sans placeholder:text-muted-foreground disabled:cursor-not-allowed"
                 @input="onInput"
                 @keydown="onKeydown"
                 @focus="focused = true"
                 @blur="focused = false" />
         </div>
         <ul v-if="focused && !full && filtered.length"
-            class="absolute z-10 max-h-48 w-full overflow-auto rounded-md border border-border bg-background p-1 shadow-md">
+            class="absolute top-full z-10 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-[var(--shadow-lg)]">
             <li v-for="s in filtered" :key="s" data-testid="tag-suggestion"
-                class="cursor-pointer rounded px-2 py-1 text-sm text-foreground hover:bg-muted"
+                class="cursor-pointer rounded-md px-2 py-1.5 font-mono text-[12.5px] text-foreground hover:bg-accent"
                 @mousedown.prevent="add(s)">
                 {{ s }}
             </li>
         </ul>
-        <p v-if="error" role="alert" class="text-xs text-destructive">{{ error }}</p>
+        <p v-if="error" role="alert" class="text-xs text-destructive-ink">{{ error }}</p>
     </div>
 </template>

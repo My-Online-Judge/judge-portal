@@ -14,6 +14,12 @@ describe('retryAfterSeconds', () => {
   it('a429WithoutHeaderUsesFallback', () => {
     expect(retryAfterSeconds(axiosErr(429), 10)).toBe(10)
   })
+  it('a503WithAnHttpDateCountsDownToIt', () => {
+    const at = new Date(Date.now() + 30_000).toUTCString()
+    const s = retryAfterSeconds(axiosErr(503, { 'retry-after': at }), 10)
+    expect(s).toBeGreaterThanOrEqual(29)
+    expect(s).toBeLessThanOrEqual(30)
+  })
   it('otherErrorsAreNull', () => {
     expect(retryAfterSeconds(axiosErr(500), 10)).toBeNull()
     expect(retryAfterSeconds(new Error('boom'), 10)).toBeNull()

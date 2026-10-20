@@ -1,60 +1,62 @@
 <template>
     <div>
-        <Table>
+        <!-- Table from 640 px up -->
+        <Table class="hidden sm:table">
             <TableHeader>
-                <TableRow class="border-border bg-muted/30 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:bg-muted/30">
-                    <TableHead class="w-[60px] pl-4">#</TableHead>
-                    <TableHead class="min-w-[200px]">Title</TableHead>
-                    <TableHead v-if="showTags" class="w-[220px]">Tags</TableHead>
-                    <TableHead class="w-[120px]">Level</TableHead>
-                    <TableHead class="w-[120px]">Total</TableHead>
-                    <TableHead class="w-[200px]">AC Rate</TableHead>
+                <TableRow class="border-border bg-muted/30 text-xs font-medium text-muted-foreground hover:bg-muted/30">
+                    <TableHead class="min-w-[200px] pl-4">Title</TableHead>
+                    <TableHead class="w-[140px]">Difficulty</TableHead>
+                    <TableHead class="w-[120px] text-right">Acceptance</TableHead>
+                    <TableHead class="w-[130px] pr-4 text-right">Submissions</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
-                <TableRow v-for="(problem, index) in problems" :key="problem.id"
-                    class="h-14 border-border transition-colors hover:bg-muted/40">
-                    <TableCell class="tabular pl-4 text-muted-foreground">{{ index + 1 }}</TableCell>
-                    <TableCell>
+                <TableRow v-for="problem in problems" :key="problem.id"
+                    class="border-border transition-colors hover:bg-muted/40">
+                    <TableCell class="pl-4">
                         <RouterLink :to="'/problems/' + problem.problemSlug"
-                            class="block font-medium text-foreground transition-colors hover:text-primary">
+                            class="block font-semibold text-foreground transition-colors hover:text-link">
                             {{ problem.title }}
                         </RouterLink>
-                    </TableCell>
-                    <TableCell v-if="showTags">
-                        <div class="flex flex-wrap gap-1.5">
-                            <Badge v-for="tag in problem.tags || []" :key="tag" variant="secondary"
-                                class="rounded-md border-0 bg-muted px-2 py-0.5 text-[11px] font-normal text-muted-foreground">
-                                {{ tag }}
-                            </Badge>
-                            <span v-if="!(problem.tags && problem.tags.length)" class="text-xs text-muted-foreground">—</span>
+                        <div v-if="showTags && problem.tags?.length" class="mt-1 flex flex-wrap gap-1">
+                            <span v-for="tag in problem.tags" :key="tag" :class="staticTag">{{ tag }}</span>
                         </div>
                     </TableCell>
                     <TableCell>
-                        <Badge :class="getLevelInfo(problem.hardnessLevel).class" class="rounded-md border-0 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">
-                            {{ getLevelInfo(problem.hardnessLevel).text }}
-                        </Badge>
+                        <DifficultyBadge :level="problem.hardnessLevel" />
                     </TableCell>
-                    <TableCell>
-                        <span class="tabular text-sm text-muted-foreground">{{ problem.totalSubmission }}</span>
+                    <TableCell class="text-right font-mono text-[13px] tabular-nums">
+                        {{ acceptance(problem) }}
                     </TableCell>
-                    <TableCell>
-                        <div class="flex items-center gap-3">
-                            <Progress :model-value="calculateAcRate(problem.acceptedSubmission, problem.totalSubmission)"
-                                class="h-1.5 w-24 bg-muted"
-                                indicator-class="bg-primary" />
-                            <span class="tabular text-xs text-muted-foreground">
-                                {{ calculateAcRate(problem.acceptedSubmission, problem.totalSubmission) }}%
-                            </span>
-                        </div>
+                    <TableCell class="pr-4 text-right font-mono text-[13px] tabular-nums text-muted-foreground">
+                        {{ problem.totalSubmission || '-' }}
                     </TableCell>
                 </TableRow>
             </TableBody>
         </Table>
+
+        <!-- Two-line list items under 640 px -->
+        <ul class="m-0 list-none p-0 sm:hidden">
+            <li v-for="problem in problems" :key="problem.id" class="border-b border-border last:border-b-0">
+                <RouterLink :to="'/problems/' + problem.problemSlug"
+                    class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-1 px-3 py-[11px]">
+                    <span class="min-w-0 truncate text-[13.5px] font-semibold text-foreground">{{ problem.title }}</span>
+                    <ChevronRight class="size-4 text-muted-foreground" aria-hidden="true" />
+                    <span class="col-span-2 flex items-center gap-2.5 text-xs text-muted-foreground">
+                        <DifficultyBadge :level="problem.hardnessLevel" />
+                        <span class="font-mono">Acceptance {{ acceptance(problem) }}</span>
+                    </span>
+                    <span v-if="showTags && problem.tags?.length" class="col-span-2 flex flex-wrap gap-1">
+                        <span v-for="tag in problem.tags" :key="tag" :class="staticTag">{{ tag }}</span>
+                    </span>
+                </RouterLink>
+            </li>
+        </ul>
     </div>
 </template>
 
 <script setup lang="ts">
+import { ChevronRight } from 'lucide-vue-next'
 import {
     Table,
     TableBody,
@@ -63,22 +65,19 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import { type Problem, getLevelInfo } from '@/types/problem'
+import DifficultyBadge from '@/components/common/DifficultyBadge.vue'
+import type { Problem } from '@/types/problem'
 
 withDefaults(defineProps<{
     problems: Problem[]
     showTags?: boolean
 }>(), {
-    showTags: false,
+    showTags: true,
 })
 
-const calculateAcRate = (accepted: number, total: number) => {
-    if (!total) return 0
-    return Number(((accepted / total) * 100).toFixed(1))
-}
+const staticTag = 'inline-flex h-[22px] items-center whitespace-nowrap rounded-md border border-border bg-card px-2 font-mono text-[11.5px] text-foreground'
+
+// One decimal, or "-" when nobody has submitted yet.
+const acceptance = (p: Problem) =>
+    p.totalSubmission ? `${((p.acceptedSubmission / p.totalSubmission) * 100).toFixed(1)}%` : '-'
 </script>
-<style scoped>
-/* Override progress indicator color based on parent class if needed, or keeping it simple for now */
-</style>

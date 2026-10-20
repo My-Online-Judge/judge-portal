@@ -4,6 +4,11 @@ import { getDeviceId } from '@/lib/deviceId'
 import { API_ROUTES } from '@/constants/apiPath'
 import { createRefreshOn401 } from './refreshSession'
 import { API_BASE_URL } from './baseUrl'
+import { shouldAnnounceSessionExpiry, sessionExpiredLoginTarget } from './sessionExpired'
+import { useToast } from '@/composables/useToast'
+import { useLoginPrompt } from '@/composables/useLoginPrompt'
+
+export { API_BASE_URL }
 
 // Auth rides on the HttpOnly accessToken cookie the API sets during the Google
 // callback. JS cannot read it (that is the point), so there is no token to attach
@@ -33,7 +38,26 @@ const handleUnauthorized = createRefreshOn401({
         const { useAuthStore } = await import('@/stores/auth')
         // Clear local state only. No navigation — the router guard sends the user to
         // /admin/login if they touch a gated route, and a public visitor stays put.
-        await useAuthStore().logout({ reload: false, notifyServer: false })
+        const auth = useAuthStore()
+        const wasAuthenticated = auth.isAuthenticated
+        await auth.logout({ reload: false, notifyServer: false })
+        if (!shouldAnnounceSessionExpiry(wasAuthenticated)) return
+        useToast().error('Your session expired', {
+            description: 'Log in again to keep working.',
+            action: {
+                label: 'Log in',
+                onClick: () => {
+                    void (async () => {
+                        // Lazy too: the router imports pages that import this module.
+                        const { default: router } = await import('@/router')
+                        const here = router.currentRoute.value.fullPath
+                        const target = sessionExpiredLoginTarget(here)
+                        if (target) await router.push(target)
+                        else useLoginPrompt().request()
+                    })()
+                },
+            },
+        })
     },
 })
 

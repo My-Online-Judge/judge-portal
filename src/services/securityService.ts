@@ -1,4 +1,4 @@
-import axiosClient from '@/api/axiosClient'
+import axiosClient, { API_BASE_URL } from '@/api/axiosClient'
 import type { AxiosResponse } from 'axios'
 import type { ApiResponse } from '@/types/common'
 import type { LoginAttempt, AccessBan, AttemptListParams, CreateBanPayload } from '@/types/security'
@@ -23,6 +23,16 @@ class SecurityService {
 
     deleteBan(id: string): Promise<AxiosResponse<ApiResponse<void>>> {
         return axiosClient.delete<ApiResponse<void>>(API_ROUTES.SECURITY.BAN(id))
+    }
+
+    // Same delete for page unload: fetch with keepalive survives the tab closing (axios/XHR does not).
+    // No body, so no Content-Type (as with the axios call), which also avoids a CORS preflight.
+    deleteBanKeepalive(id: string): void {
+        void fetch(API_BASE_URL + API_ROUTES.SECURITY.BAN(id), {
+            method: 'DELETE',
+            credentials: 'include',
+            keepalive: true,
+        }).catch(() => undefined)
     }
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { refreshStatsUntilChanged, type ProblemStats } from '@/lib/problemStats'
+import { OTHER_VERDICTS, refreshStatsUntilChanged, verdictSlices, type ProblemStats } from '@/lib/problemStats'
 
 const stats = (total: number, accepted = 0): ProblemStats => ({
   totalSubmission: total,
@@ -41,5 +41,48 @@ describe('refreshStatsUntilChanged', () => {
     const fetchStats = vi.fn().mockRejectedValue(new Error('network'))
 
     await expect(refreshStatsUntilChanged(fetchStats, 10, { sleep: vi.fn() })).resolves.toBeNull()
+  })
+})
+
+describe('verdictSlices', () => {
+  it('verdictSlicesCanonicalOrder', () => {
+    const shuffled = { '5': 1, '-2': 2, '4': 3, '3': 4, '1': 5, '-1': 6, '0': 7 }
+
+    expect(verdictSlices(shuffled, 28, 7)).toEqual([
+      { status: 0, count: 7 },
+      { status: -1, count: 6 },
+      { status: 1, count: 5 },
+      { status: 3, count: 4 },
+      { status: 4, count: 3 },
+      { status: -2, count: 2 },
+      { status: 5, count: 1 },
+    ])
+    // Verdicts nobody got keep their row, with a zero count.
+    expect(verdictSlices({ '-1': 3, '0': 2 }, 5, 2).map((s) => s.count)).toEqual([2, 3, 0, 0, 0, 0, 0])
+  })
+
+  it('verdictSlicesSumsBothTle', () => {
+    const slices = verdictSlices({ '0': 2, '1': 3, '2': 4 }, 9, 2)
+
+    expect(slices.find((s) => s.status === 1)).toEqual({ status: 1, count: 7 })
+    expect(slices.some((s) => s.status === 2)).toBe(false)
+  })
+
+  it('verdictSlicesFallback', () => {
+    const fallback = [
+      { status: 0, count: 4 },
+      { status: OTHER_VERDICTS, count: 6 },
+    ]
+
+    expect(verdictSlices({}, 10, 4)).toEqual(fallback)
+    expect(verdictSlices(undefined, 10, 4)).toEqual(fallback)
+  })
+
+  it('keeps partially accepted counts after the canonical seven', () => {
+    const slices = verdictSlices({ '0': 1, '8': 2 }, 3, 1)
+
+    expect(slices).toHaveLength(8)
+    expect(slices.at(-1)).toEqual({ status: 8, count: 2 })
+    expect(verdictSlices({ '0': 1, '8': 0 }, 1, 1)).toHaveLength(7)
   })
 })

@@ -1,5 +1,5 @@
 <template>
-  <!-- Admin renders its own full-height shell — no site Header/footer/max-width chrome. -->
+  <!-- Admin renders its own full-height shell, no site Header/footer/max-width chrome. -->
   <RouterView v-if="isAdmin" />
 
   <div v-else class="flex min-h-screen flex-col bg-background text-foreground">
@@ -10,7 +10,7 @@
     </main>
 
     <footer class="border-t border-border py-8 text-center">
-      <p class="text-sm text-muted-foreground">MyOJ — practice, submit, get judged in real time.</p>
+      <p class="text-sm text-muted-foreground">MyOJ. Practice, submit and get judged in real time.</p>
       <p class="mt-1 text-xs text-muted-foreground/60">© {{ new Date().getFullYear() }} MyOJ</p>
     </footer>
   </div>
@@ -46,7 +46,7 @@ onMounted(() => {
     localStorage.removeItem('loginRedirectUrl')
 
     if (login !== 'ok') {
-        triggerToast('Login failed. Please try again.', 'error')
+        triggerToast('Login failed. Try again.', 'error')
         return
     }
 

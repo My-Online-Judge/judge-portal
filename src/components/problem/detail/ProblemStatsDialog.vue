@@ -3,103 +3,152 @@
         <DialogTrigger as-child>
             <slot />
         </DialogTrigger>
-        <DialogContent class="sm:max-w-[560px]">
-            <DialogHeader>
-                <DialogTitle>Submission statistics</DialogTitle>
+        <DialogContent class="gap-0 overflow-hidden p-0 sm:max-w-[520px]">
+            <DialogHeader class="gap-1 px-5 pt-[18px] pr-12 pb-4 text-left">
+                <DialogTitle class="text-base leading-snug font-semibold">{{ problem.title }}</DialogTitle>
+                <DialogDescription class="text-[13px]">{{ submissionsLabel }}, by verdict</DialogDescription>
             </DialogHeader>
-            <div v-if="!detailTotal" class="flex h-52 items-center justify-center text-sm text-muted-foreground">
-                No submissions yet
-            </div>
-            <div v-else class="grid gap-8 pt-2 sm:grid-cols-[200px_1fr] sm:items-center">
-                <div class="relative mx-auto h-48 w-48">
-                    <Doughnut :data="detailData" :options="donutOptions" />
-                    <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                        <span class="tabular text-3xl font-semibold text-foreground">{{ detailTotal }}</span>
-                        <span class="text-[11px] uppercase tracking-wide text-muted-foreground">submissions</span>
-                    </div>
+
+            <div class="px-5 pb-5">
+                <div v-if="!total" class="flex h-40 items-center justify-center text-sm text-muted-foreground">
+                    No submissions yet
                 </div>
-                <ul class="divide-y divide-border">
-                    <li v-for="row in breakdown" :key="row.key" class="flex items-center gap-3 py-2">
-                        <span class="h-2.5 w-2.5 shrink-0 rounded-[3px]" :style="{ backgroundColor: row.color }"></span>
-                        <span class="flex-1 text-sm text-foreground">{{ row.fullName }}</span>
-                        <span class="tabular text-sm text-muted-foreground">{{ row.count }}</span>
-                        <span class="tabular w-12 text-right text-sm font-medium text-foreground">{{ row.pct }}%</span>
-                    </li>
-                </ul>
+                <div v-else class="flex flex-wrap items-center gap-5">
+                    <div class="relative size-[168px] flex-none">
+                        <Doughnut :data="chartData" :options="chartOptions" :aria-label="chartLabel" />
+                        <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"
+                            aria-hidden="true">
+                            <b class="tabular font-mono text-[22px] leading-tight font-semibold tracking-[-0.03em]">{{ acceptedPct }}%</b>
+                            <span class="text-[11.5px] text-muted-foreground">accepted of {{ total }}</span>
+                        </div>
+                    </div>
+                    <table class="min-w-0 flex-[1_1_200px] border-collapse text-[12.5px]">
+                        <caption class="sr-only">Submissions by verdict</caption>
+                        <thead class="sr-only">
+                            <tr>
+                                <th scope="col">Verdict</th>
+                                <th scope="col">Submissions</th>
+                                <th scope="col">Share</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="row in rows" :key="row.status" class="border-b border-border last:border-b-0">
+                                <td class="px-1.5 py-1 whitespace-nowrap">
+                                    <span class="inline-flex items-center gap-2">
+                                        <span class="size-2.5 flex-none rounded-[3px]" :style="{ backgroundColor: row.color }"
+                                            aria-hidden="true" />
+                                        <VerdictChip v-if="row.status !== OTHER_VERDICTS" :status="row.status" size="sm"
+                                            aria-hidden="true" />
+                                        {{ row.name }}
+                                    </span>
+                                </td>
+                                <td class="tabular px-1.5 py-1 text-right font-mono">{{ row.count }}</td>
+                                <td class="tabular px-1.5 py-1 text-right font-mono text-muted-foreground">{{ row.pct }}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
+
+            <DialogFooter class="items-center border-t bg-muted/55 px-5 py-3.5 sm:justify-between">
+                <span class="text-xs text-muted-foreground">Counts update when a submission is judged.</span>
+                <DialogClose as-child>
+                    <Button variant="secondary">Close</Button>
+                </DialogClose>
+            </DialogFooter>
         </DialogContent>
     </Dialog>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { type Problem, SubmissionStatus, STATUS_CONFIG } from '@/types/problem'
-import { Chart as ChartJS, ArcElement, Tooltip as ChartTooltip, Legend, DoughnutController } from 'chart.js'
+import { usePreferredReducedMotion } from '@vueuse/core'
+import { Chart as ChartJS, ArcElement, DoughnutController, type ChartData, type ChartOptions } from 'chart.js'
 import { Doughnut } from 'vue-chartjs'
+import { Button } from '@/components/ui/button'
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog'
+import VerdictChip from '@/components/common/VerdictChip.vue'
+import { useTheme } from '@/composables/useTheme'
+import { OTHER_VERDICTS, verdictSlices } from '@/lib/problemStats'
+import { verdictMeta, type VerdictTone } from '@/lib/verdict'
+import type { Problem } from '@/types/problem'
 
-ChartJS.register(ArcElement, ChartTooltip, Legend, DoughnutController)
+ChartJS.register(ArcElement, DoughnutController)
 
 const props = defineProps<{ problem: Problem }>()
 
-const acColor = STATUS_CONFIG[SubmissionStatus.SUCCESS].color
-const acCount = computed(() => props.problem.acceptedSubmission || 0)
-const otherCount = computed(() => Math.max(0, (props.problem.totalSubmission || 0) - acCount.value))
+const { isDark } = useTheme()
+const reducedMotion = usePreferredReducedMotion()
 
-// Flat donut, no floating labels or tooltip — the accompanying list already
-// shows every value, and a tooltip only clips the small centered chart.
-const donutOptions = {
+const total = computed(() => props.problem.totalSubmission || 0)
+const share = (count: number) => (total.value ? ((count / total.value) * 100).toFixed(1) : '0.0')
+const acceptedPct = computed(() => share(props.problem.acceptedSubmission || 0))
+const submissionsLabel = computed(() => `${total.value} ${total.value === 1 ? 'submission' : 'submissions'}`)
+const chartLabel = computed(
+    () => `Submissions by verdict, ${total.value} total. Accepted ${acceptedPct.value} percent.`,
+)
+
+// Chart colors are the verdict mark tokens, read from the page. They differ per theme, so read them again
+// when the theme flips.
+const cssVar = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+const palette = computed(() => {
+    void isDark.value
+    return { tone: (tone: VerdictTone) => cssVar(`--v-${tone}`), card: cssVar('--card') }
+})
+
+const rows = computed(() => {
+    const slices = verdictSlices(
+        props.problem.statisticInfo as Record<string, number> | undefined,
+        total.value,
+        props.problem.acceptedSubmission || 0,
+    )
+    return slices.map(({ status, count }) => {
+        const other = status === OTHER_VERDICTS
+        const meta = verdictMeta(status)
+        return {
+            status,
+            count,
+            name: other ? 'Other verdicts' : meta.name,
+            color: palette.value.tone(other ? 'pending' : meta.tone),
+            pct: share(count),
+        }
+    })
+})
+
+const chartData = computed<ChartData<'doughnut'>>(() => {
+    const colors = rows.value.map((r) => r.color)
+    return {
+        labels: rows.value.map((r) => r.name),
+        datasets: [{
+            data: rows.value.map((r) => r.count),
+            backgroundColor: colors,
+            hoverBackgroundColor: colors,
+            borderColor: palette.value.card,
+            hoverBorderColor: palette.value.card,
+            borderWidth: 2,
+        }],
+    }
+})
+
+// A static ring: the table beside it lists every value, so no tooltip, legend or hover.
+const chartOptions = computed<ChartOptions<'doughnut'>>(() => ({
     responsive: true,
     maintainAspectRatio: false,
-    cutout: '70%',
+    cutout: '72%',
+    events: [],
+    ...(reducedMotion.value === 'reduce' ? { animation: false as const } : {}),
     plugins: {
         legend: { display: false },
         tooltip: { enabled: false },
     },
-}
-
-// Per-status breakdown from statisticInfo, falling back to AC / Others from the summary.
-const breakdown = computed(() => {
-    const info = props.problem.statisticInfo || {}
-    const order = [
-        SubmissionStatus.SUCCESS,
-        SubmissionStatus.WRONG_ANSWER,
-        SubmissionStatus.TIME_LIMIT_EXCEEDED,
-        SubmissionStatus.REAL_TIME_LIMIT_EXCEEDED,
-        SubmissionStatus.MEMORY_LIMIT_EXCEEDED,
-        SubmissionStatus.RUNTIME_ERROR,
-        SubmissionStatus.COMPILE_ERROR,
-        SubmissionStatus.PARTIALLY_ACCEPTED,
-        SubmissionStatus.SYSTEM_ERROR,
-    ]
-    let rows = order
-        .map((s) => ({
-            key: String(s),
-            fullName: STATUS_CONFIG[s]?.fullName ?? String(s),
-            color: STATUS_CONFIG[s]?.color ?? '#94a3b8',
-            count: Number(info[String(s)] || 0),
-        }))
-        .filter((r) => r.count > 0)
-
-    if (rows.length === 0 && (props.problem.totalSubmission || 0) > 0) {
-        rows = [
-            { key: 'ac', fullName: 'Accepted', color: acColor, count: acCount.value },
-            { key: 'other', fullName: 'Other verdicts', color: '#e2544e', count: otherCount.value },
-        ].filter((r) => r.count > 0)
-    }
-
-    const total = rows.reduce((sum, r) => sum + r.count, 0)
-    return rows.map((r) => ({ ...r, pct: total ? Number(((r.count / total) * 100).toFixed(1)) : 0 }))
-})
-
-const detailTotal = computed(() => breakdown.value.reduce((sum, r) => sum + r.count, 0))
-
-const detailData = computed(() => ({
-    labels: breakdown.value.map((r) => r.fullName),
-    datasets: [{
-        backgroundColor: breakdown.value.map((r) => r.color),
-        data: breakdown.value.map((r) => r.count),
-        borderWidth: 0,
-    }],
 }))
 </script>

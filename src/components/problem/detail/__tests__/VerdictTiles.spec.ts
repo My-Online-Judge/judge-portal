@@ -51,7 +51,47 @@ describe('VerdictTiles', () => {
     })
     it('passedCountInSummary', () => {
         const w = mountIt(sub({ status: -1, result: -1, details: [tc('1'), tc('2', { result: -1 }), tc('3')] }))
-        expect(w.get('[data-test="summary-count"]').text()).toBe('2 / 3')
-        expect(w.get('[data-test="tile-2"]').attributes('aria-label')).toContain('Test 2, hidden, Wrong Answer')
+        expect(w.get('[data-test="summary-count"]').text()).toBe('2/3 tests')
+        expect(w.get('[data-test="tile-2"]').attributes('aria-label')).toBe('Test 2: Wrong answer, hidden')
+    })
+    it('hiddenTileIsNotAButton', () => {
+        const w = mountIt(sub({ status: -1, result: -1, details: [tc('2', { result: -1 })] }))
+        const tile = w.get('[data-test="tile-2"]')
+        expect(tile.element.tagName).not.toBe('BUTTON')
+        expect(tile.attributes('role')).toBe('listitem')
+        expect(tile.attributes('aria-label')?.endsWith('hidden')).toBe(true)
+        expect(w.findAll('[data-test="tile-2"] button')).toHaveLength(0)
+    })
+    it('sampleTileOpensDetail', async () => {
+        const w = mountIt(sub({ status: 0, result: 0, details: [tc('1', { sample: true, input: 'i', expectedOutput: 'e', actualOutput: 'e' })] }))
+        const tile = w.get('button[data-test="tile-1"]')
+        expect(tile.attributes('aria-pressed')).toBe('true')
+        await tile.trigger('click')
+        expect(w.find('[data-test="detail-pane"]').exists()).toBe(true)
+    })
+    it('headerUsesVerdictTitle', () => {
+        const w = mountIt(sub({ status: -1, result: -1, details: [tc('6'), tc('7', { result: -1 })] }))
+        expect(w.text()).toContain('Wrong answer on test 7')
+    })
+    it('detailShowsDiffLine', () => {
+        const w = mountIt(sub({ status: -1, result: -1, details: [tc('1', { result: -1, sample: true, input: 'i', expectedOutput: '1\n2', actualOutput: '1\n3' })] }))
+        expect(w.text()).toContain('Differs on line 2')
+    })
+    it('sampleTilesKeepButtonSemanticsAndSelectionState', async () => {
+        const w = mountIt(sub({ status: -1, result: -1, details: [
+            tc('1', { result: -1, sample: true, input: 'i', expectedOutput: 'e', actualOutput: 'x' }),
+            tc('2', { sample: true, input: 'i', expectedOutput: 'e', actualOutput: 'e' }),
+        ] }))
+        const buttons = w.findAll('button[data-test^="tile-"]')
+        expect(buttons).toHaveLength(2)
+        for (const b of buttons) {
+            expect(b.attributes('role')).toBeUndefined()
+            expect(b.element.parentElement?.getAttribute('role')).toBe('listitem')
+        }
+        expect(buttons[0].attributes('aria-pressed')).toBe('true')
+        expect(buttons[1].attributes('aria-pressed')).toBe('false')
+        await buttons[1].trigger('click')
+        expect(buttons[0].attributes('aria-pressed')).toBe('false')
+        expect(buttons[1].attributes('aria-pressed')).toBe('true')
     })
 })

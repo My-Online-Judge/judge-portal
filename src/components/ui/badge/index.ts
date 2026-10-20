@@ -3,23 +3,30 @@ import { cva } from "class-variance-authority"
 
 export { default as Badge } from "./Badge.vue"
 
+const neutral = "border-border bg-muted text-foreground"
+const primary = "border-transparent bg-primary-soft text-info-ink"
+const danger = "border-transparent bg-destructive-soft text-destructive-ink"
+
 export const badgeVariants = cva(
-  "inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
+  "inline-flex h-[22px] items-center justify-center rounded-md border px-2 text-xs font-medium leading-none w-fit whitespace-nowrap shrink-0 [&>svg]:size-[13px] gap-[5px] [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
   {
     variants: {
       variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
-        destructive:
-         "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
-        outline:
-          "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+        neutral,
+        primary,
+        success: "border-transparent bg-success-soft text-success-ink",
+        warning: "border-transparent bg-warning-soft text-warning-ink",
+        danger,
+        outline: "border-input bg-transparent text-foreground",
+        mono: "border-border bg-muted font-mono text-[11.5px] text-foreground",
+        // Aliases kept for existing call sites.
+        default: primary,
+        secondary: neutral,
+        destructive: danger,
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "neutral",
     },
   },
 )

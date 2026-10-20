@@ -5,16 +5,25 @@
   <meta charset="UTF-8">
   <link rel="icon" href="/favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="An online judge for competitive programming — submit, run against test cases, and get verdicts in real time.">
+  <meta name="description" content="An online judge for competitive programming. Submit your code, run it against test cases and get verdicts in real time.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
     rel="stylesheet">
-  <title>My OJ — online judge</title>
+  <title>My OJ, online judge</title>
 </head>
 
 <body>
+  <script>
+    (function () {
+      try {
+        var m = localStorage.getItem('theme');
+        var d = m === 'dark' || ((m !== 'light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', d);
+      } catch (e) {}
+    })();
+  </script>
   <div id="app"></div>
   <script type="module" src="/src/main.ts"></script>
 </body>

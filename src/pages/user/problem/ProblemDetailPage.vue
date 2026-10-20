@@ -9,60 +9,83 @@
         </div>
 
         <template v-else-if="problem">
-            <!-- Header -->
-            <div class="mb-4 space-y-3">
+            <!-- Page head: back link, title, meta bar (opens the statistics), tags -->
+            <div class="mb-4 flex flex-col gap-3">
                 <RouterLink :to="ROUTE_PATH.PROBLEM"
-                    class="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground">
-                    <ChevronLeft class="h-4 w-4" /> Problems
+                    class="inline-flex items-center gap-1 self-start text-[13px] text-muted-foreground hover:text-foreground">
+                    <ChevronLeft class="size-4" aria-hidden="true" /> Problems
                 </RouterLink>
                 <ProblemHeader :problem="problem" />
-                <ProblemMetaBar :problem="problem" />
             </div>
 
-            <!-- Desktop: resizable split-pane (statement | solve) -->
+            <!-- 900 px and up: resizable split-pane (statement | solve) -->
             <div v-if="isDesktop"
-                class="h-[calc(100vh-15rem)] min-h-[560px] overflow-hidden rounded-xl border border-border bg-card">
+                class="h-[calc(100vh-15rem)] min-h-[560px] overflow-hidden rounded-xl border border-border bg-background">
                 <ResizablePanelGroup direction="horizontal" auto-save-id="problem-detail-split">
-                    <ResizablePanel :default-size="46" :min-size="30">
-                        <StatementPane :problem="problem" :slug="slug" :pending-submission="pendingSubmission"
-                            @consumed="pendingSubmission = null" />
+                    <ResizablePanel ref="statementPanel" :default-size="SPLIT_DEFAULT" :min-size="30">
+                        <section aria-label="Problem" class="h-full">
+                            <StatementPane :problem="problem" :slug="slug" :pending-submission="pendingSubmission"
+                                @consumed="pendingSubmission = null" />
+                        </section>
                     </ResizablePanel>
-                    <ResizableHandle with-handle />
-                    <ResizablePanel :default-size="54" :min-size="30">
-                        <SolvePane :slug="slug" @success="handleSubmissionSuccess" @judged="refreshStats" />
+                    <ResizableHandle with-handle aria-label="Resize panes" @dblclick="resetSplit"
+                        @keydown.enter.prevent="resetSplit" />
+                    <ResizablePanel :default-size="100 - SPLIT_DEFAULT" :min-size="30">
+                        <section aria-label="Code" class="h-full">
+                            <SolvePane :slug="slug" @success="handleSubmissionSuccess" @judged="refreshStats" />
+                        </section>
                     </ResizablePanel>
                 </ResizablePanelGroup>
             </div>
 
-            <!-- Narrow: segmented toggle, one pane at a time -->
-            <div v-else class="overflow-hidden rounded-xl border border-border bg-card">
-                <div class="flex gap-1 border-b border-border p-1.5">
-                    <button v-for="v in mobileViews" :key="v.key" type="button" @click="mobileView = v.key"
-                        class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
-                        :class="mobileView === v.key ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'">
-                        {{ v.label }}
-                    </button>
+            <!-- Narrower: a Problem | Code switch. Both views stay mounted, so the editor, the console and its
+                 verdict stream survive the switch; the submit bar is pinned to the bottom in both. -->
+            <div v-else>
+                <div class="overflow-hidden rounded-xl border border-border bg-card">
+                    <div class="border-b border-border px-3 py-2">
+                        <div role="tablist" aria-label="View"
+                            class="flex gap-0.5 rounded-lg border border-border bg-muted p-0.5" @keydown="onViewKeydown">
+                            <button v-for="v in mobileViews" :id="`problem-view-tab-${v.key}`" :key="v.key" type="button"
+                                role="tab" :aria-selected="mobileView === v.key"
+                                :aria-controls="`problem-view-${v.key}`" :tabindex="mobileView === v.key ? 0 : -1"
+                                class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 py-1 text-[12.5px] font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-selected:bg-card aria-selected:text-foreground aria-selected:shadow-[var(--shadow-sm)]"
+                                @click="mobileView = v.key">
+                                <component :is="v.icon" class="size-[15px]" aria-hidden="true" />
+                                {{ v.label }}
+                            </button>
+                        </div>
+                    </div>
+                    <div class="h-[calc(100dvh-10rem)] min-h-[420px]">
+                        <div v-show="mobileView === 'problem'" id="problem-view-problem" role="tabpanel"
+                            aria-labelledby="problem-view-tab-problem" class="h-full">
+                            <StatementPane :problem="problem" :slug="slug" :pending-submission="pendingSubmission"
+                                @consumed="pendingSubmission = null" />
+                        </div>
+                        <div v-show="mobileView === 'code'" id="problem-view-code" role="tabpanel"
+                            aria-labelledby="problem-view-tab-code" class="h-full">
+                            <SolvePane :slug="slug" :submit-bar-to="`#${SUBMIT_BAR_ID}`"
+                                @success="handleSubmissionSuccess" @judged="refreshStats" />
+                        </div>
+                    </div>
                 </div>
-                <div class="h-[70vh] min-h-[520px]">
-                    <StatementPane v-if="mobileView === 'problem'" :problem="problem" :slug="slug"
-                        :pending-submission="pendingSubmission" @consumed="pendingSubmission = null" />
-                    <SolvePane v-else :slug="slug" @success="handleSubmissionSuccess" @judged="refreshStats" />
-                </div>
+                <!-- ProblemSubmit renders its submit bar in here. Full width, above the safe area. -->
+                <div :id="SUBMIT_BAR_ID" ref="submitBarEl"
+                    class="sticky bottom-0 z-30 -mx-4 bg-card pb-[env(safe-area-inset-bottom,0px)] md:-mx-6" />
             </div>
         </template>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, watchEffect, onBeforeUnmount, provide } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
-import { useMediaQuery } from '@vueuse/core'
-import { ChevronLeft } from 'lucide-vue-next'
+import { useElementSize, useMediaQuery } from '@vueuse/core'
+import { ChevronLeft, CodeXml, FileText } from 'lucide-vue-next'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import ProblemHeader from '@/components/problem/detail/ProblemHeader.vue'
-import ProblemMetaBar from '@/components/problem/detail/ProblemMetaBar.vue'
 import StatementPane from '@/components/problem/detail/StatementPane.vue'
 import { refreshStatsUntilChanged } from '@/lib/problemStats'
+import { SHOW_CONSOLE } from '@/lib/consoleReveal'
 import SolvePane from '@/components/problem/detail/SolvePane.vue'
 import Loading from '@/components/common/Loading.vue'
 import { ROUTE_PATH } from '@/constants/routePath'
@@ -76,12 +99,48 @@ const route = useRoute()
 const slug = computed(() => route.params.slug as string)
 const pendingSubmission = ref<Submission | null>(null)
 
-const isDesktop = useMediaQuery('(min-width: 1024px)')
-const mobileView = ref<'problem' | 'code'>('problem')
+const isDesktop = useMediaQuery('(min-width: 900px)')
+
+// Desktop split. Double-click or Enter on the divider puts it back to the default; reka keeps the arrow keys.
+const SPLIT_DEFAULT = 46
+const statementPanel = ref<{ resize: (size: number) => void } | null>(null)
+const resetSplit = () => statementPanel.value?.resize(SPLIT_DEFAULT)
+
+// Narrow screens: the Problem | Code switch (a tablist; arrows, Home and End move between the two).
+type MobileView = 'problem' | 'code'
+const mobileView = ref<MobileView>('problem')
 const mobileViews = [
-    { key: 'problem' as const, label: 'Problem' },
-    { key: 'code' as const, label: 'Code' },
+    { key: 'problem' as const, label: 'Problem', icon: FileText },
+    { key: 'code' as const, label: 'Code', icon: CodeXml },
 ]
+// The verdict console lives in the Code view; the verdict toast's View switches there before scrolling to it.
+provide(SHOW_CONSOLE, () => {
+    if (!isDesktop.value) mobileView.value = 'code'
+})
+const onViewKeydown = (e: KeyboardEvent) => {
+    const at = mobileViews.findIndex((v) => v.key === mobileView.value)
+    const moves: Record<string, number> = { ArrowLeft: at - 1, ArrowRight: at + 1, Home: 0, End: mobileViews.length - 1 }
+    const next = moves[e.key]
+    if (next === undefined) return
+    e.preventDefault()
+    const view = mobileViews[(next + mobileViews.length) % mobileViews.length]!
+    mobileView.value = view.key
+    document.getElementById(`problem-view-tab-${view.key}`)?.focus()
+}
+
+// The pinned submit bar covers the bottom of the screen, so lift the toasts above it while it is shown.
+const SUBMIT_BAR_ID = 'problem-submit-bar'
+const submitBarEl = ref<HTMLElement | null>(null)
+const { height: submitBarHeight } = useElementSize(submitBarEl)
+const rootStyle = document.documentElement.style
+watchEffect(() => {
+    if (!isDesktop.value && submitBarHeight.value > 0) {
+        rootStyle.setProperty('--toast-offset', `${Math.round(submitBarHeight.value)}px`)
+    } else {
+        rootStyle.removeProperty('--toast-offset')
+    }
+})
+onBeforeUnmount(() => rootStyle.removeProperty('--toast-offset'))
 
 const {
     data: problem,

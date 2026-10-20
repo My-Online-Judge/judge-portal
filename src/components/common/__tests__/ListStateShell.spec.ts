@@ -18,7 +18,7 @@ describe('ListStateShell', () => {
   it('defaultSkeletonRenders', () => {
     const w = mountShell({ loading: true })
     expect(w.find('[data-test="rows"]').exists()).toBe(false)
-    expect(w.find('.animate-ojpulse').exists()).toBe(true)
+    expect(w.find('.sk').exists()).toBe(true)
   })
 
   it('errorWithoutDataShowsErrorCard', () => {
@@ -37,7 +37,7 @@ describe('ListStateShell', () => {
     const w = mountShell({ loading: true, hasData: true, error: 'x' })
     expect(w.find('[data-test="rows"]').exists()).toBe(true)
     const wrap = w.get('[aria-busy="true"]')
-    expect(wrap.classes()).toContain('opacity-60')
+    expect(wrap.classes()).toContain('ls-refetching')
   })
 
   it('errorWithDataShowsInlineBannerAboveRows', async () => {
@@ -69,5 +69,36 @@ describe('ListStateShell', () => {
     const w = mountShell({ error: 'boom' }, { ...slots, error: '<template #error="{ retry }"><button data-test="r" @click="retry">r</button></template>' })
     await w.get('[data-test="r"]').trigger('click')
     expect(w.emitted('retry')).toHaveLength(1)
+  })
+
+  it('skeletonRendersRequestedRows', () => {
+    const w = mountShell({ loading: true, rows: 6 })
+    expect(w.findAll('.sk')).toHaveLength(6)
+  })
+
+  it('refetchShowsProgressbarAndKeepsRows', () => {
+    const w = mountShell({ loading: true, hasData: true })
+    const bar = w.get('[role="progressbar"]')
+    expect(bar.attributes('aria-label')).toBe('Refreshing')
+    expect(w.find('[data-test="rows"]').exists()).toBe(true)
+    expect(w.get('[aria-busy="true"]').exists()).toBe(true)
+    expect(mountShell({ hasData: true }).find('[role="progressbar"]').exists()).toBe(false)
+  })
+
+  it('filteredEmptyEmitsClearFilters', async () => {
+    const w = mountShell({ hasData: true, empty: true, filtered: true, filterSummary: 'quy hoạch' })
+    expect(w.text()).toContain('No results match quy hoạch')
+    await w.get('button').trigger('click')
+    expect(w.emitted('clear-filters')).toHaveLength(1)
+  })
+
+  it('filteredEmptyWithoutSummarySaysYourFilters', () => {
+    const w = mountShell({ hasData: true, empty: true, filtered: true })
+    expect(w.get('h4').text()).toBe('No results match your filters')
+  })
+
+  it('errorWithDataStripCopy', () => {
+    const w = mountShell({ hasData: true, error: 'x' })
+    expect(w.get('[role="alert"]').text()).toContain("Couldn't refresh. Showing the last results.")
   })
 })

@@ -4,7 +4,7 @@
             <DialogHeader>
                 <DialogTitle>{{ mode === 'add' ? 'Add test case' : 'Edit test case' }}</DialogTitle>
                 <DialogDescription v-if="oversized">
-                    Too large to edit here — replace the files.
+                    Too large to edit here. Replace the files instead.
                 </DialogDescription>
                 <DialogDescription v-else-if="useFiles">
                     Choose the input and expected output files.

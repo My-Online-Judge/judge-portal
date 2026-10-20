@@ -15,9 +15,9 @@
                 <div v-if="submission" class="space-y-3">
                     <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                         <span>{{ submission.language?.name }}</span>
-                        <span class="tabular">{{ submission.cpuTime != null ? `${submission.cpuTime} ms` : '—' }}</span>
+                        <span class="tabular">{{ submission.cpuTime != null ? `${submission.cpuTime} ms` : '-' }}</span>
                         <span class="tabular">
-                            {{ submission.memory ? `${(submission.memory / (1024 * 1024)).toFixed(1)} MB` : '—' }}
+                            {{ submission.memory ? `${(submission.memory / (1024 * 1024)).toFixed(1)} MB` : '-' }}
                         </span>
                     </div>
                     <VerdictTiles :submission="submission" />

@@ -1,19 +1,25 @@
 <template>
-    <section class="rounded-xl border border-border bg-card">
+    <section
+        class="relative min-w-0 overflow-hidden rounded-xl border border-border bg-card"
+        :class="dragging && 'ring-2 ring-primary'"
+        aria-labelledby="tc-title"
+        @dragenter="onDragOver"
+        @dragover="onDragOver"
+        @dragleave="onDragLeave"
+        @drop="onDrop"
+    >
         <!-- Panel header -->
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5">
-            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h3 class="text-base font-medium text-foreground">Test cases</h3>
-                <span v-if="!loading && !loadError" class="text-sm text-muted-foreground">{{ summary }}</span>
-            </div>
-            <div v-if="canManage" class="flex flex-wrap items-center gap-2">
-                <Button size="sm" :disabled="busy" @click="openAdd">
+        <div class="flex flex-wrap items-center gap-2.5 border-b border-border px-3.5 py-3">
+            <h3 id="tc-title" class="text-sm font-semibold text-foreground">Test cases</h3>
+            <span v-if="loaded && !loadError" class="text-xs text-muted-foreground tabular-nums">{{ summary }}</span>
+            <div v-if="canManage" class="ml-auto flex flex-wrap items-center gap-2">
+                <Button size="sm" variant="secondary" :disabled="busy" @click="zipInput?.click()">
+                    <Upload class="size-4" />
+                    Upload .zip
+                </Button>
+                <Button size="sm" variant="secondary" :disabled="busy" @click="openAdd">
                     <Plus class="size-4" />
                     Add test case
-                </Button>
-                <Button size="sm" variant="outline" :disabled="busy" @click="zipInput?.click()">
-                    <Upload class="size-4" />
-                    Import zip…
                 </Button>
                 <input
                     ref="zipInput"
@@ -21,62 +27,81 @@
                     accept=".zip"
                     class="sr-only"
                     tabindex="-1"
-                    aria-label="Choose test-case zip"
+                    aria-label="Choose a test-case .zip"
                     @change="onZipPick"
                 >
             </div>
         </div>
 
+        <!-- Shown while files are dragged over the card -->
+        <div
+            v-if="dragging"
+            class="pointer-events-none m-2.5 flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-primary bg-primary-soft p-5 text-center text-info-ink"
+            aria-hidden="true"
+        >
+            <FileUp class="size-[22px]" />
+            <b class="text-sm font-semibold">Drop to import</b>
+            <span class="text-xs text-muted-foreground">A .zip with 1.in / 1.out pairs</span>
+        </div>
+
         <ListStateShell
             :loading="loading"
-            :error="loadError ? 'load' : null"
+            :error="loadError ? 'The request failed. Check your connection and try again.' : null"
             :has-data="loaded"
             :empty="testCases.length === 0"
+            :rows="4"
+            empty-title="No test cases yet"
+            :empty-hint="canManage ? 'Add one, or drop a .zip on this card.' : 'None have been added.'"
             @retry="load"
         >
-            <template #empty>
-                <div class="p-5">
-                    <div class="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border px-6 py-10 text-center">
-                        <FileText class="size-6 text-muted-foreground" />
-                        <p class="text-sm text-muted-foreground">No test cases yet — add one or import a zip.</p>
-                    </div>
-                </div>
-            </template>
-
             <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+                <table class="dt min-w-[640px]">
                     <thead>
-                        <tr class="border-b border-border text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                            <th class="px-5 py-2.5">#</th>
-                            <th class="px-3 py-2.5">Sample</th>
-                            <th class="px-3 py-2.5">Input</th>
-                            <th class="px-3 py-2.5">Output</th>
-                            <th v-if="canManage" class="w-12 px-3 py-2.5"><span class="sr-only">Actions</span></th>
+                        <tr>
+                            <th class="w-12 pl-3.5">#</th>
+                            <th>Input</th>
+                            <th>Expected output</th>
+                            <th class="w-[150px]">Visibility</th>
+                            <th v-if="canManage" class="w-11"><span class="sr-only">Actions</span></th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="tc in testCases" :key="tc.id" class="border-b border-border last:border-b-0">
-                            <td class="px-5 py-2.5 align-middle font-mono font-medium text-foreground">{{ tc.name }}</td>
-                            <td class="px-3 py-2.5 align-middle">
-                                <div class="flex items-center gap-2">
+                        <tr v-for="tc in testCases" :key="tc.id">
+                            <td class="h-[52px] pl-3.5 font-mono text-muted-foreground">{{ tc.name }}</td>
+                            <td class="h-[52px] max-w-[16rem]">
+                                <span class="block truncate font-mono text-[11.5px] text-foreground">{{ firstLine(tc.inputPreview) }}</span>
+                                <span class="text-[11px] text-muted-foreground tabular-nums">{{ formatSize(tc.inputSize) }}</span>
+                            </td>
+                            <td class="h-[52px] max-w-[16rem]">
+                                <span class="block truncate font-mono text-[11.5px] text-foreground">{{ firstLine(tc.outputPreview) }}</span>
+                                <span class="text-[11px] text-muted-foreground tabular-nums">{{ formatSize(tc.outputSize) }}</span>
+                            </td>
+                            <td class="h-[52px]">
+                                <span class="flex items-center gap-2 text-[12.5px]">
                                     <Switch
                                         :model-value="tc.sample"
                                         :disabled="!canManage || switching.has(tc.id)"
-                                        :aria-label="`Open test case ${tc.name}`"
+                                        :class="switching.has(tc.id) && 'opacity-60'"
+                                        :aria-label="`Sample test ${tc.name}`"
                                         @update:model-value="(v: boolean) => onToggle(tc, v)"
                                     />
-                                    <span class="w-12 text-xs text-muted-foreground">{{ tc.sample ? 'Sample' : 'Hidden' }}</span>
-                                </div>
+                                    <span class="inline-flex min-w-[50px] items-center gap-[5px]" aria-live="polite">
+                                        <template v-if="switching.has(tc.id)">
+                                            <Loader2 class="size-[13px] animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                                            Saving
+                                        </template>
+                                        <template v-else-if="tc.sample">
+                                            <Eye class="size-[13px]" aria-hidden="true" />
+                                            Sample
+                                        </template>
+                                        <template v-else>
+                                            <Lock class="size-[13px]" aria-hidden="true" />
+                                            Hidden
+                                        </template>
+                                    </span>
+                                </span>
                             </td>
-                            <td class="max-w-[16rem] px-3 py-2.5 align-middle">
-                                <p class="text-[11px] text-muted-foreground">{{ formatSize(tc.inputSize) }}</p>
-                                <p class="truncate font-mono text-xs text-foreground">{{ firstLine(tc.inputPreview) }}</p>
-                            </td>
-                            <td class="max-w-[16rem] px-3 py-2.5 align-middle">
-                                <p class="text-[11px] text-muted-foreground">{{ formatSize(tc.outputSize) }}</p>
-                                <p class="truncate font-mono text-xs text-foreground">{{ firstLine(tc.outputPreview) }}</p>
-                            </td>
-                            <td v-if="canManage" class="px-3 py-2.5 text-right align-middle">
+                            <td v-if="canManage" class="act h-[52px]">
                                 <RowActionsMenu :label="`test case ${tc.name}`" :items="actionsFor(tc)" />
                             </td>
                         </tr>
@@ -85,8 +110,8 @@
             </div>
         </ListStateShell>
 
-        <p v-if="!loadError" class="border-t border-border px-5 py-2.5 text-xs text-muted-foreground">
-            Contestants judge against the new tests from the next submission
+        <p v-if="!loadError" class="border-t border-border px-3.5 py-2.5 text-xs text-muted-foreground">
+            Sample tests are shown to students with their input, expected output and their own output. Hidden tests show only pass or fail.
         </p>
 
         <!-- Add / edit -->
@@ -99,12 +124,12 @@
             @save="onSave"
         />
 
-        <!-- Hidden → open -->
+        <!-- Hidden to sample -->
         <ConfirmDialog
             :open="openOpen"
-            :title="`Make test case ${openTarget?.name ?? ''} open?`"
-            description="Contestants will see its input, expected output and their own output in every submission of this problem, including past ones."
-            confirm-label="Make open"
+            :title="`Make test case ${openTarget?.name ?? ''} a sample?`"
+            description="Students will see its input, expected output and their own output in every submission of this problem, including past ones."
+            confirm-label="Make sample"
             :destructive="false"
             @update:open="(v) => (openOpen = v)"
             @confirm="confirmOpen"
@@ -115,7 +140,7 @@
             :open="deleteOpen"
             :title="`Delete test case ${deleteTarget?.name ?? ''}?`"
             description="The problem is re-packaged without it."
-            confirm-label="Delete"
+            confirm-label="Delete test case"
             :busy="deleting"
             @update:open="(v) => (deleteOpen = v)"
             @confirm="confirmDelete"
@@ -126,7 +151,7 @@
             :open="zipOpen"
             :title="`Import test cases from ${zipName}?`"
             :description="`They are added after the existing ${testCases.length} test cases.`"
-            confirm-label="Import"
+            confirm-label="Import test cases"
             :destructive="false"
             :busy="importing"
             @update:open="(v) => { if (!v) clearZip() }"
@@ -138,7 +163,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, reactive } from 'vue'
 import axios from 'axios'
-import { Plus, Upload, FileText, Pencil, Download, Trash2 } from 'lucide-vue-next'
+import { Download, Eye, FileUp, Loader2, Lock, Pencil, Plus, Trash2, Upload } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
@@ -160,7 +185,7 @@ const props = defineProps<{
     canManage: boolean
 }>()
 
-const { triggerToast } = useToast()
+const { triggerToast, error: errorToast } = useToast()
 
 const testCases = ref<TestCaseSummary[]>([])
 const loading = ref(false)
@@ -192,7 +217,7 @@ const zipFile = ref<File | null>(null)
 const summary = computed(() => {
     const n = testCases.value.length
     const m = testCases.value.filter((t) => t.sample).length
-    return `${n} ${n === 1 ? 'test' : 'tests'} · ${m} sample`
+    return `${n} ${n === 1 ? 'test' : 'tests'}: ${m} sample, ${n - m} hidden`
 })
 
 const firstLine = (s: string) => s.split('\n')[0]
@@ -228,7 +253,7 @@ const replaceRow = (row: TestCaseSummary) => {
     testCases.value = testCases.value.map((t) => (t.id === row.id ? row : t))
 }
 
-// Sample/Hidden switch. The switch is controlled, so a failed request leaves it where it was.
+// Sample/Hidden switch: flips at once and saves right away; a failed request flips it back.
 const onToggle = (tc: TestCaseSummary, value: boolean) => {
     if (value) {
         openTarget.value = tc
@@ -237,14 +262,21 @@ const onToggle = (tc: TestCaseSummary, value: boolean) => {
     else void applySample(tc, false)
 }
 
+const rowOf = (id: string) => testCases.value.find((t) => t.id === id)
+
 const applySample = async (tc: TestCaseSummary, sample: boolean) => {
+    const before = tc.sample
     switching.add(tc.id)
+    replaceRow({ ...(rowOf(tc.id) ?? tc), sample })
     try {
         const res = await testCaseService.setSample(props.slug, tc.id, sample)
         // Merge only the flag: whatever shape the response has, the row keeps its sizes and previews.
-        replaceRow({ ...tc, sample: res.data.data?.sample ?? sample })
+        replaceRow({ ...(rowOf(tc.id) ?? tc), sample: res.data.data?.sample ?? sample })
     } catch (e) {
-        triggerToast(getErrorMessage(e, 'Could not change the test case.'), 'error')
+        replaceRow({ ...(rowOf(tc.id) ?? tc), sample: before })
+        errorToast("Couldn't change the test case", {
+            description: getErrorMessage(e, `Test case ${tc.name} is still ${before ? 'a sample' : 'hidden'}.`),
+        })
     } finally {
         switching.delete(tc.id)
     }
@@ -338,12 +370,43 @@ const confirmDelete = async () => {
     }
 }
 
-const onZipPick = (e: Event) => {
-    zipFile.value = (e.target as HTMLInputElement).files?.[0] ?? null
-    if (zipFile.value) {
-        zipName.value = zipFile.value.name
+const pickZip = (file: File | null) => {
+    zipFile.value = file
+    if (file) {
+        zipName.value = file.name
         zipOpen.value = true
     }
+}
+
+const onZipPick = (e: Event) => pickZip((e.target as HTMLInputElement).files?.[0] ?? null)
+
+// Drop zone: the whole card takes a dragged .zip, through the same confirm as the picker.
+const dragging = ref(false)
+const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files')
+
+const onDragOver = (e: DragEvent) => {
+    if (!props.canManage || busy.value || !hasFiles(e)) return
+    e.preventDefault()
+    dragging.value = true
+}
+
+const onDragLeave = (e: DragEvent) => {
+    const card = e.currentTarget as HTMLElement | null
+    if (card && e.relatedTarget instanceof Node && card.contains(e.relatedTarget)) return
+    dragging.value = false
+}
+
+const onDrop = (e: DragEvent) => {
+    if (!dragging.value) return
+    e.preventDefault()
+    dragging.value = false
+    const file = e.dataTransfer?.files?.[0]
+    if (!file) return
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+        errorToast('Only .zip files can be imported', { description: `${file.name} isn't a .zip.` })
+        return
+    }
+    pickZip(file)
 }
 
 const clearZip = () => {
