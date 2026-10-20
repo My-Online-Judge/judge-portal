@@ -31,6 +31,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import RichTextEditor from '@/components/admin/editor/RichTextEditor.vue'
 import TagInput from '@/components/admin/problem/TagInput.vue'
+import RichContent from '@/components/common/RichContent.vue'
+import { Switch } from '@/components/ui/switch'
 import problemService from '@/services/problemService'
 import { SEED_TAG_VOCABULARY } from '@/lib/tags'
 import { onMounted, onUnmounted, ref } from 'vue'
@@ -63,6 +65,9 @@ onMounted(async () => {
     }
 })
 onUnmounted(() => tagsController.abort())
+
+// Preview renders the statement fields as solvers see them (sanitised, with math) below their editors.
+const preview = ref(false)
 
 const errorFor = (key: string) => props.errors?.[key]
 const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
@@ -199,9 +204,17 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
 
         <!-- Statement -->
         <section class="rounded-xl border border-border bg-card">
-            <div class="border-b border-border px-5 py-3.5">
-                <h3 class="text-base font-medium text-foreground">Statement</h3>
-                <p class="mt-0.5 text-xs text-muted-foreground">The full problem statement, shown to solvers.</p>
+            <div class="flex items-start justify-between gap-4 border-b border-border px-5 py-3.5">
+                <div>
+                    <h3 class="text-base font-medium text-foreground">Statement</h3>
+                    <p class="mt-0.5 text-xs text-muted-foreground">
+                        The full problem statement, shown to solvers. Write math as $x^2$ or $$x^2$$.
+                    </p>
+                </div>
+                <label class="flex shrink-0 items-center gap-2 text-[12.5px] text-muted-foreground">
+                    Preview
+                    <Switch v-model="preview" aria-label="Preview statement" />
+                </label>
             </div>
             <div class="space-y-4 p-5">
                 <div class="space-y-1.5">
@@ -211,6 +224,7 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
                         placeholder="Describe the problem. Use headings, lists and code blocks as needed."
                         @update:model-value="(v) => set('description', v)"
                     />
+                    <RichContent v-if="preview" :html="modelValue.description" class="rounded-lg border border-border bg-background p-4" />
                     <p v-if="errorFor('description')" class="text-xs text-destructive-ink">{{ errorFor('description') }}</p>
                 </div>
 
@@ -221,6 +235,7 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
                         placeholder="Describe the input format."
                         @update:model-value="(v) => set('inputDescription', v)"
                     />
+                    <RichContent v-if="preview" :html="modelValue.inputDescription" class="rounded-lg border border-border bg-background p-4" />
                     <p v-if="errorFor('inputDescription')" class="text-xs text-destructive-ink">{{ errorFor('inputDescription') }}</p>
                 </div>
 
@@ -231,6 +246,7 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
                         placeholder="Describe the expected output."
                         @update:model-value="(v) => set('outputDescription', v)"
                     />
+                    <RichContent v-if="preview" :html="modelValue.outputDescription" class="rounded-lg border border-border bg-background p-4" />
                     <p v-if="errorFor('outputDescription')" class="text-xs text-destructive-ink">{{ errorFor('outputDescription') }}</p>
                 </div>
             </div>
@@ -287,6 +303,7 @@ const invalid = (key: string) => (props.errors?.[key] ? true : undefined)
                         placeholder="Optional. A gentle hint toward the intended approach."
                         @update:model-value="(v) => set('hint', v)"
                     />
+                    <RichContent v-if="preview" :html="modelValue.hint" class="rounded-lg border border-border bg-background p-4" />
                     <p v-if="errorFor('hint')" class="text-xs text-destructive-ink">{{ errorFor('hint') }}</p>
                 </div>
             </div>
