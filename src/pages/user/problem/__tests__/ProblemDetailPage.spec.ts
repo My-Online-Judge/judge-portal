@@ -11,6 +11,7 @@ const h = vi.hoisted(() => ({
     getContestProblem: vi.fn(),
     solveMounts: 0,
     route: null as unknown as { params: Record<string, string> },
+    getMe: vi.fn(),
 }))
 
 vi.mock('@vueuse/core', async (importOriginal) => {
@@ -26,10 +27,13 @@ vi.mock('vue-router', async (importOriginal) => {
 })
 vi.mock('@/services/problemService', () => ({ default: { getProblemBySlug: h.getProblemBySlug } }))
 vi.mock('@/services/contestService', () => ({ default: { get: h.getContest, getProblem: h.getContestProblem } }))
+vi.mock('@/services/authService', () => ({ default: { getMe: h.getMe, logout: vi.fn() } }))
 // The real SolvePane is stubbed below, but its import chain still reaches Monaco, which needs a real browser.
 vi.mock('@/lib/monaco', () => ({}))
 
 import ProblemDetailPage from '../ProblemDetailPage.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useLoginPrompt } from '@/composables/useLoginPrompt'
 
 // Stands in for the editor pane: it counts its mounts and holds typed text like Monaco does.
 const SolvePane = defineComponent({
@@ -50,6 +54,7 @@ afterEach(() => {
     wrapper?.unmount()
     wrapper = null
     vi.clearAllMocks()
+    vi.restoreAllMocks()
 })
 
 const stubs = {
@@ -112,9 +117,10 @@ describe('ProblemDetailPage', () => {
             slug: 'spring-cup', title: 'Spring cup', phase, status: 'PUBLISHED', problems: [], myProgress: {},
             startsAt: '2026-10-21T09:00:00Z', endsAt: '2026-10-21T11:00:00Z', serverTime: '2026-10-21T10:00:00Z',
         })
-        const mountContestPage = async () => {
+        const mountContestPage = async ({ signedIn = true } = {}) => {
             h.isDesktop.value = true
             h.route.params = { contestSlug: 'spring-cup', label: 'A' }
+            if (signedIn) useAuthStore().user = { id: 'me', permissions: [] } as never
             wrapper = mount(ProblemDetailPage, { attachTo: document.body, global: { stubs } })
             await flushPromises()
             return wrapper
@@ -123,6 +129,25 @@ describe('ProblemDetailPage', () => {
 
         afterEach(() => {
             h.route.params = { slug: 'tong-tu-1-den-n' }
+            useLoginPrompt().open.value = false
+        })
+
+        it('aSignedOutVisitorGetsTheLoginDialogAndThenTheProblem', async () => {
+            h.getMe.mockRejectedValue({ response: { status: 401 } })
+            vi.spyOn(console, 'error').mockImplementation(() => {})
+            h.getContest.mockResolvedValue({ data: { data: contest('RUNNING') } })
+            h.getContestProblem.mockResolvedValue({ data: { data: problem } })
+            const w = await mountContestPage({ signedIn: false })
+            // The header's login dialog, not the admin console's sign-in page; the problem is not asked for (a 401).
+            expect(useLoginPrompt().open.value).toBe(true)
+            expect(h.getContestProblem).not.toHaveBeenCalled()
+            expect(w.text()).toContain('Log in to open this problem')
+            expect(w.findComponent(SolvePane).exists()).toBe(false)
+
+            useAuthStore().user = { id: 'me', permissions: [] } as never
+            await flushPromises()
+            expect(h.getContestProblem).toHaveBeenCalledWith(expect.any(AbortSignal), 'spring-cup', 'A')
+            expect(w.findComponent(SolvePane).props('contestSlug')).toBe('spring-cup')
         })
 
         it('aRunningContestSubmitsWithItsSlug', async () => {

@@ -1,6 +1,16 @@
 <template>
     <div class="animate-enter">
-        <div v-if="isLoading || contestLoading" class="flex justify-center py-20">
+        <div v-if="needsLogin" class="flex flex-col items-center gap-3 py-20 text-center">
+            <p class="text-sm text-muted-foreground">Log in to open this problem.</p>
+            <div class="flex flex-wrap justify-center gap-2">
+                <Button size="sm" @click="loginPrompt.request()">Log in</Button>
+                <Button variant="secondary" size="sm" as-child>
+                    <RouterLink :to="backTo">Back to the contest</RouterLink>
+                </Button>
+            </div>
+        </div>
+
+        <div v-else-if="isLoading || contestLoading" class="flex justify-center py-20">
             <Loading />
         </div>
 
@@ -85,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, shallowRef, watch, watchEffect, onBeforeUnmount, provide } from 'vue'
+import { ref, computed, shallowRef, watch, watchEffect, onBeforeUnmount, onMounted, provide } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useElementSize, useMediaQuery } from '@vueuse/core'
 import { ChevronLeft, CodeXml, FileText, Info } from 'lucide-vue-next'
@@ -96,11 +106,13 @@ import { refreshStatsUntilChanged } from '@/lib/problemStats'
 import { SHOW_CONSOLE } from '@/lib/consoleReveal'
 import SolvePane from '@/components/problem/detail/SolvePane.vue'
 import Loading from '@/components/common/Loading.vue'
+import { Button } from '@/components/ui/button'
 import { ROUTE_PATH } from '@/constants/routePath'
 import { useFetch } from '@/composables/useFetch'
 import problemService from '@/services/problemService'
 import contestService from '@/services/contestService'
 import { useAuthStore } from '@/stores/auth'
+import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import type { ContestDetail } from '@/types/contest'
 import type { Submission } from '@/types/submission'
 
@@ -169,8 +181,33 @@ const {
     error,
     execute,
 } = useFetch(fetchProblem, {
+    immediate: false,
     transform: (res) => res.data,
 })
+
+// A contest's problems are for signed-in readers: a signed-out visitor gets the header's login dialog, and the problem
+// once signed in (the Google sign-in comes back to this page, or a login in place re-runs this).
+const loginPrompt = useLoginPrompt()
+const needsLogin = ref(false)
+const loadProblem = async () => {
+    if (contestSlug.value) {
+        await authStore.ensureLoaded()
+        if (!authStore.user) {
+            needsLogin.value = true
+            loginPrompt.request()
+            return
+        }
+    }
+    needsLogin.value = false
+    await execute()
+}
+onMounted(loadProblem)
+watch(
+    () => authStore.user?.id,
+    (id) => {
+        if (id && needsLogin.value) void loadProblem()
+    },
+)
 
 // The problem's own slug: the editor's drafts and the submissions list are kept by it, in a contest too.
 const slug = computed(() => (contestSlug.value ? (problem.value?.problemSlug ?? '') : (route.params.slug as string)))
@@ -229,7 +266,7 @@ const backLabel = computed(() => (contestSlug.value ? (contest.value?.title ?? '
 watch(routeKey, () => {
     pendingSubmission.value = null
     mobileView.value = 'problem'
-    execute()
+    void loadProblem()
 })
 watch(contestSlug, () => {
     contest.value = null

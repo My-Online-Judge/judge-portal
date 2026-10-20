@@ -34,11 +34,12 @@ const router = createRouter({
       component: () => import('@/pages/user/contest/ContestDetailPage.vue')
     },
     {
-      // The problem page in contest mode: it reads the problem through the contest and submits with its slug.
+      // The problem page in contest mode: it reads the problem through the contest and submits with its slug. It needs
+      // a signed-in reader, but it asks a signed-out visitor through the header's login dialog itself, instead of the
+      // guard's redirect to the admin console's sign-in.
       path: ROUTE_PATH.CONTEST_PROBLEM,
       name: 'ContestProblem',
-      component: () => import('@/pages/user/problem/ProblemDetailPage.vue'),
-      meta: { requiresAuth: true }
+      component: () => import('@/pages/user/problem/ProblemDetailPage.vue')
     },
     {
       path: ROUTE_PATH.USER_PROFILE,

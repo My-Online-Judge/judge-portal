@@ -25,13 +25,14 @@ describe('routes', () => {
     expect(dashboard?.meta.permissions).toContain('submission:read_any')
   })
 
-  it('contestRoutesReuseTheProblemPageAndNeedASignInForProblems', () => {
+  it('contestRoutesReuseTheProblemPageAndAskForASignInThemselves', () => {
     const byName = (name: string) => router.getRoutes().find((r) => r.name === name)
     expect(byName('Contests')?.path).toBe('/contests')
     expect(byName('ContestDetail')?.path).toBe('/contests/:slug')
     const problem = byName('ContestProblem')
     expect(problem?.path).toBe('/contests/:contestSlug/problems/:label')
-    expect(problem?.meta.requiresAuth).toBe(true)
+    // Not the guard's /admin/login redirect: the page opens the header's login dialog for a signed-out visitor.
+    expect(problem?.meta.requiresAuth).toBeUndefined()
     // The contest list and detail are public.
     expect(byName('Contests')?.meta.requiresAuth).toBeUndefined()
     expect(byName('ContestDetail')?.meta.requiresAuth).toBeUndefined()
