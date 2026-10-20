@@ -187,11 +187,12 @@ async function onSubmit() {
                 const after = slug && before === null ? await findProblem(slug, ctl.signal) : undefined
                 if (ctl.signal.aborted) return
                 if (after) finish(after)
-                else
-                    serverError.value =
-                        after === null
-                            ? 'Could not import the package. Check your connection and try again.'
-                            : 'The import may have completed. Check the problems list before retrying.'
+                else if (after === undefined)
+                    serverError.value = 'The import may have completed. Check the problems list before retrying.'
+                // Not created. A gateway status did arrive, so its message (a busy service, say) beats "your connection".
+                else if (axios.isAxiosError(err) && err.response)
+                    serverError.value = getErrorMessage(err, 'Could not import the package. Try again in a moment.')
+                else serverError.value = 'Could not import the package. Check your connection and try again.'
                 return
             }
             serverError.value =

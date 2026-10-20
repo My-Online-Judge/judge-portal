@@ -236,7 +236,10 @@ describe('ImportPackageDialog', () => {
     })
 
     it('aGatewayTimeoutWithNoProblemReportsFailure', async () => {
-        h.importPackage.mockRejectedValue(failWith(504, 'Gateway Time-out'))
+        // A proxy's own 504 page: an answer arrived, so it is not a connection problem.
+        h.importPackage.mockRejectedValue(
+            Object.assign(new Error('x'), { isAxiosError: true, response: { status: 504, data: '<html>504 Gateway Time-out</html>' } }),
+        )
         const w = mountDialog()
         await nextTick()
         await pick()
@@ -244,7 +247,19 @@ describe('ImportPackageDialog', () => {
         submit().click()
         await flushPromises()
         expect(w.emitted('imported')).toBeUndefined()
-        expect(document.body.textContent).toContain('Could not import the package. Check your connection and try again.')
+        expect(document.body.textContent).toContain('Could not import the package. Try again in a moment.')
+        expect(document.body.textContent).not.toContain('Check your connection')
+    })
+
+    it('aBusyAnswerWithNoProblemShowsTheServersMessage', async () => {
+        h.importPackage.mockRejectedValue(failWith(503, 'The service is busy, try again in a moment'))
+        mountDialog()
+        await nextTick()
+        await pick()
+        await typeSlug('two-sum-copy')
+        submit().click()
+        await flushPromises()
+        expect(document.body.textContent).toContain('The service is busy, try again in a moment')
     })
 
     it('aCancelAfterTheServerCreatedTheProblemReportsItCreated', async () => {
