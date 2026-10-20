@@ -25,6 +25,7 @@ export const API_ROUTES = {
         TEST_CASES_IMPORT: (slug: string) => `/problems/${slug}/test-cases/import`,
         TEST_CASE: (slug: string, id: string) => `/problems/${slug}/test-cases/${id}`,
         REJUDGE: (slug: string) => `/problems/${slug}/rejudge`,
+        CHECKER: (slug: string) => `/problems/${slug}/checker`,
         IMPORT: '/problems/import',
         EXPORT: (slug: string) => `/problems/${slug}/export`,
     },

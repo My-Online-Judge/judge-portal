@@ -139,6 +139,9 @@
                     :can-manage="canUpdate"
                 />
 
+                <!-- Checker (special judge; requires problem:update) -->
+                <CheckerCard v-if="canUpdate" :slug="problem.problemSlug ?? String(route.params.slug)" />
+
                 <section v-if="hasHtml(problem.hint)" :class="cardClass">
                     <h3 :class="cardHeadClass">Hint</h3>
                     <div class="p-4">
@@ -193,6 +196,7 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
 import { useDiscardGuard } from '@/composables/useDiscardGuard'
 import ProblemFormFields, { type ProblemFormValue } from '@/components/admin/problem/ProblemFormFields.vue'
+import CheckerCard from '@/components/admin/problem/CheckerCard.vue'
 import TestCaseManager from '@/components/admin/problem/TestCaseManager.vue'
 import RichTextEditor from '@/components/admin/editor/RichTextEditor.vue'
 import { useToast } from '@/composables/useToast'

@@ -1,7 +1,7 @@
 import axiosClient, { API_BASE_URL } from '@/api/axiosClient'
 import type { AxiosResponse } from 'axios'
 import type { ApiResponse } from '@/types/common'
-import type { Problem, ProblemSearchParams, TagCount, CreateProblemPayload, UpdateProblemPayload } from '@/types/problem'
+import type { Problem, ProblemSearchParams, TagCount, CheckerInfo, CreateProblemPayload, UpdateProblemPayload } from '@/types/problem'
 import { API_ROUTES } from '@/constants/apiPath'
 
 // Builds the multipart body for problem creation:
@@ -52,6 +52,25 @@ class ProblemService {
     // Delete a problem by slug
     remove(slug: string): Promise<AxiosResponse<ApiResponse<void>>> {
         return axiosClient.delete<ApiResponse<void>>(API_ROUTES.PROBLEMS.DETAIL(slug))
+    }
+
+    // The problem's checker with its source (problem:update)
+    getChecker(slug: string): Promise<AxiosResponse<ApiResponse<CheckerInfo>>> {
+        return axiosClient.get<ApiResponse<CheckerInfo>>(API_ROUTES.PROBLEMS.CHECKER(slug))
+    }
+
+    // Upload or replace the checker: multipart part "file", a C++ source of at most 64 KiB
+    uploadChecker(slug: string, file: File): Promise<AxiosResponse<ApiResponse<CheckerInfo>>> {
+        const fd = new FormData()
+        fd.append('file', file)
+        return axiosClient.put<ApiResponse<CheckerInfo>>(API_ROUTES.PROBLEMS.CHECKER(slug), fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        })
+    }
+
+    // Remove the checker: outputs are compared again (the source file is kept server-side)
+    removeChecker(slug: string): Promise<AxiosResponse<ApiResponse<void>>> {
+        return axiosClient.delete<ApiResponse<void>>(API_ROUTES.PROBLEMS.CHECKER(slug))
     }
 
     // Create a problem from an exported package (zip). A blank override is not sent; the package's slug is used.

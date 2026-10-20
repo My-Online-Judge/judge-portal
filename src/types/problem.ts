@@ -17,6 +17,7 @@ export interface Problem extends BaseModel {
     totalSubmission: number
     acceptedSubmission: number
     tags?: string[]
+    spj?: boolean
     statisticInfo?: Record<string, unknown>
 }
 
@@ -40,6 +41,13 @@ export interface UpdateProblemPayload {
     hint?: string
     status?: number
     tags?: string[]
+}
+
+// A problem's checker (special judge); `source` only comes from the read, never from the upload.
+export interface CheckerInfo {
+    spj: boolean
+    version: string | null
+    source: string | null
 }
 
 export interface TagCount {
