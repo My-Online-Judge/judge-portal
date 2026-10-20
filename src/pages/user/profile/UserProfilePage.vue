@@ -129,11 +129,17 @@ const initials = computed(() => {
 })
 
 let seq = 0
+// The signed-in user the shown stats were read for; undefined until a load has asked.
+let viewer: string | null | undefined
 const load = async () => {
     const mine = ++seq
     state.value = 'loading'
     detailOpen.value = false
     try {
+        // Right after a reload the header's /auth/me may still be on its way: wait for it, so the owner gets the owner view.
+        await authStore.ensureLoaded()
+        if (mine !== seq) return
+        viewer = authStore.user?.id ?? null
         const p = (await userService.getPublicProfile(username.value)).data.data
         // The owner view of the stats depends on the access cookie, so refresh it first when signed in.
         if (authStore.user) await ensureFreshSession()
@@ -155,4 +161,12 @@ const openDetail = (id: string) => {
 }
 
 watch(username, load, { immediate: true })
+// A login or logout on the page changes whose view the stats are: read them again. A load still waiting for the
+// session reads the new user itself.
+watch(
+    () => authStore.user?.id ?? null,
+    (id) => {
+        if (viewer !== undefined && id !== viewer) void load()
+    },
+)
 </script>

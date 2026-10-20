@@ -121,7 +121,8 @@ const handleLogout = () => {
     authStore.logout()
 }
 
+// Through the store's one load, so a page that waits for the session on a hard load shares this request.
 onMounted(() => {
-    authStore.fetchUser()
+    void authStore.ensureLoaded()
 })
 </script>

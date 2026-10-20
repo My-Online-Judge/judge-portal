@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { defineComponent, h as render } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 
@@ -8,17 +8,23 @@ const h = vi.hoisted(() => ({
   getPublicProfile: vi.fn(),
   getUserStats: vi.fn(),
   ensureFreshSession: vi.fn(),
+  getMe: vi.fn(),
+  calls: [] as string[],
+  route: null as unknown as { params: { username: string } },
 }))
 
-vi.mock('vue-router', () => {
+vi.mock('vue-router', async () => {
+  const { reactive: r } = await import('vue')
+  h.route = r({ params: { username: 'alice' } })
   const RouterLink = defineComponent({
     props: ['to'],
     setup: (p, { slots }) => () => render('a', { href: typeof p.to === 'string' ? p.to : '' }, slots.default?.()),
   })
-  return { useRoute: () => ({ params: { username: 'alice' } }), RouterLink }
+  return { useRoute: () => h.route, RouterLink }
 })
 vi.mock('@/services/userService', () => ({ default: { getPublicProfile: h.getPublicProfile } }))
 vi.mock('@/services/submissionService', () => ({ default: { getUserStats: h.getUserStats } }))
+vi.mock('@/services/authService', () => ({ default: { getMe: h.getMe, logout: vi.fn() } }))
 vi.mock('@/api/refreshSession', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/api/refreshSession')>()),
   ensureFreshSession: h.ensureFreshSession,
@@ -36,20 +42,43 @@ const stats = (over = {}) => ({
 })
 const DetailStub = defineComponent({ props: ['open', 'submissionId'], setup: () => () => render('div', { 'data-test': 'detail' }) })
 
+const mounted: VueWrapper[] = []
+const mountView = () => {
+  const w = mount(UserProfilePage, { global: { stubs: { SubmissionDetailDialog: DetailStub } } })
+  mounted.push(w)
+  return w
+}
 async function mountPage(viewerId: string | null) {
   setActivePinia(createPinia())
   if (viewerId) useAuthStore().user = { id: viewerId } as never
-  const w = mount(UserProfilePage, { global: { stubs: { SubmissionDetailDialog: DetailStub } } })
+  const w = mountView()
   await flushPromises()
   return w
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  h.ensureFreshSession.mockResolvedValue(undefined)
+  h.calls.length = 0
+  h.route.params.username = 'alice'
+  h.ensureFreshSession.mockImplementation(async () => void h.calls.push('fresh'))
   h.getPublicProfile.mockResolvedValue({ data: { data: profile } })
-  h.getUserStats.mockResolvedValue({ data: { data: stats() } })
+  h.getUserStats.mockImplementation(async () => {
+    h.calls.push('stats')
+    return { data: { data: stats() } }
+  })
+  // Nobody signed in unless a test says so.
+  h.getMe.mockResolvedValue({ data: { data: null } })
 })
+
+// The route is shared: a page left mounted would load again when the next test resets it.
+afterEach(() => mounted.splice(0).forEach((w) => w.unmount()))
+
+/** A promise the test settles by hand. */
+function deferred<T>() {
+  let resolve!: (v: T) => void
+  const promise = new Promise<T>((r) => (resolve = r))
+  return { promise, resolve }
+}
 
 describe('UserProfilePage', () => {
   it('showsTheHeaderAndTiles', async () => {
@@ -93,5 +122,75 @@ describe('UserProfilePage', () => {
     await owner.get('tbody tr').trigger('click')
     expect(owner.getComponent(DetailStub).props('open')).toBe(true)
     expect(owner.getComponent(DetailStub).props('submissionId')).toBe('s1')
+  })
+
+  it('aHardLoadAsTheOwnerWaitsForTheSessionAndShowsTheOwnerView', async () => {
+    // Right after a reload nobody is known yet: the header's /auth/me is still on its way.
+    const me = deferred<unknown>()
+    h.getMe.mockReturnValue(me.promise)
+    setActivePinia(createPinia())
+    const w = mountView()
+    await flushPromises()
+    expect(h.getUserStats).not.toHaveBeenCalled()
+
+    me.resolve({ data: { data: { id: 'u1', username: 'alice', permissions: [] } } })
+    await flushPromises()
+
+    // The session is made fresh before the stats leave, so they come back with the owner's view.
+    expect(h.calls).toEqual(['fresh', 'stats'])
+    expect(h.getPublicProfile).toHaveBeenCalledTimes(1)
+    await w.get('tbody tr').trigger('click')
+    expect(w.getComponent(DetailStub).props('open')).toBe(true)
+  })
+
+  it('signingInOrOutOnThePageReadsTheStatsAgain', async () => {
+    const w = await mountPage(null)
+    expect(h.getUserStats).toHaveBeenCalledTimes(1)
+    expect(h.ensureFreshSession).not.toHaveBeenCalled()
+
+    useAuthStore().user = { id: 'u1' } as never
+    await flushPromises()
+    expect(h.getUserStats).toHaveBeenCalledTimes(2)
+    expect(h.calls.slice(-2)).toEqual(['fresh', 'stats'])
+    await w.get('tbody tr').trigger('click')
+    expect(w.getComponent(DetailStub).props('open')).toBe(true)
+
+    useAuthStore().user = null
+    await flushPromises()
+    expect(h.getUserStats).toHaveBeenCalledTimes(3)
+    expect(w.find('[data-test="detail"]').exists()).toBe(false)
+  })
+
+  it('showsLoadingFirst', async () => {
+    const pending = deferred<unknown>()
+    h.getPublicProfile.mockReturnValue(pending.promise)
+    const w = await mountPage(null)
+    expect(w.findComponent({ name: 'Loading' }).exists()).toBe(true)
+    pending.resolve({ data: { data: profile } })
+    await flushPromises()
+    expect(w.text()).toContain('Alice Tran')
+  })
+
+  it('aRouteChangeDropsTheOlderAnswer', async () => {
+    const alice = deferred<unknown>()
+    h.getPublicProfile.mockImplementation((name: string) =>
+      name === 'alice' ? alice.promise : Promise.resolve({ data: { data: { ...profile, id: 'u2', username: 'bob', name: 'Bob Le' } } }),
+    )
+    const w = await mountPage(null)
+    h.route.params.username = 'bob'
+    await flushPromises()
+    alice.resolve({ data: { data: profile } })
+    await flushPromises()
+    expect(w.text()).toContain('Bob Le')
+    expect(w.text()).not.toContain('Alice Tran')
+  })
+
+  it('aFailureShowsRetry', async () => {
+    h.getPublicProfile.mockRejectedValueOnce({ isAxiosError: true, response: { status: 500 } })
+    const w = await mountPage(null)
+    expect(w.text()).toContain('Could not load this profile')
+    await w.get('button').trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('Alice Tran')
   })
 })
