@@ -171,6 +171,7 @@ import type { RowAction } from '@/components/common/rowActions'
 import { useFetch } from '@/composables/useFetch'
 import { useSubmissionStream } from '@/composables/useSubmissionStream'
 import { useToast } from '@/composables/useToast'
+import { announceQueued } from '@/lib/rejudgeQueued'
 import { getErrorMessage } from '@/lib/errorMessage'
 import { parseRetryAfter } from '@/lib/retryAfter'
 import { busyFallbackMessage } from '@/lib/submitErrors'
@@ -187,7 +188,7 @@ import { isTerminalStatus, SubmissionResult, type Submission, type SubmissionLis
 const SubmissionDetailDialog = defineAsyncComponent(() => import('@/components/problem/detail/SubmissionDetailDialog.vue'))
 
 const authStore = useAuthStore()
-const { triggerToast, error: errorToast } = useToast()
+const { triggerToast, error: errorToast, success: successToast, info: infoToast } = useToast()
 const canRejudge = computed(() => authStore.hasPermission('submission:rejudge'))
 
 // The API's Retry-After for a full judge queue (QUEUE_FULL), used when the header is missing.
@@ -422,7 +423,7 @@ const confirmRejudgeProblem = async () => {
         const status = problemResult.value === 'all' ? undefined : Number(problemResult.value)
         const res = await submissionService.rejudgeProblem(slug, status)
         const n = res.data.data.queued
-        triggerToast(`Queued ${n} ${n === 1 ? 'submission' : 'submissions'}`, 'success')
+        announceQueued(n, { success: successToast, info: infoToast })
         problemOpen.value = false
         load()
     } catch (err) {

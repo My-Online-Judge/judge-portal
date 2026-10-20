@@ -13,6 +13,8 @@ const h = vi.hoisted(() => ({
     rejudgeProblem: vi.fn(),
     toast: vi.fn(),
     error: vi.fn(),
+    success: vi.fn(),
+    info: vi.fn(),
 }))
 
 vi.mock('vue-router', async () => {
@@ -33,7 +35,7 @@ vi.mock('@/composables/useSubmissionStream', () => ({
         stopAll: vi.fn(),
     }),
 }))
-vi.mock('@/composables/useToast', () => ({ useToast: () => ({ triggerToast: h.toast, error: h.error }) }))
+vi.mock('@/composables/useToast', () => ({ useToast: () => ({ triggerToast: h.toast, error: h.error, success: h.success, info: h.info }) }))
 // The real dialog loads the submission and Monaco; only the props the page passes matter here.
 vi.mock('@/components/problem/detail/SubmissionDetailDialog.vue', async () => {
     const { defineComponent: define, h: r } = await import('vue')
@@ -211,7 +213,9 @@ describe('AdminSubmissionsPage', () => {
         bodyButton('Rejudge')!.click()
         await flushPromises()
         expect(h.rejudgeProblem).toHaveBeenCalledWith('two-sum', -1)
-        expect(h.toast).toHaveBeenCalledWith('Queued 12 submissions', 'success')
+        expect(h.success).toHaveBeenCalledWith('Queued 12 submissions', {
+            description: 'The judge queue limits each run. Run it again later if there are more.',
+        })
         expect(h.search).toHaveBeenCalledTimes(2)
     })
 
@@ -271,5 +275,18 @@ describe('AdminSubmissionsPage', () => {
     it('aTerminalRowIsNotWatched', async () => {
         await mountPage()
         expect(h.watched.size).toBe(0)
+    })
+
+    it('rejudgingAProblemWithNothingFinishedSaysSo', async () => {
+        h.rejudgeProblem.mockResolvedValue({ data: { data: { queued: 0 } } })
+        await mountPage()
+        bodyButton('Rejudge problem…')!.click()
+        await flushPromises()
+        await wrapper!.findComponent({ name: 'ProblemPickerStub' }).vm.$emit('update:modelValue', 'two-sum')
+        await nextTick()
+        bodyButton('Rejudge')!.click()
+        await flushPromises()
+        expect(h.info).toHaveBeenCalledWith('No finished submissions to rejudge')
+        expect(h.success).not.toHaveBeenCalled()
     })
 })

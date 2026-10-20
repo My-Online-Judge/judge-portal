@@ -8,6 +8,8 @@ const h = vi.hoisted(() => ({
   getProblems: vi.fn(),
   rejudgeProblem: vi.fn(),
   toast: vi.fn(),
+  success: vi.fn(),
+  info: vi.fn(),
   exportUrl: vi.fn((slug: string) => `/api/v1/problems/${slug}/export`),
   downloadUrl: vi.fn(),
   ensureFreshSession: vi.fn(),
@@ -29,7 +31,7 @@ vi.mock('@/api/refreshSession', async (importOriginal) => ({
   ensureFreshSession: h.ensureFreshSession,
 }))
 vi.mock('@/services/submissionService', () => ({ default: { rejudgeProblem: h.rejudgeProblem } }))
-vi.mock('@/composables/useToast', () => ({ useToast: () => ({ triggerToast: h.toast, loading: h.loading }) }))
+vi.mock('@/composables/useToast', () => ({ useToast: () => ({ triggerToast: h.toast, loading: h.loading, success: h.success, info: h.info }) }))
 
 import AdminProblemsPage from '../AdminProblemsPage.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -88,7 +90,9 @@ describe('AdminProblemsPage rejudge', () => {
     bodyButton('Rejudge')!.click()
     await flushPromises()
     expect(h.rejudgeProblem).toHaveBeenCalledWith('sum')
-    expect(h.toast).toHaveBeenCalledWith('Queued 12 submission(s) for rejudging', 'success')
+    expect(h.success).toHaveBeenCalledWith('Queued 12 submissions', {
+      description: 'The judge queue limits each run. Run it again later if there are more.',
+    })
   })
 })
 

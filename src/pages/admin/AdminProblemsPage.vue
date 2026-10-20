@@ -146,12 +146,13 @@ import submissionService from '@/services/submissionService'
 import { useAuthStore } from '@/stores/auth'
 import type { Problem } from '@/types/problem'
 import { relativeTime } from '@/lib/problemDisplay'
+import { announceQueued } from '@/lib/rejudgeQueued'
 import { downloadUrl } from '@/lib/download'
 import { ensureFreshSession } from '@/api/refreshSession'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { undo, error: errorToast, triggerToast, loading } = useToast()
+const { undo, error: errorToast, triggerToast, loading, success: successToast, info: infoToast } = useToast()
 
 const canCreate = computed(() => authStore.hasPermission('problem:create'))
 const canUpdate = computed(() => authStore.hasPermission('problem:update'))
@@ -244,7 +245,7 @@ const confirmRejudge = async () => {
     rejudging.value = true
     try {
         const res = await submissionService.rejudgeProblem(rejudgeTarget.value.problemSlug)
-        triggerToast(`Queued ${res.data.data.queued} submission(s) for rejudging`, 'success')
+        announceQueued(res.data.data.queued, { success: successToast, info: infoToast })
         rejudgeOpen.value = false
     } catch (err) {
         triggerToast(getErrorMessage(err, "Couldn't rejudge the problem"), 'error')
