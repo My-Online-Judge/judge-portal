@@ -65,6 +65,13 @@ describe('package import and export', () => {
         expect(body.get('slugOverride')).toBe('copy-1')
     })
 
+    it('importPassesTheAbortSignal', async () => {
+        const svc = await load()
+        const controller = new AbortController()
+        await svc.importPackage(zip(), undefined, controller.signal)
+        expect(post.mock.calls[0]![2]).toMatchObject({ signal: controller.signal })
+    })
+
     it('importOmitsABlankOverride', async () => {
         const svc = await load()
         await svc.importPackage(zip(), '  ')

@@ -55,13 +55,15 @@ class ProblemService {
     }
 
     // Create a problem from an exported package (zip). A blank override is not sent; the package's slug is used.
-    importPackage(file: File, slugOverride?: string): Promise<AxiosResponse<ApiResponse<Problem>>> {
+    // Aborting `signal` cancels the upload.
+    importPackage(file: File, slugOverride?: string, signal?: AbortSignal): Promise<AxiosResponse<ApiResponse<Problem>>> {
         const fd = new FormData()
         fd.append('file', file)
         if (slugOverride?.trim()) fd.append('slugOverride', slugOverride.trim())
         return axiosClient.post<ApiResponse<Problem>>(API_ROUTES.PROBLEMS.IMPORT, fd, {
             headers: { 'Content-Type': 'multipart/form-data' },
             timeout: PACKAGE_TIMEOUT_MS,
+            signal,
         })
     }
 
