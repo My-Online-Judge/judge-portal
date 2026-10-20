@@ -242,20 +242,25 @@ const searchParams = (): SubmissionSearchParams => ({
 
 // Counts the list loads, so a background refresh that a newer load overtook is dropped.
 let loadSeq = 0
+// What the last load asked for: a background refresh re-reads exactly that, not filters still being typed.
+let lastParams: SubmissionSearchParams | null = null
 const load = () => {
     if (!rangeValid.value) return
     loadSeq += 1
     resetLiveRows()
-    return execute(searchParams())
+    lastParams = searchParams()
+    return execute(lastParams)
 }
 
 // Re-reads the current page without the spinner or a new error state; a failure keeps the rows on screen.
 const refreshQuietly = async () => {
-    if (!rangeValid.value) return
+    if (!lastParams) return
     const mine = loadSeq
     try {
-        const res = await submissionService.search(new AbortController().signal, searchParams())
-        if (mine === loadSeq) data.value = res.data
+        const res = await submissionService.search(new AbortController().signal, lastParams)
+        if (mine !== loadSeq) return
+        data.value = res.data
+        error.value = null
     } catch {
         // The next load or watch shows the problem.
     }

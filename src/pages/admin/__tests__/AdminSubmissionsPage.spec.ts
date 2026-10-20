@@ -362,6 +362,36 @@ describe('AdminSubmissionsPage', () => {
         expect(h.watchCalls).toEqual([row.id, row.id])
     })
 
+    describe('a quiet refresh', () => {
+        const stuck = { ...row, status: 6, cpuTime: null, memory: null }
+        beforeEach(() => {
+            h.search.mockResolvedValue({ data: { data: [stuck], pagination } })
+        })
+
+        it('keepsTheFiltersOfTheLastLoad', async () => {
+            vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+            await mountPage()
+            // A username is typed; its debounced reload has not run when the watch gives up.
+            await type('input[aria-label="Filter by username"]', 'bob')
+            h.watched.get(row.id)!.onGiveUp!()
+            await flushPromises()
+            expect(h.search).toHaveBeenCalledTimes(2)
+            expect(h.search).toHaveBeenLastCalledWith(expect.any(AbortSignal), { page: 0, size: 20 })
+        })
+
+        it('clearsAnEarlierError', async () => {
+            await mountPage()
+            h.search.mockRejectedValueOnce(new Error('down'))
+            wrapper!.findComponent({ name: 'PaginationFooter' }).vm.$emit('change-page', 1)
+            await flushPromises()
+            expect(document.body.textContent).toContain("Couldn't refresh")
+            h.watched.get(row.id)!.onGiveUp!()
+            await flushPromises()
+            expect(h.search).toHaveBeenLastCalledWith(expect.any(AbortSignal), { page: 1, size: 20 })
+            expect(document.body.textContent).not.toContain("Couldn't refresh")
+        })
+    })
+
     it('aTerminalRowIsNotWatched', async () => {
         await mountPage()
         expect(h.watched.size).toBe(0)
