@@ -208,6 +208,7 @@ const rowActions = (p: Problem): RowAction[] => {
 
 // --- Export: the package zip, built by the server and opened as a link, so it streams to disk ---
 // Slugs whose export is starting; their menu item is disabled until the browser has the link.
+const EXPORT_COOLDOWN_MS = 3000
 const exporting = ref(new Set<string>())
 
 const exportProblem = async (p: Problem) => {
@@ -215,6 +216,7 @@ const exportProblem = async (p: Problem) => {
     if (exporting.value.has(slug)) return
     exporting.value.add(slug)
     const toast = loading(`Preparing ${slug}.zip`)
+    let started = false
     try {
         // The link carries the access cookie but not the client's refresh-on-401.
         await ensureFreshSession()
@@ -224,9 +226,12 @@ const exportProblem = async (p: Problem) => {
             return
         }
         downloadUrl(problemService.exportUrl(slug), `${slug}.zip`)
+        started = true
         toast.update({ type: 'success', title: 'Download started', description: `${slug}.zip` })
     } finally {
-        exporting.value.delete(slug)
+        // The server builds the zip while the browser connects: keep the item disabled a moment after the click.
+        if (started) setTimeout(() => exporting.value.delete(slug), EXPORT_COOLDOWN_MS)
+        else exporting.value.delete(slug)
     }
 }
 

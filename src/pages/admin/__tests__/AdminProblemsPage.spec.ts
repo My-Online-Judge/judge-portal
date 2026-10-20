@@ -116,6 +116,25 @@ describe('AdminProblemsPage export', () => {
     expect(h.toastUpdate).toHaveBeenCalledWith({ type: 'success', title: 'Download started', description: 'sum.zip' })
   })
 
+  it('exportStaysDisabledForAboutThreeSecondsAfterTheClick', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      await mountPage(['problem:update'])
+      await selectExport()
+      expect(h.downloadUrl).toHaveBeenCalledTimes(1)
+      await openMenu()
+      expect(exportItem().hasAttribute('data-disabled')).toBe(true)
+      vi.advanceTimersByTime(2999)
+      await flushPromises()
+      expect(exportItem().hasAttribute('data-disabled')).toBe(true)
+      vi.advanceTimersByTime(1)
+      await flushPromises()
+      expect(exportItem().hasAttribute('data-disabled')).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('exportIgnoresASecondStartWhileRunning', async () => {
     let release!: () => void
     h.ensureFreshSession.mockReturnValue(new Promise<void>((r) => (release = r)))
