@@ -193,4 +193,31 @@ describe('UserProfilePage', () => {
     await flushPromises()
     expect(w.text()).toContain('Alice Tran')
   })
+
+  it('aStatsNotFoundIsAnErrorNotAMissingUser', async () => {
+    h.getUserStats.mockRejectedValue({ isAxiosError: true, response: { status: 404 } })
+    const w = await mountPage(null)
+    expect(w.text()).not.toContain('User not found')
+    expect(w.text()).toContain('Could not load this profile')
+  })
+
+  it('theThreeTilesKeepTheirBordersOnPhones', async () => {
+    const w = await mountPage(null)
+    const strip = w.get('[data-test="tile-solved"]').element.parentElement!
+    expect(strip.className).toContain('grid-cols-3')
+    // The 2-by-2 phone rule would give the third tile a top border and no left one.
+    expect(strip.className).not.toContain('nth-child(n+3)')
+  })
+
+  it('theOwnerCanOpenASubmissionFromTheKeyboard', async () => {
+    const other = await mountPage('someone-else')
+    expect(other.find('tbody button').exists()).toBe(false)
+    other.unmount()
+
+    const owner = await mountPage('u1')
+    const open = owner.get('tbody button')
+    expect(open.attributes('type')).toBe('button')
+    await open.trigger('click')
+    expect(owner.getComponent(DetailStub).props('open')).toBe(true)
+  })
 })

@@ -27,7 +27,7 @@
                 </div>
             </header>
 
-            <StatStrip class="!grid-cols-3">
+            <StatStrip :cols="3">
                 <StatCell data-test="tile-solved" label="Solved" :value="stats.solvedCount" />
                 <StatCell data-test="tile-attempted" label="Attempted" :value="stats.attemptedCount" />
                 <StatCell data-test="tile-acceptance" label="Acceptance" :value="acceptance" />
@@ -58,7 +58,12 @@
                         </thead>
                         <tbody>
                             <tr v-for="s in stats.recent" :key="s.id" :class="isOwner && 'cursor-pointer'" @click="openDetail(s.id)">
-                                <td class="pl-4 font-mono text-xs whitespace-nowrap">{{ formatDateTime(s.createdAt) }}</td>
+                                <td class="pl-4 font-mono text-xs whitespace-nowrap">
+                                    <!-- The owner opens a row from the keyboard through its time. -->
+                                    <button v-if="isOwner" type="button" class="rounded-sm hover:text-link hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                        :aria-label="`Open submission from ${formatDateTime(s.createdAt)}`" @click.stop="openDetail(s.id)">{{ formatDateTime(s.createdAt) }}</button>
+                                    <template v-else>{{ formatDateTime(s.createdAt) }}</template>
+                                </td>
                                 <td>
                                     <RouterLink :to="`/problems/${s.problemSlug}`"
                                         class="font-mono text-xs text-foreground hover:text-link hover:underline" @click.stop>{{ s.problemSlug }}</RouterLink>
@@ -140,7 +145,19 @@ const load = async () => {
         await authStore.ensureLoaded()
         if (mine !== seq) return
         viewer = authStore.user?.id ?? null
-        const p = (await userService.getPublicProfile(username.value)).data.data
+        const p = await userService.getPublicProfile(username.value).then(
+            (res) => res.data.data,
+            (err) => {
+                // Only the profile's 404 means there is no such user; a stats failure is an error to retry.
+                if (isAxiosError(err) && err.response?.status === 404) return null
+                throw err
+            },
+        )
+        if (mine !== seq) return
+        if (!p) {
+            state.value = 'notFound'
+            return
+        }
         // The owner view of the stats depends on the access cookie, so refresh it first when signed in.
         if (authStore.user) await ensureFreshSession()
         const s = (await submissionService.getUserStats(p.id)).data.data
@@ -148,9 +165,9 @@ const load = async () => {
         profile.value = p
         stats.value = s
         state.value = 'ready'
-    } catch (err) {
+    } catch {
         if (mine !== seq) return
-        state.value = isAxiosError(err) && err.response?.status === 404 ? 'notFound' : 'error'
+        state.value = 'error'
     }
 }
 
