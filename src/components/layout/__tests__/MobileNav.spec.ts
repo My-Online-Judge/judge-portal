@@ -23,6 +23,31 @@ let wrapper: VueWrapper | null = null
 const sheet = () => document.querySelector<HTMLElement>('[role="dialog"][aria-label="Navigation"]')
 const sheetLabels = () => [...(sheet()?.querySelectorAll('nav a') ?? [])].map((a) => a.textContent?.trim())
 
+/** A window.matchMedia whose min-width queries follow `resize`, firing `change` like a browser. */
+function fakeViewport(width: number) {
+    const lists: { min: number; listeners: Set<(e: { matches: boolean }) => void> }[] = []
+    const matchMedia = (query: string) => {
+        const min = Number(/min-width:\s*(\d+)px/.exec(query)?.[1] ?? 0)
+        const entry = { min, listeners: new Set<(e: { matches: boolean }) => void>() }
+        lists.push(entry)
+        return {
+            media: query,
+            get matches() {
+                return width >= min
+            },
+            addEventListener: (_: string, l: (e: { matches: boolean }) => void) => entry.listeners.add(l),
+            removeEventListener: (_: string, l: (e: { matches: boolean }) => void) => entry.listeners.delete(l),
+        }
+    }
+    vi.stubGlobal('matchMedia', matchMedia)
+    return {
+        resize(next: number) {
+            width = next
+            for (const { min, listeners } of lists) listeners.forEach((l) => l({ matches: width >= min }))
+        },
+    }
+}
+
 const mountWithRouter = async <T>(component: T, props: Record<string, unknown> = {}) => {
     wrapper = mount(component as never, {
         props,
@@ -51,6 +76,7 @@ describe('MobileNav', () => {
     afterEach(() => {
         wrapper?.unmount()
         wrapper = null
+        vi.unstubAllGlobals()
     })
 
     it('hamburgerIsHiddenFromMd', async () => {
@@ -85,5 +111,23 @@ describe('MobileNav', () => {
         await flushPromises()
 
         expect(sheet()).toBeNull()
+    })
+
+    it('closesWhenTheViewportReachesMd', async () => {
+        const viewport = fakeViewport(375)
+        const w = await mountWithRouter(MobileNav, { items: ITEMS })
+        await w.get('button[aria-label="Open menu"]').trigger('click')
+        await flushPromises()
+        expect(sheet()).not.toBeNull()
+
+        viewport.resize(600) // still below md: the sheet stays
+        await flushPromises()
+        expect(sheet()).not.toBeNull()
+
+        // From md the desktop nav shows; an open sheet would be a second "Main" navigation landmark.
+        viewport.resize(1024)
+        await flushPromises()
+        expect(sheet()).toBeNull()
+        expect(document.querySelectorAll('nav[aria-label="Main"]')).toHaveLength(0)
     })
 })

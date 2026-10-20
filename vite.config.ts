@@ -6,7 +6,12 @@ import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 
 const isAdmin = (id: string) => id.includes('/src/pages/admin/') || id.includes('/src/components/admin/')
-const isMonaco = (id: string) => id.includes('node_modules/monaco-editor')
+// Monaco, plus our code that loads it: if an admin page ever imports the editor, these must not fall into "shared",
+// which the entry imports.
+const isMonaco = (id: string) =>
+  id.includes('node_modules/monaco-editor') ||
+  id.includes('/src/lib/monaco') ||
+  id.includes('/src/components/common/CodeEditor.vue')
 
 /** Walks up the static importers of `id` and reports whether any module on the way satisfies `found`. */
 function importedFrom(id: string, getModuleInfo: Rollup.GetModuleInfo, found: (m: Rollup.ModuleInfo) => boolean, skip = (_id: string) => false) {

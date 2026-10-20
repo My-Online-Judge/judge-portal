@@ -40,6 +40,7 @@
 <script setup lang="ts">
 import { ref, watch, type Component } from 'vue'
 import { useRoute } from 'vue-router'
+import { useMediaQuery } from '@vueuse/core'
 import { Menu, X } from 'lucide-vue-next'
 import { DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, DialogTrigger } from 'reka-ui'
 import { Button } from '@/components/ui/button'
@@ -53,4 +54,9 @@ const open = ref(false)
 // Close on any navigation, including the back button; a tap on the current page's link closes it too.
 const route = useRoute()
 watch(() => route.fullPath, () => (open.value = false))
+// From md the desktop nav shows, so a sheet left open would be a second "Main" navigation landmark: close it.
+const isMd = useMediaQuery('(min-width: 768px)')
+watch(isMd, (md) => {
+    if (md) open.value = false
+})
 </script>
