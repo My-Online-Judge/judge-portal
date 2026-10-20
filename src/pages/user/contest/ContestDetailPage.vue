@@ -90,8 +90,8 @@
                     </TabsContent>
 
                     <TabsContent value="scoreboard" class="mt-0">
-                        <!-- Mounted only while shown: it polls every 15 s. -->
-                        <ContestScoreboard v-if="tab === 'scoreboard'" :slug="contest.slug" />
+                        <!-- Mounted only while shown: it polls every 15 s while the contest runs. -->
+                        <ContestScoreboard v-if="tab === 'scoreboard'" :slug="contest.slug" :phase="contest.phase" />
                     </TabsContent>
                 </div>
             </Tabs>

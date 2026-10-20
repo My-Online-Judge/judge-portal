@@ -1,7 +1,8 @@
 <template>
+    <!-- Only the first read shows the skeleton: a background poll keeps the board as it is, with no refresh bar. -->
     <ListStateShell :loading="loading && !board" :error="error ? 'Check your connection and try again.' : null"
-        :has-data="!!board" :empty="rows.length === 0" :rows="5" empty-title="No one is on the scoreboard yet"
-        empty-hint="Contestants appear here once their first submission is judged." @retry="load">
+        :has-data="!!board" :empty="rows.length === 0 && labels.length === 0" :rows="5"
+        empty-title="No one is on the scoreboard yet" :empty-hint="emptyHint" @retry="load">
         <div class="overflow-x-auto">
             <table class="dt" :style="{ minWidth: `${340 + labels.length * 64}px` }">
                 <caption class="sr-only">Scoreboard: solved problems first, then the lowest penalty in minutes</caption>
@@ -15,6 +16,15 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <tr v-if="rows.length === 0">
+                        <td :colspan="4 + labels.length" class="h-auto py-8 text-center text-muted-foreground">
+                            <template v-if="phase === 'UPCOMING'">{{ emptyHint }}</template>
+                            <template v-else>
+                                <span class="block font-medium text-foreground">No one is on the scoreboard yet</span>
+                                <span class="mt-0.5 block text-xs">{{ emptyHint }}</span>
+                            </template>
+                        </td>
+                    </tr>
                     <tr v-for="row in rows" :key="row.user.id">
                         <td class="pl-4 font-mono tabular-nums" data-col="rank">{{ row.rank }}</td>
                         <td data-col="user">
@@ -52,15 +62,22 @@ import axios from 'axios'
 import ListStateShell from '@/components/common/ListStateShell.vue'
 import contestService from '@/services/contestService'
 import { SCOREBOARD_POLL_MS } from '@/lib/contestTime'
-import type { Scoreboard, ScoreboardCell } from '@/types/contest'
+import type { ContestPhase, Scoreboard, ScoreboardCell } from '@/types/contest'
 
-const props = defineProps<{ slug: string }>()
+// Only a running contest's board changes: an upcoming or ended one is read once, and a phase change reads it again (the
+// end gives one last read, then the board is final).
+const props = defineProps<{ slug: string; phase: ContestPhase }>()
 
 const board = shallowRef<Scoreboard | null>(null)
 const loading = ref(false)
 const error = ref(false)
 const labels = computed(() => board.value?.labels ?? [])
 const rows = computed(() => board.value?.rows ?? [])
+const emptyHint = computed(() =>
+    props.phase === 'UPCOMING'
+        ? 'The scoreboard fills in once the contest starts.'
+        : 'Contestants appear here once their first submission is judged.',
+)
 
 // ICPC marks: "+" (or "+2" after two wrong tries) over the minute of the accept; "-2" for two wrong tries so far.
 const solvedMark = (c: ScoreboardCell) => (c.attempts > 1 ? `+${c.attempts - 1}` : '+')
@@ -76,6 +93,7 @@ let timer: ReturnType<typeof setTimeout> | null = null
 let inFlight: AbortController | null = null
 let stopped = false
 const hidden = () => document.visibilityState === 'hidden'
+const polls = () => !stopped && props.phase === 'RUNNING' && !hidden()
 
 const load = async () => {
     if (timer !== null) clearTimeout(timer)
@@ -97,7 +115,7 @@ const load = async () => {
         if (inFlight === ctl) {
             inFlight = null
             loading.value = false
-            if (!stopped && !hidden()) timer = setTimeout(load, SCOREBOARD_POLL_MS)
+            if (polls()) timer = setTimeout(load, SCOREBOARD_POLL_MS)
         }
     }
 }
@@ -106,7 +124,7 @@ const onVisibilityChange = () => {
     if (hidden()) {
         if (timer !== null) clearTimeout(timer)
         timer = null
-    } else if (!stopped && timer === null && inFlight === null) {
+    } else if (polls() && timer === null && inFlight === null) {
         void load()
     }
 }
@@ -117,6 +135,10 @@ watch(
         board.value = null
         void load()
     },
+)
+watch(
+    () => props.phase,
+    () => void load(),
 )
 onMounted(() => {
     document.addEventListener('visibilitychange', onVisibilityChange)

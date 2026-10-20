@@ -38,8 +38,8 @@ const board = {
 }
 
 let wrapper: VueWrapper | undefined
-async function mountBoard() {
-    wrapper = mount(ContestScoreboard, { props: { slug: 'spring-cup' }, global: { components: { RouterLink } } })
+async function mountBoard(phase = 'RUNNING') {
+    wrapper = mount(ContestScoreboard, { props: { slug: 'spring-cup', phase }, global: { components: { RouterLink } } })
     await flushPromises()
     return wrapper
 }
@@ -151,10 +151,56 @@ describe('ContestScoreboard', () => {
         expect(second.find('a').exists()).toBe(false)
     })
 
-    it('aContestThatHasNotStartedShowsTheLabelsAndNoRows', async () => {
+    it('aContestThatHasNotStartedShowsTheLabelsAndIsReadOnce', async () => {
+        h.scoreboard.mockResolvedValue({ data: { data: { labels: ['A', 'B'], rows: [] } } })
+        const w = await mountBoard('UPCOMING')
+        expect(w.findAll('thead th').map((th) => th.text()).slice(-2)).toEqual(['A', 'B'])
+        const only = w.findAll('tbody tr')
+        expect(only).toHaveLength(1)
+        expect(only[0]!.get('td').attributes('colspan')).toBe('6')
+        expect(only[0]!.text()).toBe('The scoreboard fills in once the contest starts.')
+        await vi.advanceTimersByTimeAsync(60_000)
+        expect(h.scoreboard).toHaveBeenCalledTimes(1)
+    })
+
+    it('aRunningBoardWithNoRowsKeepsTheLabels', async () => {
         h.scoreboard.mockResolvedValue({ data: { data: { labels: ['A', 'B'], rows: [] } } })
         const w = await mountBoard()
-        expect(w.findAll('tbody tr')).toHaveLength(0)
-        expect(w.text()).toContain('No one is on the scoreboard yet')
+        expect(w.findAll('thead th').map((th) => th.text()).slice(-2)).toEqual(['A', 'B'])
+        expect(w.get('tbody').text()).toContain('No one is on the scoreboard yet')
+    })
+
+    it('theStartOfTheContestStartsThePolling', async () => {
+        const w = await mountBoard('UPCOMING')
+        await w.setProps({ phase: 'RUNNING' })
+        await flushPromises()
+        expect(h.scoreboard).toHaveBeenCalledTimes(2)
+        await vi.advanceTimersByTimeAsync(15_000)
+        expect(h.scoreboard).toHaveBeenCalledTimes(3)
+    })
+
+    it('anEndedBoardIsFinalAfterOneLastRead', async () => {
+        const w = await mountBoard()
+        await w.setProps({ phase: 'ENDED' })
+        await flushPromises()
+        expect(h.scoreboard).toHaveBeenCalledTimes(2)
+        await vi.advanceTimersByTimeAsync(120_000)
+        expect(h.scoreboard).toHaveBeenCalledTimes(2)
+        wrapper!.unmount()
+
+        // Opened after the end: read once.
+        h.scoreboard.mockClear()
+        await mountBoard('ENDED')
+        await vi.advanceTimersByTimeAsync(120_000)
+        expect(h.scoreboard).toHaveBeenCalledTimes(1)
+    })
+
+    it('aBackgroundPollShowsNoRefreshBar', async () => {
+        const w = await mountBoard()
+        h.scoreboard.mockImplementationOnce(() => new Promise(() => {}))
+        await vi.advanceTimersByTimeAsync(15_000)
+        expect(h.scoreboard).toHaveBeenCalledTimes(2)
+        expect(w.find('[role="progressbar"]').exists()).toBe(false)
+        expect(w.find('[aria-busy="true"]').exists()).toBe(false)
     })
 })

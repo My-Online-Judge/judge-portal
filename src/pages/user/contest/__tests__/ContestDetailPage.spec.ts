@@ -32,7 +32,7 @@ import ContestDetailPage from '../ContestDetailPage.vue'
 
 const ScoreboardStub = defineComponent({
     name: 'ContestScoreboard',
-    props: ['slug'],
+    props: ['slug', 'phase'],
     setup: () => () => render('div', { 'data-test': 'scoreboard' }),
 })
 
@@ -149,6 +149,7 @@ describe('ContestDetailPage', () => {
         await tab('Scoreboard').trigger('mousedown', { button: 0 })
         await flushPromises()
         expect(w.getComponent(ScoreboardStub).props('slug')).toBe('spring-cup')
+        expect(w.getComponent(ScoreboardStub).props('phase')).toBe('RUNNING')
         await tab('Problems').trigger('mousedown', { button: 0 })
         await flushPromises()
         expect(w.find('[data-test="scoreboard"]').exists()).toBe(false)
