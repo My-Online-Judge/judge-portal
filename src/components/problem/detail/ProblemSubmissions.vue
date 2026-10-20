@@ -121,36 +121,58 @@ const {
 
 const pagination = computed(() => response.value?.pagination)
 
-const { watch: watchVerdict } = useSubmissionStream()
+const { watch: watchVerdict, stop: stopVerdict } = useSubmissionStream()
 const liveRows = ref<Submission[]>([])
+// Streamed verdicts by submission id, merged over the row they belong to. A row fetched with a final status is
+// already newer than any verdict streamed before, so only rows still judging take the override.
+const overrides = ref<Record<string, Submission>>({})
+const applyVerdict = (verdict: Submission) => {
+    overrides.value = { ...overrides.value, [verdict.id]: verdict }
+}
+const withVerdict = (row: Submission): Submission => {
+    const verdict = overrides.value[row.id]
+    return verdict && !isTerminalStatus(row.status) ? { ...row, ...verdict } : row
+}
 
-// Optimistic + streamed rows shown above the fetched page; dedupe so a row that
-// later appears in the fetched page is not rendered twice.
+// Optimistic rows shown above the fetched page; dedupe so a row that later
+// appears in the fetched page is not rendered twice.
 const displayRows = computed(() => {
     const liveIds = new Set(liveRows.value.map((r) => r.id))
     const fetched = (response.value?.data || []).filter((s) => !liveIds.has(s.id))
-    return [...liveRows.value, ...fetched]
+    return [...liveRows.value, ...fetched].map(withVerdict)
 })
 
 const addPendingSubmission = (sub: Submission) => {
     if (!liveRows.value.some((r) => r.id === sub.id)) {
         liveRows.value.unshift(sub) // status is PENDING(6) from the submit response
     }
-    watchVerdict(sub.id, (verdict) => {
-        const idx = liveRows.value.findIndex((r) => r.id === verdict.id)
-        if (idx !== -1) {
-            liveRows.value.splice(idx, 1, { ...liveRows.value[idx], ...verdict })
-        }
-    })
+    watchVerdict(sub.id, applyVerdict)
 }
 
-// Once a finished submission shows up in a fresh fetch, drop its live copy so it
-// stops being pinned above the paginated list.
+// History rows of the current page that this list watches (the pinned new submissions are watched on their own).
+const watchedRows = new Set<string>()
+
 watch(response, (r) => {
-    const fetchedIds = new Set((r?.data || []).map((s) => s.id))
+    const rows = r?.data || []
+    const fetchedIds = new Set(rows.map((s) => s.id))
+    // Once a finished submission shows up in a fresh fetch, drop its live copy so it
+    // stops being pinned above the paginated list.
     liveRows.value = liveRows.value.filter(
-        (row) => !(fetchedIds.has(row.id) && isTerminalStatus(row.status)),
+        (row) => !(fetchedIds.has(row.id) && isTerminalStatus(withVerdict(row).status)),
     )
+    const liveIds = new Set(liveRows.value.map((row) => row.id))
+    // Rows that left the page stop streaming or polling; every row still judging gets a live verdict.
+    for (const id of watchedRows) {
+        if (!fetchedIds.has(id) && !liveIds.has(id)) {
+            stopVerdict(id)
+            watchedRows.delete(id)
+        }
+    }
+    for (const row of rows) {
+        if (isTerminalStatus(row.status) || liveIds.has(row.id)) continue
+        watchedRows.add(row.id)
+        watchVerdict(row.id, applyVerdict)
+    }
 })
 
 watch(

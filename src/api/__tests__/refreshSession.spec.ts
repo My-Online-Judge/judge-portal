@@ -1,6 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { AxiosError, AxiosResponse } from 'axios'
-import { createRefreshOn401, isRefreshExcluded } from '@/api/refreshSession'
+// @vitest-environment jsdom
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import type { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
+import { createRefreshOn401, isRefreshExcluded, singleFlight } from '@/api/refreshSession'
+
+// The signed-in state ensureFreshSession reads; the real store would pull in the whole auth flow.
+const auth = vi.hoisted(() => ({ isAuthenticated: true, logout: vi.fn(() => Promise.resolve()) }))
+vi.mock('@/stores/auth', () => ({ useAuthStore: () => auth }))
 
 const err = (status: number | undefined, url: string, extra: Record<string, unknown> = {}) =>
     ({
@@ -193,5 +198,244 @@ describe('createRefreshOn401', () => {
 
         releaseGiveUp[1]()
         await c.catch(() => {})
+    })
+})
+
+describe('singleFlight', () => {
+    it('shares one promise between two concurrent callers and calls fn again after it settles', async () => {
+        const releases: Array<(v: string) => void> = []
+        const fn = vi.fn(() => new Promise<string>((resolve) => { releases.push(resolve) }))
+        const once = singleFlight(fn)
+
+        const a = once()
+        const b = once()
+        expect(b).toBe(a)
+        expect(fn).toHaveBeenCalledTimes(1)
+        releases[0]('first')
+        await expect(a).resolves.toBe('first')
+
+        const c = once()
+        expect(c).not.toBe(a)
+        expect(fn).toHaveBeenCalledTimes(2)
+        releases[1]('second')
+        await expect(c).resolves.toBe('second')
+    })
+
+    it('a rejected call ends the flight too', async () => {
+        const fn = vi.fn()
+            .mockImplementationOnce(() => Promise.reject(new Error('nope')))
+            .mockImplementationOnce(() => Promise.resolve('ok'))
+        const once = singleFlight(fn)
+        await expect(once()).rejects.toThrow('nope')
+        await expect(once()).resolves.toBe('ok')
+        expect(fn).toHaveBeenCalledTimes(2)
+    })
+})
+
+// --- The tab's one refresh path, through the real axios client (a fake adapter answers the requests) ---
+
+class MockEventSource {
+    static readonly CONNECTING = 0
+    static readonly OPEN = 1
+    static readonly CLOSED = 2
+    static instances: MockEventSource[] = []
+    readyState = MockEventSource.CONNECTING
+    listeners: Record<string, ((ev: { data?: string }) => void)[]> = {}
+    constructor(public url: string) {
+        MockEventSource.instances.push(this)
+    }
+    addEventListener(type: string, cb: (ev: { data?: string }) => void) {
+        ;(this.listeners[type] ||= []).push(cb)
+    }
+    close() {
+        this.readyState = MockEventSource.CLOSED
+    }
+    emit(type: string, ev: { data?: string }) {
+        ;(this.listeners[type] || []).forEach((cb) => cb(ev))
+    }
+}
+
+type Handler = (config: InternalAxiosRequestConfig) => Promise<AxiosResponse>
+
+const reply = (config: InternalAxiosRequestConfig, status: number, data: unknown = {}): Promise<AxiosResponse> => {
+    const response = { data, status, statusText: '', headers: {}, config } as AxiosResponse
+    if (status < 400) return Promise.resolve(response)
+    return Promise.reject(Object.assign(new Error(`Request failed with status code ${status}`), { config, response, isAxiosError: true }))
+}
+const okEverything: Handler = (config) => reply(config, 200)
+
+/** Fresh modules per test: the refresh flight and the session clock are module state. */
+async function loadApp(handler: Handler) {
+    vi.resetModules()
+    const { default: client, refreshSession } = await import('@/api/axiosClient')
+    const session = await import('@/api/refreshSession')
+    const { default: authService } = await import('@/services/authService')
+    const { useSubmissionStream } = await import('@/composables/useSubmissionStream')
+    const requests: string[] = []
+    client.defaults.adapter = (config) => {
+        requests.push(`${config.method?.toUpperCase()} ${config.url}`)
+        return handler(config)
+    }
+    const refreshes = () => requests.filter((r) => r === 'POST /auth/refresh').length
+    return { client, refreshSession, session, authService, useSubmissionStream, requests, refreshes }
+}
+
+const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
+
+describe('one refresh path per tab', () => {
+    beforeEach(() => {
+        auth.isAuthenticated = true
+        MockEventSource.instances = []
+        vi.stubGlobal('EventSource', MockEventSource)
+    })
+    afterEach(() => vi.unstubAllGlobals())
+
+    it('streamAndInterceptorShareOneRefresh', async () => {
+        let releaseRefresh!: () => void
+        let problemReads = 0
+        const app = await loadApp((config) => {
+            if (config.url === '/auth/refresh') {
+                return new Promise((resolve) => { releaseRefresh = () => resolve(reply(config, 200)) })
+            }
+            if (config.url === '/problems') return ++problemReads === 1 ? reply(config, 401) : reply(config, 200, { data: 'fresh' })
+            return reply(config, 404)
+        })
+        const onVerdict = vi.fn()
+        app.useSubmissionStream().watch('s1', onVerdict)
+
+        // The access cookie lapsed: the stream is refused (CLOSED) and a concurrent read gets a 401.
+        const stream = MockEventSource.instances[0]
+        stream.readyState = MockEventSource.CLOSED
+        stream.emit('error', {})
+        const read = app.client.get('/problems')
+        await tick()
+        releaseRefresh()
+
+        await expect(read).resolves.toMatchObject({ data: { data: 'fresh' } })
+        await tick()
+        expect(app.refreshes()).toBe(1)
+        expect(MockEventSource.instances).toHaveLength(2)
+        MockEventSource.instances[1].emit('verdict', { data: JSON.stringify({ id: 's1', status: 0 }) })
+        expect(onVerdict).toHaveBeenCalledTimes(1)
+    })
+
+    it('authService.refresh() joins the same flight', async () => {
+        let releaseRefresh!: () => void
+        const app = await loadApp((config) =>
+            new Promise((resolve) => { releaseRefresh = () => resolve(reply(config, 200)) }))
+        const fromInterceptorPath = app.refreshSession()
+        const fromService = app.authService.refresh()
+        expect(fromService).toBe(fromInterceptorPath)
+        await tick()
+        releaseRefresh()
+        await Promise.all([fromInterceptorPath, fromService])
+        expect(app.refreshes()).toBe(1)
+    })
+})
+
+describe('ensureFreshSession', () => {
+    const MINUTE = 60_000
+
+    beforeEach(() => {
+        auth.isAuthenticated = true
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2026-10-20T08:00:00Z'))
+    })
+    afterEach(() => vi.useRealTimers())
+
+    it('exports the 14-minute threshold', async () => {
+        const app = await loadApp(okEverything)
+        expect(app.session.SESSION_REFRESH_AFTER_MS).toBe(14 * MINUTE)
+    })
+
+    it('refreshes first when the last login or refresh is unknown', async () => {
+        const app = await loadApp(okEverything)
+        await app.session.ensureFreshSession()
+        expect(app.requests).toEqual(['POST /auth/refresh'])
+    })
+
+    it('skips the refresh under 14 minutes after one and refreshes at 14 minutes', async () => {
+        let first = true
+        const app = await loadApp((config) => {
+            // The first refresh comes from the interceptor: a 401 on a protected read.
+            if (config.url === '/users/me' && first) {
+                first = false
+                return reply(config, 401)
+            }
+            return reply(config, 200)
+        })
+        await app.client.get('/users/me')
+        expect(app.refreshes()).toBe(1)
+
+        vi.setSystemTime(Date.now() + 14 * MINUTE - 1)
+        await app.session.ensureFreshSession()
+        expect(app.refreshes()).toBe(1)
+
+        vi.setSystemTime(Date.now() + 1)
+        await app.session.ensureFreshSession()
+        expect(app.refreshes()).toBe(2)
+    })
+
+    it('counts a password login as fresh', async () => {
+        const app = await loadApp(okEverything)
+        await app.authService.login('admin', 'secret')
+        vi.setSystemTime(Date.now() + 13 * MINUTE)
+        await app.session.ensureFreshSession()
+        expect(app.requests).toEqual(['POST /auth/login'])
+    })
+
+    it('does nothing for a signed-out tab', async () => {
+        auth.isAuthenticated = false
+        const app = await loadApp(okEverything)
+        await app.session.ensureFreshSession()
+        expect(app.requests).toEqual([])
+    })
+
+    it('resolves when the refresh fails, and tries again on the next call', async () => {
+        const app = await loadApp((config) => reply(config, config.url === '/auth/refresh' ? 401 : 200))
+        await expect(app.session.ensureFreshSession()).resolves.toBeUndefined()
+        await app.session.ensureFreshSession()
+        expect(app.refreshes()).toBe(2)
+        expect(auth.logout).not.toHaveBeenCalled()
+    })
+
+    it('shares the in-flight refresh', async () => {
+        let releaseRefresh!: () => void
+        const app = await loadApp((config) =>
+            new Promise((resolve) => { releaseRefresh = () => resolve(reply(config, 200)) }))
+        const both = Promise.all([app.session.ensureFreshSession(), app.session.ensureFreshSession(), app.refreshSession()])
+        await vi.waitFor(() => expect(app.refreshes()).toBe(1))
+        releaseRefresh()
+        await both
+        expect(app.refreshes()).toBe(1)
+    })
+
+    it('runs when the tab becomes visible', async () => {
+        let visibility: DocumentVisibilityState = 'visible'
+        Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visibility })
+        const app = await loadApp(okEverything)
+        const uninstall = app.session.installFreshSessionOnVisible(document)
+        try {
+            visibility = 'hidden'
+            document.dispatchEvent(new Event('visibilitychange'))
+            await tick()
+            await tick()
+            expect(app.refreshes()).toBe(0)
+
+            visibility = 'visible'
+            document.dispatchEvent(new Event('visibilitychange'))
+            await vi.waitFor(() => expect(app.refreshes()).toBe(1))
+
+            // Uninstalled: a stale session no longer refreshes on visibility.
+            uninstall()
+            vi.setSystemTime(Date.now() + 15 * MINUTE)
+            document.dispatchEvent(new Event('visibilitychange'))
+            await tick()
+            await tick()
+            expect(app.refreshes()).toBe(1)
+        } finally {
+            uninstall()
+            Reflect.deleteProperty(document, 'visibilityState')
+        }
     })
 })

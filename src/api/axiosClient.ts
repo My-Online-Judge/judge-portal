@@ -2,11 +2,12 @@
 import axios, { type AxiosError, type AxiosResponse } from 'axios'
 import { getDeviceId } from '@/lib/deviceId'
 import { API_ROUTES } from '@/constants/apiPath'
-import { createRefreshOn401 } from './refreshSession'
+import { createRefreshOn401, markSessionFresh, singleFlight } from './refreshSession'
 import { API_BASE_URL } from './baseUrl'
 import { shouldAnnounceSessionExpiry, sessionExpiredLoginTarget } from './sessionExpired'
 import { useToast } from '@/composables/useToast'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
+import type { ApiResponse } from '@/types/common'
 
 export { API_BASE_URL }
 
@@ -28,10 +29,22 @@ axiosClient.interceptors.request.use((config) => {
     return config
 })
 
+/**
+ * The tab's one session refresh. The 401 interceptor below, the verdict stream, ensureFreshSession and
+ * authService.refresh() all call it, so a tab never has two refreshes in flight: the refresh cookie rotates on
+ * every refresh, and a rotated one presented again after a 10 s grace ends every session (SP12). Other tabs share
+ * the cookie jar, so a later tab sends the rotated cookie, and simultaneous tabs fall inside the grace.
+ */
+export const refreshSession = singleFlight(async () => {
+    const response = await axiosClient.post<ApiResponse<void>>(API_ROUTES.AUTH.REFRESH_TOKEN)
+    markSessionFresh()
+    return response
+})
+
 // An expired access token comes back as 401 (403 means "authenticated but not
 // permitted" and must never be retried). Refresh once, then replay the request.
 const handleUnauthorized = createRefreshOn401({
-    refresh: () => axiosClient.post(API_ROUTES.AUTH.REFRESH_TOKEN),
+    refresh: refreshSession,
     retry: (config) => axiosClient.request(config),
     onGiveUp: async () => {
         // Imported lazily: the store imports authService, which imports this module.

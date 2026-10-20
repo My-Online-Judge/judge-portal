@@ -16,6 +16,7 @@ import App from './App.vue'
 import router from './router'
 import { useTheme } from './composables/useTheme'
 import { installChunkReload } from './lib/chunkReload'
+import { installFreshSessionOnVisible } from './api/refreshSession'
 
 const app = createApp(App)
 
@@ -23,6 +24,8 @@ app.use(createPinia())
 app.use(router)
 // A tab still running the previous build reloads once when its lazy chunks are gone after a redeploy.
 installChunkReload(router)
+// A tab coming back after 14 minutes or more refreshes its session first, so public pages still know who is asking.
+installFreshSessionOnVisible()
 
 // Start following the OS theme for everyone, signed in or not, before any menu exists.
 useTheme()

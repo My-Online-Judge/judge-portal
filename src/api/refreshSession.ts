@@ -25,13 +25,23 @@ export interface RefreshOn401Deps {
     isExcluded?: (url?: string) => boolean
 }
 
+/** One in-flight call shared by every caller; the first call after it settles calls `fn` again. */
+export function singleFlight<T>(fn: () => Promise<T>): () => Promise<T> {
+    let inFlight: Promise<T> | null = null
+    return () => {
+        if (!inFlight) {
+            inFlight = fn().finally(() => { inFlight = null })
+        }
+        return inFlight
+    }
+}
+
 /**
  * Builds an axios response-error handler that turns a 401 into
  * "refresh once, then retry the original request".
  */
 export function createRefreshOn401(deps: RefreshOn401Deps) {
     const isExcluded = deps.isExcluded ?? isRefreshExcluded
-    let inFlight: Promise<unknown> | null = null
     // Identity of the last round that already called onGiveUp, not a boolean:
     // a boolean flag lives at module scope and gets reset the moment the NEXT
     // round starts, so a still-awaiting waiter of the PREVIOUS (failed) round
@@ -41,12 +51,7 @@ export function createRefreshOn401(deps: RefreshOn401Deps) {
     let gaveUpForRound: Promise<unknown> | null = null
 
     // Single-flight: N requests failing at once wait on one /auth/refresh.
-    const refreshOnce = (): Promise<unknown> => {
-        if (!inFlight) {
-            inFlight = deps.refresh().finally(() => { inFlight = null })
-        }
-        return inFlight
-    }
+    const refreshOnce = singleFlight(deps.refresh)
 
     return async (error: AxiosError): Promise<AxiosResponse> => {
         const config = error.config as RetriableConfig | undefined
@@ -65,7 +70,7 @@ export function createRefreshOn401(deps: RefreshOn401Deps) {
 
         config._retry = true
         // Capture this round's identity before awaiting it: by the time the
-        // catch below runs, `inFlight` may already belong to a *new* round.
+        // catch below runs, the flight may already belong to a *new* round.
         const round = refreshOnce()
         try {
             await round
@@ -78,4 +83,45 @@ export function createRefreshOn401(deps: RefreshOn401Deps) {
         }
         return deps.retry(config)
     }
+}
+
+/**
+ * Access tokens last 15 minutes and the access cookie expires with them (SP12). Public endpoints answer an expired
+ * caller as anonymous rather than with a 401, so a personalised public read refreshes first once the session is this old.
+ */
+export const SESSION_REFRESH_AFTER_MS = 14 * 60_000
+
+// When this tab last logged in or refreshed successfully; null while unknown (a fresh page load).
+let lastFreshAt: number | null = null
+
+/** Records a successful login or refresh: the access cookie is new. */
+export function markSessionFresh(): void {
+    lastFreshAt = Date.now()
+}
+
+/**
+ * Before a personalised read: a signed-in tab whose last login or refresh is unknown or at least 14 minutes old
+ * refreshes first, through the tab's one refresh path. Never rejects: if the refresh fails, the read goes out
+ * anyway, and the next protected request's 401 ends the session as usual.
+ */
+export async function ensureFreshSession(): Promise<void> {
+    if (lastFreshAt !== null && Date.now() - lastFreshAt < SESSION_REFRESH_AFTER_MS) return
+    try {
+        // Lazy: the store imports authService, and the client imports this module.
+        const { useAuthStore } = await import('@/stores/auth')
+        if (!useAuthStore().isAuthenticated) return
+        const { refreshSession } = await import('./axiosClient')
+        await refreshSession()
+    } catch {
+        // Nothing to add: see above.
+    }
+}
+
+/** Runs ensureFreshSession whenever the tab becomes visible again. Returns the uninstaller. */
+export function installFreshSessionOnVisible(doc: Document = document): () => void {
+    const onChange = () => {
+        if (doc.visibilityState === 'visible') void ensureFreshSession()
+    }
+    doc.addEventListener('visibilitychange', onChange)
+    return () => doc.removeEventListener('visibilitychange', onChange)
 }
