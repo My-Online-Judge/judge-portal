@@ -113,8 +113,8 @@ describe('ProblemDetailPage', () => {
 
     describe('in a contest', () => {
         const problem = { problemSlug: 'tong-hai-so', title: 'Tổng hai số', status: 1 }
-        const contest = (phase: string) => ({
-            slug: 'spring-cup', title: 'Spring cup', phase, status: 'PUBLISHED', problems: [], myProgress: {},
+        const contest = (phase: string, status = 'PUBLISHED') => ({
+            slug: 'spring-cup', title: 'Spring cup', phase, status, problems: [], myProgress: {},
             startsAt: '2026-10-21T09:00:00Z', endsAt: '2026-10-21T11:00:00Z', serverTime: '2026-10-21T10:00:00Z',
         })
         const mountContestPage = async ({ signedIn = true } = {}) => {
@@ -163,6 +163,15 @@ describe('ProblemDetailPage', () => {
             expect(pane.props('slug')).toBe('tong-hai-so')
             expect(pane.props('disabledReason')).toBeUndefined()
             expect(w.text()).not.toContain(PRACTICE)
+        })
+
+        it('aDraftInItsWindowIsAPreviewThatSubmitsWithoutTheContest', async () => {
+            // Only an editor sees a draft; the judge takes contest submissions for a published contest only.
+            h.getContest.mockResolvedValue({ data: { data: contest('RUNNING', 'DRAFT') } })
+            h.getContestProblem.mockResolvedValue({ data: { data: problem } })
+            const w = await mountContestPage()
+            expect(w.findComponent(SolvePane).props('contestSlug')).toBeUndefined()
+            expect(w.text()).toContain('Preview: this contest is a draft, so submissions do not count.')
         })
 
         it('anEndedContestIsPracticeWithABanner', async () => {

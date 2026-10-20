@@ -243,11 +243,14 @@ const loadContest = async () => {
 void loadContest()
 
 const INACTIVE = 0
-// Only a running contest takes the submission; after the end (or before the start, which only editors can see) it is
-// practice.
-const submitContestSlug = computed(() => (contest.value?.phase === 'RUNNING' ? contestSlug.value : undefined))
+// Only a published contest that is running takes the submission; after the end, before the start or in a draft (both
+// seen by editors only) it is practice, so a draft never loops on the judge's "not running" refusal.
+const submitContestSlug = computed(() =>
+    contest.value?.status === 'PUBLISHED' && contest.value.phase === 'RUNNING' ? contestSlug.value : undefined,
+)
 const contestNote = computed(() => {
     if (contest.value?.phase === 'ENDED') return 'Practice: this contest has ended, so submissions do not count.'
+    if (contest.value?.status === 'DRAFT') return 'Preview: this contest is a draft, so submissions do not count.'
     if (contest.value?.phase === 'UPCOMING') return 'Preview: this contest has not started, so submissions do not count.'
     return null
 })
