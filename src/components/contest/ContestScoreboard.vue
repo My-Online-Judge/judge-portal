@@ -70,10 +70,12 @@ const solvedText = (c: ScoreboardCell) =>
 const cellClass = (c?: ScoreboardCell) =>
     c?.solved ? 'bg-success-soft text-success-ink' : c?.attempts ? 'text-destructive-ink' : ''
 
-// Polled: read at mount, then again 15 s after each answer, so a slow answer never overlaps the next read.
+// Polled: read at mount, then again 15 s after each answer, so a slow answer never overlaps the next read. A hidden tab
+// does not poll: it reads again when shown.
 let timer: ReturnType<typeof setTimeout> | null = null
 let inFlight: AbortController | null = null
 let stopped = false
+const hidden = () => document.visibilityState === 'hidden'
 
 const load = async () => {
     if (timer !== null) clearTimeout(timer)
@@ -95,8 +97,17 @@ const load = async () => {
         if (inFlight === ctl) {
             inFlight = null
             loading.value = false
-            if (!stopped) timer = setTimeout(load, SCOREBOARD_POLL_MS)
+            if (!stopped && !hidden()) timer = setTimeout(load, SCOREBOARD_POLL_MS)
         }
+    }
+}
+
+const onVisibilityChange = () => {
+    if (hidden()) {
+        if (timer !== null) clearTimeout(timer)
+        timer = null
+    } else if (!stopped && timer === null && inFlight === null) {
+        void load()
     }
 }
 
@@ -107,8 +118,12 @@ watch(
         void load()
     },
 )
-onMounted(load)
+onMounted(() => {
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    void load()
+})
 onBeforeUnmount(() => {
+    document.removeEventListener('visibilitychange', onVisibilityChange)
     stopped = true
     if (timer !== null) clearTimeout(timer)
     inFlight?.abort()

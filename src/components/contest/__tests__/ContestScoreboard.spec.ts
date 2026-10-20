@@ -71,6 +71,50 @@ describe('ContestScoreboard', () => {
         expect(h.scoreboard).toHaveBeenCalledTimes(3)
     })
 
+    it('pausesWhileTheTabIsHiddenAndReadsAgainWhenShown', async () => {
+        let state: DocumentVisibilityState = 'visible'
+        const spy = vi.spyOn(document, 'visibilityState', 'get').mockImplementation(() => state)
+        const turn = (next: DocumentVisibilityState) => {
+            state = next
+            document.dispatchEvent(new Event('visibilitychange'))
+        }
+        try {
+            await mountBoard()
+            expect(h.scoreboard).toHaveBeenCalledTimes(1)
+            turn('hidden')
+            await vi.advanceTimersByTimeAsync(120_000)
+            expect(h.scoreboard).toHaveBeenCalledTimes(1)
+
+            // Shown again: read at once, then every 15 s as before.
+            turn('visible')
+            await flushPromises()
+            expect(h.scoreboard).toHaveBeenCalledTimes(2)
+            await vi.advanceTimersByTimeAsync(15_000)
+            expect(h.scoreboard).toHaveBeenCalledTimes(3)
+
+            // A read that is in flight when the tab hides schedules nothing after it.
+            let answerIt!: (v: unknown) => void
+            h.scoreboard.mockImplementationOnce(() => new Promise((resolve) => (answerIt = resolve)))
+            await vi.advanceTimersByTimeAsync(15_000)
+            expect(h.scoreboard).toHaveBeenCalledTimes(4)
+            turn('hidden')
+            answerIt({ data: { data: board } })
+            await vi.advanceTimersByTimeAsync(120_000)
+            expect(h.scoreboard).toHaveBeenCalledTimes(4)
+        } finally {
+            spy.mockRestore()
+        }
+    })
+
+    it('stopsListeningOnUnmount', async () => {
+        await mountBoard()
+        wrapper!.unmount()
+        wrapper = undefined
+        document.dispatchEvent(new Event('visibilitychange'))
+        await vi.advanceTimersByTimeAsync(60_000)
+        expect(h.scoreboard).toHaveBeenCalledTimes(1)
+    })
+
     it('stopsPollingOnUnmount', async () => {
         await mountBoard()
         wrapper!.unmount()
