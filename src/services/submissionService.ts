@@ -13,6 +13,14 @@ class SubmissionService {
         return axiosClient.get(API_ROUTES.SUBMISSIONS.DETAIL(id))
     }
 
+    rejudge(id: string): Promise<AxiosResponse<ApiResponse<void>>> {
+        return axiosClient.post(API_ROUTES.SUBMISSIONS.REJUDGE(id))
+    }
+
+    rejudgeProblem(slug: string, status?: number): Promise<AxiosResponse<ApiResponse<{ queued: number }>>> {
+        return axiosClient.post(API_ROUTES.PROBLEMS.REJUDGE(slug), null, { params: status === undefined ? undefined : { status } })
+    }
+
     getSubmissionsByUserAndProblem(
         signal: AbortSignal,
         userId: string | number,

@@ -101,6 +101,17 @@
         </div>
 
         <ConfirmDialog
+            :open="rejudgeOpen"
+            :title="`Rejudge “${rejudgeTarget?.title ?? ''}”?`"
+            description="Judges the 500 newest finished submissions of this problem again with its current test data. Statistics follow the new verdicts."
+            confirm-label="Rejudge"
+            tone="neutral"
+            :busy="rejudging"
+            @update:open="(v) => (rejudgeOpen = v)"
+            @confirm="confirmRejudge"
+        />
+
+        <ConfirmDialog
             :open="deleteOpen"
             :title="`Delete problem “${deleteTarget?.title ?? ''}”?`"
             description="Its test cases are deleted with it. You can undo for 8 seconds after deleting."
@@ -115,7 +126,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { watchDebounced } from '@vueuse/core'
-import { Plus, Search, Eye, EyeOff, Pencil, Trash2 } from 'lucide-vue-next'
+import { Plus, Search, Eye, EyeOff, Pencil, Trash2, RotateCcw } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -128,19 +139,22 @@ import DifficultyBadge from '@/components/common/DifficultyBadge.vue'
 import type { RowAction } from '@/components/common/rowActions'
 import { useFetch } from '@/composables/useFetch'
 import { useToast } from '@/composables/useToast'
+import { getErrorMessage } from '@/lib/errorMessage'
 import { usePendingDeletes, isAlreadyGone } from '@/composables/usePendingDeletes'
 import problemService from '@/services/problemService'
+import submissionService from '@/services/submissionService'
 import { useAuthStore } from '@/stores/auth'
 import type { Problem } from '@/types/problem'
 import { relativeTime } from '@/lib/problemDisplay'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { undo, error: errorToast } = useToast()
+const { undo, error: errorToast, triggerToast } = useToast()
 
 const canCreate = computed(() => authStore.hasPermission('problem:create'))
 const canUpdate = computed(() => authStore.hasPermission('problem:update'))
 const canDelete = computed(() => authStore.hasPermission('problem:delete'))
+const canRejudge = computed(() => authStore.hasPermission('submission:rejudge'))
 
 const { data, isLoading, error, execute } = useFetch(problemService.getProblems, { immediate: false })
 
@@ -182,8 +196,33 @@ const goEdit = (slug: string) => router.push({ name: 'AdminProblemDetail', param
 const rowActions = (p: Problem): RowAction[] => {
     const items: RowAction[] = [{ label: 'View', icon: Eye, onSelect: () => goDetail(p.problemSlug) }]
     if (canUpdate.value) items.push({ label: 'Edit', icon: Pencil, onSelect: () => goEdit(p.problemSlug) })
+    if (canRejudge.value) items.push({ label: 'Rejudge…', icon: RotateCcw, onSelect: () => openRejudge(p) })
     if (canDelete.value) items.push({ label: 'Delete…', icon: Trash2, destructive: true, onSelect: () => openDelete(p) })
     return items
+}
+
+// --- Rejudge confirm ---
+const rejudgeOpen = ref(false)
+const rejudgeTarget = ref<Problem | null>(null)
+const rejudging = ref(false)
+
+const openRejudge = (p: Problem) => {
+    rejudgeTarget.value = p
+    rejudgeOpen.value = true
+}
+
+const confirmRejudge = async () => {
+    if (!rejudgeTarget.value || rejudging.value) return
+    rejudging.value = true
+    try {
+        const res = await submissionService.rejudgeProblem(rejudgeTarget.value.problemSlug)
+        triggerToast(`Queued ${res.data.data.queued} submission(s) for rejudging`, 'success')
+        rejudgeOpen.value = false
+    } catch (err) {
+        triggerToast(getErrorMessage(err, "Couldn't rejudge the problem"), 'error')
+    } finally {
+        rejudging.value = false
+    }
 }
 
 // --- Delete confirm ---

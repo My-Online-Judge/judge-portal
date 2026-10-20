@@ -100,7 +100,7 @@ import { useToast, type ToastHandle } from '@/composables/useToast'
 import { useCooldown } from '@/composables/useCooldown'
 import { useTheme } from '@/composables/useTheme'
 import { getErrorMessage } from '@/lib/errorMessage'
-import { retryAfterSeconds } from '@/lib/retryAfter'
+import { busyFallbackMessage, retryAfterSeconds } from '@/lib/submitErrors'
 import { shouldShowTooFast, submissionToasts } from '@/lib/submissionToasts'
 import submissionService from '@/services/submissionService'
 import type { Submission, SubmissionRequest } from '@/types/submission'
@@ -167,10 +167,14 @@ const handleReset = () => {
 }
 
 // When the current cooldown ends (epoch ms), so a press on the cooldown button can show the same toast.
+const TOO_FAST = 'You are submitting too fast'
 let cooldownUntil = 0
-const beginCooldown = (seconds: number) => {
+// What the countdown toast says for the current cooldown: the 429 copy, or a busy judge's message.
+let cooldownReason = TOO_FAST
+const beginCooldown = (seconds: number, reason: string = TOO_FAST) => {
     startCooldown(seconds)
     cooldownUntil = Date.now() + seconds * 1000
+    cooldownReason = reason
 }
 // One "too fast" toast at a time: presses while it counts down don't stack more of them.
 let tooFast: ToastHandle | undefined
@@ -178,8 +182,8 @@ let tooFast: ToastHandle | undefined
 let tooFastFor = 0
 const showTooFast = () => {
     const until = Math.max(cooldownUntil, Date.now() + 1000)
-    if (shouldShowTooFast(tooFast?.id, toasts.value)) tooFast = countdown('You are submitting too fast', { until })
-    else if (tooFast && tooFastFor !== cooldownUntil) tooFast.update({ until })
+    if (shouldShowTooFast(tooFast?.id, toasts.value)) tooFast = countdown(cooldownReason, { until })
+    else if (tooFast && tooFastFor !== cooldownUntil) tooFast.update({ until, title: cooldownReason })
     tooFastFor = cooldownUntil
 }
 
@@ -223,9 +227,12 @@ const handleSubmit = async () => {
         emit('success', res.data.data)
     } catch (error) {
         pending.dismiss()
-        if (isAxiosError(error) && error.response?.status === 429) {
-            const seconds = retryAfterSeconds(error.response.headers?.['retry-after'], COOLDOWN_SECONDS)
-            beginCooldown(seconds)
+        // 429 (too fast) and 503 (judge busy) both push back with a wait; the countdown toast
+        // shows it. A 503 keeps the server's message, a 429 keeps the design copy.
+        const wait = retryAfterSeconds(error, COOLDOWN_SECONDS)
+        if (wait !== null) {
+            const busy = isAxiosError(error) && error.response?.status === 503
+            beginCooldown(wait, busy ? busyFallbackMessage(error) : TOO_FAST)
             showTooFast()
         } else if (isAxiosError(error) && !error.response) {
             errorToast("Couldn't reach the server", {
