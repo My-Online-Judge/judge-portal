@@ -461,4 +461,26 @@ describe('useSubmissionStream', () => {
     await vi.advanceTimersByTimeAsync(POLL_DELAYS_MS[0])
     expect(getById).toHaveBeenCalledTimes(8 - MAX_OPEN_STREAMS)
   })
+
+  it('a priority watch takes a stream slot from a history row when the cap is full', async () => {
+    const stream = useSubmissionStream()
+    for (let i = 0; i < MAX_OPEN_STREAMS; i++) stream.watch(`r${i}`, () => {})
+    getById.mockClear()
+    stream.watch('mine', () => {}, undefined, { priority: true })
+    // The oldest history row gave its stream up and polls; the new submission has a stream.
+    expect(MockEventSource.instances).toHaveLength(MAX_OPEN_STREAMS + 1)
+    expect(MockEventSource.instances[0].closed).toBe(true)
+    expect(MockEventSource.instances[MAX_OPEN_STREAMS].closed).toBe(false)
+    await vi.advanceTimersByTimeAsync(POLL_DELAYS_MS[0])
+    expect(getById).toHaveBeenCalledTimes(1)
+    expect(getById).toHaveBeenCalledWith('r0')
+  })
+
+  it('a priority watch never evicts another priority watch', () => {
+    const stream = useSubmissionStream()
+    for (let i = 0; i < MAX_OPEN_STREAMS; i++) stream.watch(`p${i}`, () => {}, undefined, { priority: true })
+    stream.watch('extra', () => {}, undefined, { priority: true })
+    expect(MockEventSource.instances).toHaveLength(MAX_OPEN_STREAMS)
+    expect(MockEventSource.instances.every((es) => !es.closed)).toBe(true)
+  })
 })

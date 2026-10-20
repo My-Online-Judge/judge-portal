@@ -32,6 +32,8 @@ interface Watch {
     /** The one session refresh and reconnect is used up. */
     reconnected: boolean
     polling: boolean
+    /** The user's own new submission: may take a stream slot from a history row. */
+    priority: boolean
     pollStartedAt: number
     polls: number
     /** Finished or stopped: late events, refreshes and poll results are ignored. */
@@ -167,7 +169,14 @@ export function useSubmissionStream(deps: SubmissionStreamDeps = {}) {
     }
 
     const open = (w: Watch) => {
-        if (openStreams() >= MAX_OPEN_STREAMS) return startPolling(w)
+        if (openStreams() >= MAX_OPEN_STREAMS) {
+            // Full: a priority watch moves the oldest non-priority stream to polling, anything else polls itself.
+            const victim = w.priority
+                ? Array.from(shared.values()).find((o) => o !== w && o.source !== null && !o.priority)
+                : undefined
+            if (!victim) return startPolling(w)
+            startPolling(victim)
+        }
         const source = new EventSource(`${API_BASE_URL}${API_ROUTES.SUBMISSIONS.STREAM(w.id)}`, {
             withCredentials: true,
         })
@@ -198,7 +207,7 @@ export function useSubmissionStream(deps: SubmissionStreamDeps = {}) {
         })
     }
 
-    const watch = (id: string, onVerdict: VerdictHandler, onGiveUp?: () => void) => {
+    const watch = (id: string, onVerdict: VerdictHandler, onGiveUp?: () => void, opts: { priority?: boolean } = {}) => {
         if (mine.has(id)) return
         const sub: Subscriber = {
             onVerdict: (v) => {
@@ -221,6 +230,7 @@ export function useSubmissionStream(deps: SubmissionStreamDeps = {}) {
                 timer: null,
                 reconnected: false,
                 polling: false,
+                priority: !!opts.priority,
                 pollStartedAt: 0,
                 polls: 0,
                 done: false,

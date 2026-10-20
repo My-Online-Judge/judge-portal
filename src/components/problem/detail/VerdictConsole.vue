@@ -103,6 +103,7 @@ watch(
                     }
                 },
                 () => releaseSubmissionToast(sub.id),
+                { priority: true },
             )
         }
     },
