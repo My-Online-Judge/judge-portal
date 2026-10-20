@@ -13,6 +13,9 @@ export function buildProblemFormData(dto: CreateProblemPayload, file: File): For
     return fd
 }
 
+// Packages go up to 50 MB and an export streams from storage: the client's default 10 s is too short.
+const PACKAGE_TIMEOUT_MS = 120_000
+
 class ProblemService {
 
     // Get all problems with pagination and search params
@@ -49,6 +52,26 @@ class ProblemService {
     // Delete a problem by slug
     remove(slug: string): Promise<AxiosResponse<ApiResponse<void>>> {
         return axiosClient.delete<ApiResponse<void>>(API_ROUTES.PROBLEMS.DETAIL(slug))
+    }
+
+    // Create a problem from an exported package (zip). A blank override is not sent; the package's slug is used.
+    importPackage(file: File, slugOverride?: string): Promise<AxiosResponse<ApiResponse<Problem>>> {
+        const fd = new FormData()
+        fd.append('file', file)
+        if (slugOverride?.trim()) fd.append('slugOverride', slugOverride.trim())
+        return axiosClient.post<ApiResponse<Problem>>(API_ROUTES.PROBLEMS.IMPORT, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: PACKAGE_TIMEOUT_MS,
+        })
+    }
+
+    // Download a problem as a package (zip).
+    async exportPackage(slug: string): Promise<Blob> {
+        const res = await axiosClient.get<Blob>(API_ROUTES.PROBLEMS.EXPORT(slug), {
+            responseType: 'blob',
+            timeout: PACKAGE_TIMEOUT_MS,
+        })
+        return res.data
     }
 
     // Same delete for page unload: fetch with keepalive survives the tab closing (axios/XHR does not).

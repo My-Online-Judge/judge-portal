@@ -4,7 +4,13 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 
-const h = vi.hoisted(() => ({ getProblems: vi.fn(), rejudgeProblem: vi.fn(), toast: vi.fn() }))
+const h = vi.hoisted(() => ({
+  getProblems: vi.fn(),
+  rejudgeProblem: vi.fn(),
+  toast: vi.fn(),
+  exportPackage: vi.fn(),
+  downloadBlob: vi.fn(),
+}))
 
 vi.mock('vue-router', async () => {
   const { defineComponent, h: render } = await import('vue')
@@ -12,7 +18,8 @@ vi.mock('vue-router', async () => {
   const RouterLink = defineComponent({ props: ['to'], setup: (_, { slots }) => () => render('a', slots.default?.()) })
   return { useRouter: () => ({ push: vi.fn() }), useRoute: () => ({ query: {}, path: '/admin/problems' }), RouterLink }
 })
-vi.mock('@/services/problemService', () => ({ default: { getProblems: h.getProblems, remove: vi.fn() } }))
+vi.mock('@/services/problemService', () => ({ default: { getProblems: h.getProblems, remove: vi.fn(), exportPackage: h.exportPackage } }))
+vi.mock('@/lib/download', () => ({ downloadBlob: h.downloadBlob }))
 vi.mock('@/services/submissionService', () => ({ default: { rejudgeProblem: h.rejudgeProblem } }))
 vi.mock('@/composables/useToast', () => ({ useToast: () => ({ triggerToast: h.toast }) }))
 
@@ -72,5 +79,25 @@ describe('AdminProblemsPage rejudge', () => {
     await flushPromises()
     expect(h.rejudgeProblem).toHaveBeenCalledWith('sum')
     expect(h.toast).toHaveBeenCalledWith('Queued 12 submission(s) for rejudging', 'success')
+  })
+})
+
+describe('AdminProblemsPage export', () => {
+  it('exportItemDownloadsTheZip', async () => {
+    const blob = new Blob(['PK'])
+    h.exportPackage.mockResolvedValue(blob)
+    await mountPage(['problem:update'])
+    await openMenu()
+    ;[...document.body.querySelectorAll('[role="menuitem"]')].find((e) => e.textContent?.trim() === 'Export')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushPromises()
+    expect(h.exportPackage).toHaveBeenCalledWith('sum')
+    expect(h.downloadBlob).toHaveBeenCalledWith('sum.zip', blob)
+  })
+
+  it('exportHiddenWithoutUpdatePermission', async () => {
+    await mountPage([])
+    await openMenu()
+    expect(menuItems()).not.toContain('Export')
   })
 })

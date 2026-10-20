@@ -25,18 +25,17 @@
                 </div>
             </section>
 
-            <!-- Import problem (not built yet) -->
+            <!-- Import problem -->
             <section class="min-w-0 overflow-hidden rounded-xl border border-border bg-card" aria-labelledby="create-import">
                 <div class="border-b border-border px-3.5 py-3">
                     <h3 id="create-import" class="text-sm font-semibold text-foreground">Import problem</h3>
                     <p class="mt-0.5 text-xs text-muted-foreground">Create a problem from an exported package instead of filling the form.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3 p-4">
-                    <Button type="button" variant="secondary" disabled>
+                    <Button type="button" variant="secondary" :disabled="submitting" @click="importOpen = true">
                         <Upload class="size-4" />
                         Import from package
                     </Button>
-                    <span class="text-xs text-muted-foreground">Coming soon</span>
                 </div>
             </section>
 
@@ -51,6 +50,8 @@
                 </Button>
             </div>
         </form>
+
+        <ImportPackageDialog v-model:open="importOpen" @imported="onImported" />
 
         <UnsavedChangesBar
             :dirty="dirty"
@@ -84,11 +85,12 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import UnsavedChangesBar from '@/components/common/UnsavedChangesBar.vue'
 import { useDiscardGuard } from '@/composables/useDiscardGuard'
 import ProblemFormFields, { type ProblemFormValue } from '@/components/admin/problem/ProblemFormFields.vue'
+import ImportPackageDialog from '@/components/admin/problem/ImportPackageDialog.vue'
 import TestCaseEditor, { type TestCasePair } from '@/components/admin/problem/TestCaseEditor.vue'
 import { useToast } from '@/composables/useToast'
 import { getErrorMessage } from '@/lib/errorMessage'
 import problemService, { buildProblemFormData } from '@/services/problemService'
-import type { CreateProblemPayload } from '@/types/problem'
+import type { CreateProblemPayload, Problem } from '@/types/problem'
 
 const router = useRouter()
 const { triggerToast } = useToast()
@@ -163,6 +165,15 @@ const validate = (): boolean => {
     }
     errors.value = e
     return Object.keys(e).length === 0
+}
+
+const importOpen = ref(false)
+
+const onImported = (problem: Problem) => {
+    // The form is abandoned for the imported problem: do not ask to discard it on the way out.
+    created.value = true
+    triggerToast('Problem imported', 'success')
+    router.push({ name: 'AdminProblemDetail', params: { slug: problem.problemSlug } })
 }
 
 const cancel = () => router.push({ name: 'AdminProblems' })

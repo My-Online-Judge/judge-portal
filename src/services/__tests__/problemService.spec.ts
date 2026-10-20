@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { buildProblemFormData } from '@/services/problemService'
 import type { CreateProblemPayload } from '@/types/problem'
 
@@ -36,5 +36,55 @@ describe('deleteKeepalive', () => {
         } finally {
             vi.unstubAllGlobals()
         }
+    })
+})
+
+describe('package import and export', () => {
+    const post = vi.fn()
+    const get = vi.fn()
+    const load = async () => {
+        vi.resetModules()
+        vi.doMock('@/api/axiosClient', () => ({ default: { post, get }, API_BASE_URL: '/api/v1' }))
+        return (await import('@/services/problemService')).default
+    }
+    const zip = () => new File(['PK'], 'two-sum.zip', { type: 'application/zip' })
+
+    beforeEach(() => {
+        post.mockReset().mockResolvedValue({ data: {} })
+        get.mockReset().mockResolvedValue({ data: new Blob(['PK']) })
+    })
+    afterEach(() => vi.doUnmock('@/api/axiosClient'))
+
+    it('importSendsFileAndOverride', async () => {
+        const svc = await load()
+        const file = zip()
+        await svc.importPackage(file, 'copy-1')
+        const [url, body] = post.mock.calls[0] as [string, FormData, object]
+        expect(url).toBe('/problems/import')
+        expect(body.get('file')).toBe(file)
+        expect(body.get('slugOverride')).toBe('copy-1')
+    })
+
+    it('importOmitsABlankOverride', async () => {
+        const svc = await load()
+        await svc.importPackage(zip(), '  ')
+        await svc.importPackage(zip())
+        for (const call of post.mock.calls) expect((call[1] as FormData).has('slugOverride')).toBe(false)
+    })
+
+    it('exportRequestsABlob', async () => {
+        const svc = await load()
+        const blob = await svc.exportPackage('two-sum')
+        expect(get.mock.calls[0]![0]).toBe('/problems/two-sum/export')
+        expect(get.mock.calls[0]![1]).toMatchObject({ responseType: 'blob' })
+        expect(blob).toBeInstanceOf(Blob)
+    })
+
+    it('uploadsAndDownloadsUseTheLongTimeout', async () => {
+        const svc = await load()
+        await svc.importPackage(zip())
+        await svc.exportPackage('two-sum')
+        expect(post.mock.calls[0]![2]).toMatchObject({ timeout: 120_000 })
+        expect(get.mock.calls[0]![1]).toMatchObject({ timeout: 120_000 })
     })
 })

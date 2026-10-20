@@ -126,7 +126,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { watchDebounced } from '@vueuse/core'
-import { Plus, Search, Eye, EyeOff, Pencil, Trash2, RotateCcw } from 'lucide-vue-next'
+import { Plus, Search, Eye, EyeOff, Pencil, Trash2, RotateCcw, Download } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -146,6 +146,7 @@ import submissionService from '@/services/submissionService'
 import { useAuthStore } from '@/stores/auth'
 import type { Problem } from '@/types/problem'
 import { relativeTime } from '@/lib/problemDisplay'
+import { downloadBlob } from '@/lib/download'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -196,9 +197,19 @@ const goEdit = (slug: string) => router.push({ name: 'AdminProblemDetail', param
 const rowActions = (p: Problem): RowAction[] => {
     const items: RowAction[] = [{ label: 'View', icon: Eye, onSelect: () => goDetail(p.problemSlug) }]
     if (canUpdate.value) items.push({ label: 'Edit', icon: Pencil, onSelect: () => goEdit(p.problemSlug) })
+    if (canUpdate.value) items.push({ label: 'Export', icon: Download, onSelect: () => exportProblem(p) })
     if (canRejudge.value) items.push({ label: 'Rejudge…', icon: RotateCcw, onSelect: () => openRejudge(p) })
     if (canDelete.value) items.push({ label: 'Delete…', icon: Trash2, destructive: true, onSelect: () => openDelete(p) })
     return items
+}
+
+// --- Export: the package zip, built by the server ---
+const exportProblem = async (p: Problem) => {
+    try {
+        downloadBlob(`${p.problemSlug}.zip`, await problemService.exportPackage(p.problemSlug))
+    } catch (err) {
+        triggerToast(getErrorMessage(err, "Couldn't export the problem"), 'error')
+    }
 }
 
 // --- Rejudge confirm ---
