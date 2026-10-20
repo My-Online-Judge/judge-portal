@@ -74,6 +74,27 @@ function texNodes(root: Node): Text[] {
     return found
 }
 
+// throwOnError:false only covers KaTeX's ParseError. Anything else (a RangeError from thousands of nested braces, an
+// internal bug) would break the whole statement, so the formula falls back to its own source as plain text.
+function renderOne(p: { tex: string; display: boolean }): Node {
+    try {
+        const holder = document.createElement('template')
+        holder.innerHTML = katex.renderToString(p.tex, {
+            displayMode: p.display,
+            throwOnError: false,
+            trust: false,
+            output: 'html',
+            strict: 'ignore',
+            maxExpand: MAX_EXPAND,
+            maxSize: MAX_SIZE_EM,
+        })
+        return holder.content
+    } catch {
+        const mark = p.display ? '$$' : '$'
+        return document.createTextNode(mark + p.tex + mark)
+    }
+}
+
 export function renderMath(safeHtml: string): string {
     if (!safeHtml || !safeHtml.includes('$')) return safeHtml
     const template = document.createElement('template')
@@ -89,17 +110,7 @@ export function renderMath(safeHtml: string): string {
                 frag.append(document.createTextNode(p.text))
                 continue
             }
-            const holder = document.createElement('template')
-            holder.innerHTML = katex.renderToString(p.tex, {
-                displayMode: p.display,
-                throwOnError: false,
-                trust: false,
-                output: 'html',
-                strict: 'ignore',
-                maxExpand: MAX_EXPAND,
-                maxSize: MAX_SIZE_EM,
-            })
-            frag.append(holder.content)
+            frag.append(renderOne(p))
         }
         node.replaceWith(frag)
         changed = true

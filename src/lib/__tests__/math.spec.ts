@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { renderMath } from '../math'
 
 describe('renderMath', () => {
@@ -68,5 +68,38 @@ describe('renderMath', () => {
         expect(out).toContain('<b>n</b>')
         expect(out).toContain('class="katex"')
         expect(out).toContain('items</p>')
+    })
+
+    it('anInternalKatexFailureFallsBackToTheEscapedSource', () => {
+        const out = renderMath('<p>a $' + '{'.repeat(50000) + '$ b</p>')
+        const doc = new DOMParser().parseFromString(out, 'text/html')
+        expect(doc.body.textContent).toContain('a ')
+        expect(doc.body.textContent).toContain(' b')
+        expect(doc.querySelector('.katex')).toBeNull()
+    })
+
+    it('katexIsCalledWithTrustFalse', async () => {
+        const katex = (await import('katex')).default
+        const spy = vi.spyOn(katex, 'renderToString')
+        try {
+            renderMath('<p>$x$</p>')
+            expect(spy).toHaveBeenCalledWith('x', expect.objectContaining({ trust: false }))
+        } finally {
+            spy.mockRestore()
+        }
+    })
+
+    it('htmlClassNeverReachesTheOutput', () => {
+        const out = renderMath('<p>$\\htmlClass{evil}{x}$</p>')
+        expect(out).toContain('class="katex"')
+        expect(out).not.toContain('evil')
+    })
+
+    it('sqrtKeepsItsSvgAfterSanitising', () => {
+        const out = renderMath('<p>$\\sqrt{x}$</p>')
+        const doc = new DOMParser().parseFromString(out, 'text/html')
+        expect(doc.querySelector('svg')).not.toBeNull()
+        expect(doc.querySelector('svg path')?.getAttribute('d')).toBeTruthy()
+        expect(doc.querySelector('svg')?.getAttribute('viewBox')).toBeTruthy()
     })
 })
