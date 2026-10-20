@@ -39,6 +39,25 @@ describe('auth store hasPermission', () => {
     expect(authService.getMe).toHaveBeenCalledTimes(1)
   })
 
+  it('ensureLoaded asks once for a signed-out visitor, and again only after a login', async () => {
+    const authService = (await import('@/services/authService')).default as any
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {})
+    authService.getMe.mockRejectedValue({ response: { status: 401 } })
+    const store = useAuthStore()
+
+    await store.ensureLoaded()
+    await store.ensureLoaded()
+    expect(authService.getMe).toHaveBeenCalledTimes(1)
+    expect(store.user).toBeNull()
+
+    // Signed in, then out: the logout is the answer, so nothing is asked.
+    store.login(userWith([]))
+    await store.logout({ reload: false, notifyServer: false })
+    await store.ensureLoaded()
+    expect(authService.getMe).toHaveBeenCalledTimes(1)
+    quiet.mockRestore()
+  })
+
   it('ensureLoaded retries fetchUser after a failed attempt', async () => {
     const authService = (await import('@/services/authService')).default as any
     vi.stubGlobal('document', { cookie: '' })
