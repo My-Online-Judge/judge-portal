@@ -52,11 +52,17 @@ import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import { getErrorMessage } from '@/lib/errorMessage'
 import { useTheme } from '@/composables/useTheme'
+import EditorPlaceholder from '@/components/common/EditorPlaceholder.vue'
 import { getMonacoLanguage } from '@/utils/editorUtils'
 
 // Loaded on demand: only the admin view shows the source, and a static import would tie Monaco to every chunk that
 // imports this dialog (size:check guards the /problems closure).
-const CodeEditor = defineAsyncComponent(() => import('@/components/common/CodeEditor.vue'))
+const CodeEditor = defineAsyncComponent({
+    loader: () => import('@/components/common/CodeEditor.vue'),
+    loadingComponent: EditorPlaceholder,
+    errorComponent: EditorPlaceholder,
+    delay: 0,
+})
 
 const props = defineProps<{ open: boolean; submissionId: string | null; showSource?: boolean }>()
 const emit = defineEmits<{ (e: 'update:open', value: boolean): void }>()
