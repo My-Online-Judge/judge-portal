@@ -2,11 +2,16 @@ import axiosClient from '@/api/axiosClient'
 import type { AxiosResponse } from 'axios'
 import type { ApiResponse } from '@/types/common'
 import { API_ROUTES } from '@/constants/apiPath'
-import type { Submission, SubmissionRequest } from '@/types/submission'
+import type { Submission, SubmissionListItem, SubmissionRequest, SubmissionSearchParams } from '@/types/submission'
 
 class SubmissionService {
     submit(req: SubmissionRequest): Promise<AxiosResponse<ApiResponse<Submission>>> {
         return axiosClient.post<ApiResponse<Submission>>(API_ROUTES.SUBMISSIONS.ROOT, req)
+    }
+
+    // Every submission, newest first (submission:read_any). Undefined filters are left out.
+    search(signal: AbortSignal, params: SubmissionSearchParams): Promise<AxiosResponse<ApiResponse<SubmissionListItem[]>>> {
+        return axiosClient.get(API_ROUTES.SUBMISSIONS.ROOT, { params, signal })
     }
 
     getSubmissionById(id: string): Promise<AxiosResponse<ApiResponse<Submission>>> {

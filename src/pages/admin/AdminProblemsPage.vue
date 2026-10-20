@@ -103,7 +103,7 @@
         <ConfirmDialog
             :open="rejudgeOpen"
             :title="`Rejudge “${rejudgeTarget?.title ?? ''}”?`"
-            description="Judges the 500 newest finished submissions of this problem again with its current test data. Statistics follow the new verdicts."
+            description="Rejudges up to the 500 newest finished submissions of this problem, as many as the judge queue has room for."
             confirm-label="Rejudge"
             tone="neutral"
             :busy="rejudging"

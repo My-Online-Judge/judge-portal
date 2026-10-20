@@ -192,6 +192,7 @@ import { useMediaQuery } from '@vueuse/core'
 import {
     ArrowLeft,
     ChevronRight,
+    FileCode,
     KeyRound,
     LayoutDashboard,
     ListChecks,
@@ -272,6 +273,12 @@ const navGroups = computed(() => {
                     icon: ListChecks,
                     show: can('problem:create', 'problem:update', 'problem:delete'),
                 },
+                {
+                    label: 'Submissions',
+                    to: ROUTE_PATH.ADMIN_SUBMISSIONS,
+                    icon: FileCode,
+                    show: can('submission:read_any'),
+                },
             ],
         },
         {
@@ -317,6 +324,8 @@ const crumbs = computed<Crumb[]>(() => {
             return [adminCrumb, problemsCrumb, { label: 'New' }]
         case 'AdminProblemDetail':
             return [adminCrumb, problemsCrumb, { label: String(route.params.slug ?? ''), mono: true }]
+        case 'AdminSubmissions':
+            return [adminCrumb, { label: 'Submissions' }]
         case 'AdminJudgeServers':
             return [adminCrumb, { label: 'Judge servers' }]
         case 'AdminRoles':

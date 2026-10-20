@@ -15,4 +15,13 @@ describe('routes', () => {
     const root = router.getRoutes().find((r) => r.path === '/')
     expect(root?.redirect).toBe('/problems')
   })
+
+  it('adminSubmissionsNeedsReadAny', () => {
+    const route = router.getRoutes().find((r) => r.name === 'AdminSubmissions')
+    expect(route?.path).toBe('/admin/submissions')
+    expect(route?.meta.permissions).toEqual(['submission:read_any'])
+    // A submissions-only admin still reaches the dashboard.
+    const dashboard = router.getRoutes().find((r) => r.name === 'AdminDashboard')
+    expect(dashboard?.meta.permissions).toContain('submission:read_any')
+  })
 })

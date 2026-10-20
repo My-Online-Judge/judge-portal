@@ -11,6 +11,19 @@ import { useAuthStore } from '@/stores/auth'
 const toast = vi.hoisted(() => vi.fn())
 vi.mock('@/services/submissionService', () => ({ default: { getSubmissionById: vi.fn(), rejudge: vi.fn() } }))
 vi.mock('@/composables/useToast', () => ({ useToast: () => ({ triggerToast: toast }) }))
+// Monaco does not run in jsdom: the editor is a stub that keeps its props.
+vi.mock('@/components/common/CodeEditor.vue', async () => {
+    const { defineComponent, h } = await import('vue')
+    // __esModule: the dialog loads the editor through defineAsyncComponent, which unwraps `default` only from a module.
+    return {
+        __esModule: true,
+        default: defineComponent({
+            name: 'CodeEditorStub',
+            props: ['modelValue', 'language', 'options', 'height', 'theme'],
+            setup: () => () => h('div', { 'data-test': 'code-editor' }),
+        }),
+    }
+})
 
 const getById = vi.mocked(submissionService.getSubmissionById)
 const rejudge = vi.mocked(submissionService.rejudge)
@@ -21,7 +34,8 @@ const grant = (permissions: string[]) => {
 const rejudgeBtn = () => document.body.querySelector('[data-test="rejudge"]') as HTMLButtonElement | null
 const sub = {
     id: 'abcdef123456', status: 0, result: 0, errorMessage: '', cpuTime: 12, memory: 2097152,
-    language: { name: 'C++' },
+    language: { name: 'C++', editorFormat: 'cpp' },
+    sourceCode: 'int main() {}',
     details: [{ name: '1', result: 0, cpuTime: 5, realTime: 5, memory: 1024, sample: false }],
 } as unknown as Submission
 
@@ -108,5 +122,21 @@ describe('SubmissionDetailDialog', () => {
         rejudgeBtn()!.click()
         await flushPromises()
         expect(toast).toHaveBeenCalledWith('The judge is busy, try again in a moment', 'error')
+    })
+
+    it('showSourceRendersAReadOnlyEditor', async () => {
+        getById.mockResolvedValue({ data: { data: sub } } as never)
+        mountIt()
+        await flushPromises()
+        expect(document.body.querySelector('[data-test="code-editor"]')).toBeNull()
+        wrapper!.unmount()
+
+        mountIt({ showSource: true })
+        await vi.waitFor(() => expect(wrapper!.findComponent({ name: 'CodeEditorStub' }).exists()).toBe(true))
+        const editor = wrapper!.findComponent({ name: 'CodeEditorStub' })
+        expect(editor.props('modelValue')).toBe('int main() {}')
+        expect(editor.props('language')).toBe('cpp')
+        expect(editor.props('height')).toBe('320px')
+        expect(editor.props('options')).toMatchObject({ readOnly: true, minimap: { enabled: false } })
     })
 })

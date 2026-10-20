@@ -21,6 +21,15 @@
                         </span>
                     </div>
                     <VerdictTiles :submission="submission" />
+                    <div v-if="showSource" class="overflow-hidden rounded-lg border border-border">
+                        <CodeEditor
+                            :model-value="submission.sourceCode"
+                            :language="getMonacoLanguage(submission.language)"
+                            :theme="isDark ? 'vs-dark' : 'vs'"
+                            :options="{ readOnly: true, minimap: { enabled: false } }"
+                            height="320px"
+                        />
+                    </div>
                     <Button v-if="canRejudge && isTerminalStatus(submission.status)" data-test="rejudge" variant="outline"
                         size="sm" :disabled="rejudging" @click="rejudge">
                         Rejudge
@@ -32,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import ListStateShell from '@/components/common/ListStateShell.vue'
 import { Button } from '@/components/ui/button'
@@ -42,12 +51,19 @@ import { isTerminalStatus, type Submission } from '@/types/submission'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import { getErrorMessage } from '@/lib/errorMessage'
+import { useTheme } from '@/composables/useTheme'
+import { getMonacoLanguage } from '@/utils/editorUtils'
 
-const props = defineProps<{ open: boolean; submissionId: string | null }>()
+// Loaded on demand: only the admin view shows the source, and a static import would tie Monaco to every chunk that
+// imports this dialog (size:check guards the /problems closure).
+const CodeEditor = defineAsyncComponent(() => import('@/components/common/CodeEditor.vue'))
+
+const props = defineProps<{ open: boolean; submissionId: string | null; showSource?: boolean }>()
 const emit = defineEmits<{ (e: 'update:open', value: boolean): void }>()
 
 const authStore = useAuthStore()
 const { triggerToast } = useToast()
+const { isDark } = useTheme()
 const canRejudge = computed(() => authStore.hasPermission('submission:rejudge'))
 const rejudging = ref(false)
 

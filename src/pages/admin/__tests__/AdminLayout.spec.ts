@@ -20,11 +20,11 @@ function stubDesktop(matches: boolean) {
     })) as unknown as typeof window.matchMedia
 }
 
-async function mountAt(path: string) {
+async function mountAt(path: string, permissions = ['problem:update', 'user:read', 'role:read']) {
     setActivePinia(createPinia())
     useAuthStore().user = {
         id: 'me', name: 'Binh Tran', username: 'binh', email: 'b@x.io', roles: [],
-        permissions: ['problem:update', 'user:read', 'role:read'],
+        permissions,
     } as never
     const router = createRouter({
         history: createMemoryHistory(),
@@ -37,6 +37,7 @@ async function mountAt(path: string) {
                     { path: '', name: 'AdminDashboard', component: Blank },
                     { path: 'problems', name: 'AdminProblems', component: Blank },
                     { path: 'problems/:slug', name: 'AdminProblemDetail', component: Blank },
+                    { path: 'submissions', name: 'AdminSubmissions', component: Blank },
                     { path: 'users', name: 'AdminUsers', component: Blank },
                     { path: 'roles', name: 'AdminRoles', component: Blank },
                 ],
@@ -112,5 +113,20 @@ describe('AdminLayout', () => {
         expect(crumbs).toEqual(['Admin', 'Problems', 'two-sum'])
         const headerButtons = wrapper!.findAll('header button').map((b) => b.attributes('aria-label'))
         expect(headerButtons).toEqual(['Open navigation', 'Account menu for Binh Tran'])
+    })
+
+    it('submissionsInContentWithItsCrumb', async () => {
+        await mountAt('/admin/problems')
+        expect(navLinks().map((a) => a.text())).not.toContain('Submissions')
+        wrapper!.unmount()
+
+        await mountAt('/admin/submissions', ['problem:update', 'submission:read_any'])
+        const content = wrapper!.get('nav[aria-label="Admin navigation"] ul[aria-label="Content"]')
+        expect(content.findAll('a').map((a) => a.text())).toEqual(['Problems', 'Submissions'])
+        const submissions = navLinks().find((a) => a.text() === 'Submissions')!
+        expect(submissions.attributes('href')).toBe('/admin/submissions')
+        expect(submissions.attributes('aria-current')).toBe('page')
+        const crumbs = wrapper!.findAll('header nav[aria-label="Breadcrumb"] li').map((li) => li.text())
+        expect(crumbs).toEqual(['Admin', 'Submissions'])
     })
 })

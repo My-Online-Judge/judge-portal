@@ -6,7 +6,7 @@ import ConfirmDialog from '../ConfirmDialog.vue'
 
 let wrapper: VueWrapper | undefined
 
-function mountDialog(props: Record<string, unknown> = {}) {
+function mountDialog(props: Record<string, unknown> = {}, slots: Record<string, string> = {}) {
   wrapper = mount(ConfirmDialog, {
     attachTo: document.body,
     props: {
@@ -16,6 +16,7 @@ function mountDialog(props: Record<string, unknown> = {}) {
       confirmLabel: 'Delete',
       ...props,
     },
+    slots,
   })
   return wrapper
 }
@@ -89,5 +90,22 @@ describe('ConfirmDialog', () => {
     mountDialog({ destructive: true, tone: 'neutral' })
     await nextTick()
     expect(document.body.querySelector('[data-slot="confirm-icon"]')?.getAttribute('data-tone')).toBe('neutral')
+  })
+
+  it('rendersDefaultSlotContent', async () => {
+    mountDialog({}, { default: '<label for="extra">Reason</label><input id="extra" />' })
+    await nextTick()
+    const body = document.body.querySelector('[data-slot="confirm-body"]') as HTMLElement
+    expect(body.querySelector('#extra')).toBeTruthy()
+    // Between the description and the footer.
+    const description = [...document.body.querySelectorAll('p')].find((p) => p.textContent === 'They can no longer sign in.')!
+    expect(description.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(body.compareDocumentPosition(button('Delete')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('noSlotRendersNoBody', async () => {
+    mountDialog()
+    await nextTick()
+    expect(document.body.querySelector('[data-slot="confirm-body"]')).toBeNull()
   })
 })

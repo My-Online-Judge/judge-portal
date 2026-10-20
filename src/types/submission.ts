@@ -33,6 +33,33 @@ export interface Submission extends BaseModel {
     problemSlug: string
 }
 
+/** One row of the admin search: no source and no per-test details. */
+export interface SubmissionListItem {
+    id: string
+    createdAt: string
+    /** Null on rows copied from the monolith. */
+    userId: string | null
+    /** Null when the user is unknown to identity. */
+    username: string | null
+    problemSlug: string
+    /** The language's name. */
+    language: string
+    status: number
+    cpuTime: number | null
+    memory: number | null
+}
+
+/** The admin search's filters; `result` is a status code, `from` and `to` are inclusive ISO dates (yyyy-mm-dd). */
+export interface SubmissionSearchParams {
+    problemSlug?: string
+    username?: string
+    result?: number
+    from?: string
+    to?: string
+    page?: number
+    size?: number
+}
+
 export enum SubmissionResult {
     COMPILE_ERROR = -2,
     WRONG_ANSWER = -1,

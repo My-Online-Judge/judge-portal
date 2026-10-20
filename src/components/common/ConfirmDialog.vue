@@ -70,6 +70,9 @@ function onConfirm() {
           <AlertDialogDescription class="text-[13px] text-muted-foreground">{{ description }}</AlertDialogDescription>
         </div>
       </AlertDialogHeader>
+      <div v-if="$slots.default" data-slot="confirm-body" class="px-5 pb-4">
+        <slot />
+      </div>
       <AlertDialogFooter class="border-t bg-muted/55 px-5 py-3.5">
         <AlertDialogCancel :disabled="busy" class="mt-0">{{ cancelLabel }}</AlertDialogCancel>
         <Button
