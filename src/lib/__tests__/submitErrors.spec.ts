@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AxiosError, AxiosHeaders } from 'axios'
-import { retryAfterSeconds } from '../submitErrors'
+import { busyFallbackMessage, retryAfterSeconds } from '../submitErrors'
 
 const axiosErr = (status: number, headers: Record<string, string> = {}) =>
   new AxiosError('x', 'ERR', undefined, undefined, {
@@ -17,5 +17,20 @@ describe('retryAfterSeconds', () => {
   it('otherErrorsAreNull', () => {
     expect(retryAfterSeconds(axiosErr(500), 10)).toBeNull()
     expect(retryAfterSeconds(new Error('boom'), 10)).toBeNull()
+  })
+})
+
+describe('busyFallbackMessage', () => {
+  it('a429SaysTooFast', () => {
+    expect(busyFallbackMessage(axiosErr(429))).toBe('You are submitting too fast')
+  })
+  it('a503WithoutBodySaysJudgeUnavailable', () => {
+    expect(busyFallbackMessage(axiosErr(503))).toBe('The judge is unavailable, try again in a moment')
+  })
+  it('keepsTheServerMessageWhenPresent', () => {
+    const err = new AxiosError('x', 'ERR', undefined, undefined, {
+      status: 503, data: { message: 'Judge is busy' }, statusText: '', headers: new AxiosHeaders(), config: { headers: new AxiosHeaders() },
+    })
+    expect(busyFallbackMessage(err)).toBe('Judge is busy')
   })
 })

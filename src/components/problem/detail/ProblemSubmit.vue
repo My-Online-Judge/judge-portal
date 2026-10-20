@@ -126,7 +126,7 @@ import { ref, watch, computed } from 'vue'
 import { useToast } from '@/composables/useToast'
 import { useCooldown } from '@/composables/useCooldown'
 import { getErrorMessage } from '@/lib/errorMessage'
-import { retryAfterSeconds } from '@/lib/submitErrors'
+import { busyFallbackMessage, retryAfterSeconds } from '@/lib/submitErrors'
 import submissionService from '@/services/submissionService'
 import type { Submission, SubmissionRequest } from '@/types/submission'
 import { getMonacoLanguage } from '@/utils/editorUtils'
@@ -206,7 +206,7 @@ const handleSubmit = async () => {
         const wait = retryAfterSeconds(error, COOLDOWN_SECONDS)
         if (wait !== null) {
             startCooldown(wait)
-            triggerToast(getErrorMessage(error, 'You are submitting too fast'), 'error')
+            triggerToast(busyFallbackMessage(error), 'error')
         } else {
             triggerToast(getErrorMessage(error, 'An error occurred'), 'error')
         }
