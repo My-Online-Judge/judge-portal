@@ -38,6 +38,7 @@ async function mountAt(path: string, permissions = ['problem:update', 'user:read
                     { path: 'problems', name: 'AdminProblems', component: Blank },
                     { path: 'problems/:slug', name: 'AdminProblemDetail', component: Blank },
                     { path: 'submissions', name: 'AdminSubmissions', component: Blank },
+                    { path: 'contests', name: 'AdminContests', component: Blank },
                     { path: 'users', name: 'AdminUsers', component: Blank },
                     { path: 'roles', name: 'AdminRoles', component: Blank },
                 ],
@@ -128,5 +129,20 @@ describe('AdminLayout', () => {
         expect(submissions.attributes('aria-current')).toBe('page')
         const crumbs = wrapper!.findAll('header nav[aria-label="Breadcrumb"] li').map((li) => li.text())
         expect(crumbs).toEqual(['Admin', 'Submissions'])
+    })
+
+    it('contestsInContentWithItsCrumb', async () => {
+        await mountAt('/admin/problems')
+        expect(navLinks().map((a) => a.text())).not.toContain('Contests')
+        wrapper!.unmount()
+
+        await mountAt('/admin/contests', ['problem:update', 'submission:read_any', 'contest:update'])
+        const content = wrapper!.get('nav[aria-label="Admin navigation"] ul[aria-label="Content"]')
+        expect(content.findAll('a').map((a) => a.text())).toEqual(['Problems', 'Contests', 'Submissions'])
+        const contests = navLinks().find((a) => a.text() === 'Contests')!
+        expect(contests.attributes('href')).toBe('/admin/contests')
+        expect(contests.attributes('aria-current')).toBe('page')
+        const crumbs = wrapper!.findAll('header nav[aria-label="Breadcrumb"] li').map((li) => li.text())
+        expect(crumbs).toEqual(['Admin', 'Contests'])
     })
 })

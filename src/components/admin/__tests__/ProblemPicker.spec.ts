@@ -61,6 +61,8 @@ describe('ProblemPicker', () => {
         option('two-sum')!.click()
         await nextTick()
         expect(w.emitted('update:modelValue')).toEqual([['two-sum']])
+        // The whole problem too, for callers that show its title.
+        expect(w.emitted('pick')).toEqual([[problems[0]]])
     })
 
     it('excludedSlugsAreNotListed', async () => {

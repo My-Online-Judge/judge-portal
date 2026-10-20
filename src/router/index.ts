@@ -3,7 +3,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { resolveAdminAccess } from '@/router/adminGuard'
 import { useAuthStore } from '@/stores/auth'
 
-const ADMIN_ANY = ['problem:create', 'problem:update', 'problem:delete', 'submission:read_any', 'judgeserver:read', 'role:read', 'user:read']
+const CONTEST_ANY = ['contest:create', 'contest:update', 'contest:delete']
+const ADMIN_ANY = ['problem:create', 'problem:update', 'problem:delete', 'submission:read_any', ...CONTEST_ANY, 'judgeserver:read', 'role:read', 'user:read']
 
 // Every page is a lazy chunk; vite.config.ts groups the admin pages into one "admin" chunk.
 const router = createRouter({
@@ -70,6 +71,7 @@ const router = createRouter({
         { path: 'problems', name: 'AdminProblems', component: () => import('@/pages/admin/AdminProblemsPage.vue'), meta: { permissions: ['problem:create', 'problem:update', 'problem:delete'] } },
         { path: 'problems/new', name: 'AdminProblemCreate', component: () => import('@/pages/admin/problem/ProblemCreatePage.vue'), meta: { permissions: ['problem:create'] } },
         { path: 'problems/:slug', name: 'AdminProblemDetail', component: () => import('@/pages/admin/problem/ProblemDetailPage.vue'), meta: { permissions: ['problem:create', 'problem:update', 'problem:delete'] } },
+        { path: 'contests', name: 'AdminContests', component: () => import('@/pages/admin/AdminContestsPage.vue'), meta: { permissions: CONTEST_ANY } },
         { path: 'submissions', name: 'AdminSubmissions', component: () => import('@/pages/admin/AdminSubmissionsPage.vue'), meta: { permissions: ['submission:read_any'] } },
         { path: 'judge-servers', name: 'AdminJudgeServers', component: () => import('@/pages/admin/AdminJudgeServersPage.vue'), meta: { permissions: ['judgeserver:read'] } },
         { path: 'roles', name: 'AdminRoles', component: () => import('@/pages/admin/AdminRolesPage.vue'), meta: { permissions: ['role:read'] } },

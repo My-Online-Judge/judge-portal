@@ -15,7 +15,7 @@
                         class="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                         :class="p.problemSlug === modelValue && 'bg-primary-soft text-info-ink'"
                         :aria-pressed="p.problemSlug === modelValue"
-                        @click="emit('update:modelValue', p.problemSlug)"
+                        @click="choose(p)"
                     >
                         <span class="min-w-0 truncate font-medium">{{ p.title }}</span>
                         <span class="slug shrink-0">{{ p.problemSlug }}</span>
@@ -39,7 +39,8 @@ import type { Problem } from '@/types/problem'
 const props = withDefaults(defineProps<{ modelValue: string | null; excludeSlugs?: string[] }>(), {
     excludeSlugs: () => [],
 })
-const emit = defineEmits<{ 'update:modelValue': [slug: string] }>()
+// `pick` carries the whole problem, for callers that show its title.
+const emit = defineEmits<{ 'update:modelValue': [slug: string]; pick: [problem: Problem] }>()
 
 const PAGE_SIZE = 20
 
@@ -71,6 +72,11 @@ async function search() {
             loading.value = false
         }
     }
+}
+
+function choose(p: Problem) {
+    emit('update:modelValue', p.problemSlug)
+    emit('pick', p)
 }
 
 watchDebounced(query, search, { debounce: 300 })

@@ -90,5 +90,6 @@ export interface ContestPayload {
     startsAt: string
     endsAt: string
     status: ContestStatus
-    problemSlugs: string[]
+    /** Required on create. Left out on update, the list stays as it is. */
+    problemSlugs?: string[]
 }

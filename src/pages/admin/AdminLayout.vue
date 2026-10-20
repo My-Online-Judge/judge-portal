@@ -203,6 +203,7 @@ import {
     Server,
     ShieldAlert,
     ShieldCheck,
+    Trophy,
     Users,
     X,
 } from 'lucide-vue-next'
@@ -274,6 +275,12 @@ const navGroups = computed(() => {
                     show: can('problem:create', 'problem:update', 'problem:delete'),
                 },
                 {
+                    label: 'Contests',
+                    to: ROUTE_PATH.ADMIN_CONTESTS,
+                    icon: Trophy,
+                    show: can('contest:create', 'contest:update', 'contest:delete'),
+                },
+                {
                     label: 'Submissions',
                     to: ROUTE_PATH.ADMIN_SUBMISSIONS,
                     icon: FileCode,
@@ -324,6 +331,8 @@ const crumbs = computed<Crumb[]>(() => {
             return [adminCrumb, problemsCrumb, { label: 'New' }]
         case 'AdminProblemDetail':
             return [adminCrumb, problemsCrumb, { label: String(route.params.slug ?? ''), mono: true }]
+        case 'AdminContests':
+            return [adminCrumb, { label: 'Contests' }]
         case 'AdminSubmissions':
             return [adminCrumb, { label: 'Submissions' }]
         case 'AdminJudgeServers':

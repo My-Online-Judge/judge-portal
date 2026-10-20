@@ -12,6 +12,7 @@ export const ROUTE_PATH = {
     ACCOUNT_PASSWORD: '/account/password',
     ADMIN_PROBLEMS: '/admin/problems',
     ADMIN_SUBMISSIONS: '/admin/submissions',
+    ADMIN_CONTESTS: '/admin/contests',
     ADMIN_JUDGE_SERVERS: '/admin/judge-servers',
     ADMIN_ROLES: '/admin/roles',
     ADMIN_PERMISSIONS: '/admin/permissions',
