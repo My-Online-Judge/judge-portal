@@ -31,11 +31,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import RichTextEditor from '@/components/admin/editor/RichTextEditor.vue'
 import TagInput from '@/components/admin/problem/TagInput.vue'
-import RichContent from '@/components/common/RichContent.vue'
 import { Switch } from '@/components/ui/switch'
 import problemService from '@/services/problemService'
 import { SEED_TAG_VOCABULARY } from '@/lib/tags'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue'
+
+// Only the Preview shows it. Loaded on demand so KaTeX stays out of the chunk every page imports.
+const RichContent = defineAsyncComponent(() => import('@/components/common/RichContent.vue'))
 
 const props = defineProps<{
     modelValue: ProblemFormValue

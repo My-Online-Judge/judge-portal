@@ -20,14 +20,27 @@ const visit = (key) => {
 }
 ROOTS.forEach(visit)
 
+// KaTeX (script, stylesheet and font faces) is for statements only: it loads with the problem page, never with a first paint.
+let heavy = false
 let total = 0
 for (const key of closure) {
   const file = manifest[key].file
+  for (const css of manifest[key].css ?? []) {
+    if (readFileSync(join(DIST, css), 'utf8').includes('KaTeX_')) {
+      console.error(`  ${css} is in the /problems closure and carries the KaTeX font faces`)
+      heavy = true
+    }
+  }
   if (!file.endsWith('.js')) continue
+  if (readFileSync(join(DIST, file), 'utf8').includes('katex-error')) {
+    console.error(`  ${file} is in the /problems closure and contains KaTeX`)
+    heavy = true
+  }
   const size = gzipSync(readFileSync(join(DIST, file)), { level: 9 }).length
   total += size
   console.log(`  ${file}: ${size}`)
 }
 
 console.log(`initial JS for /problems: ${total} bytes gzip (budget ${BUDGET})`)
-if (total > BUDGET) process.exit(1)
+if (heavy) console.error('KaTeX must stay out of the /problems initial closure (lazy-load RichContent).')
+if (total > BUDGET || heavy) process.exit(1)

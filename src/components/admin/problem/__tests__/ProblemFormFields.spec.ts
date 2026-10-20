@@ -22,7 +22,8 @@ describe('ProblemFormFields preview', () => {
         await flushPromises()
         expect(w.find('.katex').exists()).toBe(false)
         await w.get('[aria-label="Preview statement"]').trigger('click')
-        expect(w.find('.katex').exists()).toBe(true)
+        // RichContent is a lazy chunk: it arrives after the toggle.
+        await vi.waitFor(() => expect(w.find('.katex').exists()).toBe(true))
     })
 
     it('previewCoversInputOutputAndHint', async () => {
@@ -35,6 +36,6 @@ describe('ProblemFormFields preview', () => {
         })
         await flushPromises()
         await w.get('[aria-label="Preview statement"]').trigger('click')
-        expect(w.findAll('.katex').length).toBe(3)
+        await vi.waitFor(() => expect(w.findAll('.katex').length).toBe(3))
     })
 })
