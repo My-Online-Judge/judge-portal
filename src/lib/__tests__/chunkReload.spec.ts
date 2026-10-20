@@ -1,21 +1,38 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { START_LOCATION } from 'vue-router'
 import { installChunkReload } from '../chunkReload'
 
-type ErrorHandler = (error: unknown) => void
+type Location = { fullPath: string }
+type ErrorHandler = (error: unknown, to: Location, from: Location) => void
+type AfterHook = (to: Location, from: Location, failure?: unknown) => void
 type Listener = (event: Event) => void
+type SessionStore = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
+
+const at = (fullPath: string): Location => ({ fullPath })
+
+/** The tab's sessionStorage, shared by every page load in it. */
+const tabSession = (): SessionStore => {
+  const items = new Map<string, string>()
+  return {
+    getItem: (k) => items.get(k) ?? null,
+    setItem: (k, v) => void items.set(k, v),
+    removeItem: (k) => void items.delete(k),
+  }
+}
 
 /** One page load: its own router and window, sharing the tab's sessionStorage with the other loads. */
-function load(session: Map<string, string>) {
+function load(session: SessionStore) {
   const listeners = new Map<string, Listener[]>()
   let onError: ErrorHandler = () => {}
-  const router = { onError: (h: ErrorHandler) => ((onError = h), () => {}) }
+  let afterEach: AfterHook = () => {}
+  const router = {
+    onError: (h: ErrorHandler) => ((onError = h), () => {}),
+    afterEach: (h: AfterHook) => ((afterEach = h), () => {}),
+  }
   const win = {
-    location: { reload: vi.fn() },
-    sessionStorage: {
-      getItem: (k: string) => session.get(k) ?? null,
-      setItem: (k: string, v: string) => void session.set(k, v),
-    },
+    location: { reload: vi.fn(), assign: vi.fn() },
+    sessionStorage: session,
     addEventListener: (type: string, l: Listener) => listeners.set(type, [...(listeners.get(type) ?? []), l]),
   }
   installChunkReload(router as never, win as never)
@@ -24,7 +41,19 @@ function load(session: Map<string, string>) {
     for (const l of listeners.get('vite:preloadError') ?? []) l(event)
     return event
   }
-  return { reload: win.location.reload, routerError: (e: unknown) => onError(e), preloadError }
+  let current: Location = START_LOCATION
+  return {
+    reload: win.location.reload,
+    assign: win.location.assign,
+    /** A navigation to `to` fails with `error` (the address bar stays where it was). */
+    routerError: (e: unknown, to: Location = at('/problems')) => onError(e, to, current),
+    /** A navigation to `to` lands (or ends in a navigation failure such as an aborted one). */
+    navigated: (to: Location, failure?: unknown) => {
+      afterEach(to, current, failure)
+      if (!failure) current = to
+    },
+    preloadError,
+  }
 }
 
 const chunkGone = () => new TypeError('Failed to fetch dynamically imported module: https://oj/assets/admin-abc.js')
@@ -37,27 +66,62 @@ describe('installChunkReload', () => {
   afterEach(() => consoleError.mockRestore())
 
   it('chunkLoadFailureReloadsOnce', () => {
-    const session = new Map<string, string>()
+    const session = tabSession()
     const first = load(session)
-    first.routerError(chunkGone())
-    expect(first.reload).toHaveBeenCalledTimes(1)
+    first.navigated(at('/problems'))
+    first.routerError(chunkGone(), at('/admin/problems'))
+    // The failed navigation left the address bar on /problems: load the page that was asked for.
+    expect(first.assign).toHaveBeenCalledExactlyOnceWith('/admin/problems')
+    expect(first.reload).not.toHaveBeenCalled()
     expect(consoleError).not.toHaveBeenCalled()
 
-    // The reloaded page fails the same way: no second reload in this session, the error surfaces instead.
+    // The reloaded page fails the same way: no second reload, the error surfaces instead. Its own first navigation
+    // does not count as recovered, or a broken build would reload in a loop.
     const second = load(session)
+    second.navigated(at('/problems'))
     const again = new TypeError('Importing a module script failed.')
-    second.routerError(again)
+    second.routerError(again, at('/admin/problems'))
+    expect(second.assign).not.toHaveBeenCalled()
     expect(second.reload).not.toHaveBeenCalled()
     expect(consoleError).toHaveBeenCalledWith(again)
   })
 
+  it('a tab left open across two deploys recovers twice', () => {
+    const session = tabSession()
+    const first = load(session)
+    first.navigated(at('/problems'))
+    first.routerError(chunkGone(), at('/problems/tong'))
+    expect(first.assign).toHaveBeenCalledExactlyOnceWith('/problems/tong')
+
+    // The new build works: once the reloaded page navigates on its own, the next deploy can reload the tab again.
+    const second = load(session)
+    second.navigated(at('/problems/tong'))
+    second.navigated(at('/problems'))
+    second.routerError(chunkGone(), at('/admin'))
+    expect(second.assign).toHaveBeenCalledExactlyOnceWith('/admin')
+    expect(consoleError).not.toHaveBeenCalled()
+  })
+
+  it('a navigation failure does not re-arm the reload', () => {
+    const session = tabSession()
+    load(session).routerError(chunkGone(), at('/admin'))
+
+    const second = load(session)
+    second.navigated(at('/admin'))
+    second.navigated(at('/problems'), { type: 4 }) // aborted by a guard
+    second.routerError(chunkGone(), at('/problems'))
+    expect(second.assign).not.toHaveBeenCalled()
+    expect(second.reload).not.toHaveBeenCalled()
+  })
+
   it('reloads once on a preload error and lets the next one through', () => {
-    const session = new Map<string, string>()
+    const session = tabSession()
     const first = load(session)
     expect(first.preloadError().defaultPrevented).toBe(true)
     expect(first.reload).toHaveBeenCalledTimes(1)
     // The prevented import resolves to nothing, so the router fails too; the page is already reloading.
     first.routerError(new Error('Couldn\'t resolve component "default" at "/admin"'))
+    expect(first.assign).not.toHaveBeenCalled()
     expect(consoleError).not.toHaveBeenCalled()
 
     const second = load(session)
@@ -65,12 +129,29 @@ describe('installChunkReload', () => {
     expect(second.reload).not.toHaveBeenCalled()
   })
 
+  it('never reloads when sessionStorage throws', () => {
+    const blocked = () => {
+      throw new DOMException('The operation is insecure.', 'SecurityError')
+    }
+    const page = load({ getItem: blocked, setItem: blocked, removeItem: blocked })
+    expect(() => page.navigated(at('/problems'))).not.toThrow()
+    expect(() => page.navigated(at('/problems/tong'))).not.toThrow()
+
+    const gone = chunkGone()
+    page.routerError(gone, at('/admin'))
+    expect(page.preloadError().defaultPrevented).toBe(false)
+    expect(page.assign).not.toHaveBeenCalled()
+    expect(page.reload).not.toHaveBeenCalled()
+    expect(consoleError).toHaveBeenCalledWith(gone)
+  })
+
   it('otherRouterErrorsDoNotReload', () => {
-    const { reload, routerError } = load(new Map())
+    const { reload, assign, routerError } = load(tabSession())
     const other = new Error('Navigation guard failed')
     routerError(other)
     routerError('not an error')
     expect(reload).not.toHaveBeenCalled()
+    expect(assign).not.toHaveBeenCalled()
     // Registering onError silences vue-router's own logging, so these are still logged.
     expect(consoleError).toHaveBeenCalledWith(other)
     expect(consoleError).toHaveBeenCalledWith('not an error')
