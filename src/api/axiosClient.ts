@@ -41,37 +41,43 @@ export const refreshSession = singleFlight(async () => {
     return response
 })
 
+/**
+ * The session is unrecoverable (a refresh was refused): clear local auth state and, for a visitor who was signed in,
+ * say so with a toast whose action opens the login. Shared by the 401 interceptor and ensureFreshSession.
+ */
+export async function giveUpSession(): Promise<void> {
+    // Imported lazily: the store imports authService, which imports this module.
+    const { useAuthStore } = await import('@/stores/auth')
+    // Clear local state only. No navigation — the router guard sends the user to
+    // /admin/login if they touch a gated route, and a public visitor stays put.
+    const auth = useAuthStore()
+    const wasAuthenticated = auth.isAuthenticated
+    await auth.logout({ reload: false, notifyServer: false })
+    if (!shouldAnnounceSessionExpiry(wasAuthenticated)) return
+    useToast().error('Your session expired', {
+        description: 'Log in again to keep working.',
+        action: {
+            label: 'Log in',
+            onClick: () => {
+                void (async () => {
+                    // Lazy too: the router imports pages that import this module.
+                    const { default: router } = await import('@/router')
+                    const here = router.currentRoute.value.fullPath
+                    const target = sessionExpiredLoginTarget(here)
+                    if (target) await router.push(target)
+                    else useLoginPrompt().request()
+                })()
+            },
+        },
+    })
+}
+
 // An expired access token comes back as 401 (403 means "authenticated but not
 // permitted" and must never be retried). Refresh once, then replay the request.
 const handleUnauthorized = createRefreshOn401({
     refresh: refreshSession,
     retry: (config) => axiosClient.request(config),
-    onGiveUp: async () => {
-        // Imported lazily: the store imports authService, which imports this module.
-        const { useAuthStore } = await import('@/stores/auth')
-        // Clear local state only. No navigation — the router guard sends the user to
-        // /admin/login if they touch a gated route, and a public visitor stays put.
-        const auth = useAuthStore()
-        const wasAuthenticated = auth.isAuthenticated
-        await auth.logout({ reload: false, notifyServer: false })
-        if (!shouldAnnounceSessionExpiry(wasAuthenticated)) return
-        useToast().error('Your session expired', {
-            description: 'Log in again to keep working.',
-            action: {
-                label: 'Log in',
-                onClick: () => {
-                    void (async () => {
-                        // Lazy too: the router imports pages that import this module.
-                        const { default: router } = await import('@/router')
-                        const here = router.currentRoute.value.fullPath
-                        const target = sessionExpiredLoginTarget(here)
-                        if (target) await router.push(target)
-                        else useLoginPrompt().request()
-                    })()
-                },
-            },
-        })
-    },
+    onGiveUp: giveUpSession,
 })
 
 // Response Interceptor

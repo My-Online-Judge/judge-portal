@@ -338,6 +338,7 @@ describe('ensureFreshSession', () => {
 
     beforeEach(() => {
         auth.isAuthenticated = true
+        auth.logout.mockClear()
         vi.useFakeTimers({ toFake: ['Date'] })
         vi.setSystemTime(new Date('2026-10-20T08:00:00Z'))
     })
@@ -391,8 +392,21 @@ describe('ensureFreshSession', () => {
         expect(app.requests).toEqual([])
     })
 
-    it('resolves when the refresh fails, and tries again on the next call', async () => {
+    it('a refused refresh (401) ends the session like the interceptor does and still resolves', async () => {
         const app = await loadApp((config) => reply(config, config.url === '/auth/refresh' ? 401 : 200))
+        const { useToast } = await import('@/composables/useToast')
+        await expect(app.session.ensureFreshSession()).resolves.toBeUndefined()
+        expect(auth.logout).toHaveBeenCalledTimes(1)
+        expect(auth.logout).toHaveBeenCalledWith({ reload: false, notifyServer: false })
+        const titles = useToast().toasts.value.map((t) => t.title)
+        expect(titles).toContain('Your session expired')
+    })
+
+    it('a network error on the refresh is transient: no logout, and the next call tries again', async () => {
+        const app = await loadApp((config) =>
+            config.url === '/auth/refresh'
+                ? Promise.reject(Object.assign(new Error('Network Error'), { config, isAxiosError: true }))
+                : reply(config, 200))
         await expect(app.session.ensureFreshSession()).resolves.toBeUndefined()
         await app.session.ensureFreshSession()
         expect(app.refreshes()).toBe(2)

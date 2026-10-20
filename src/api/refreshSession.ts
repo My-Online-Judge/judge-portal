@@ -101,8 +101,10 @@ export function markSessionFresh(): void {
 
 /**
  * Before a personalised read: a signed-in tab whose last login or refresh is unknown or at least 14 minutes old
- * refreshes first, through the tab's one refresh path. Never rejects: if the refresh fails, the read goes out
- * anyway, and the next protected request's 401 ends the session as usual.
+ * refreshes first, through the tab's one refresh path. Never rejects. A refresh the server refuses (401) ends the
+ * session exactly as the interceptor does (local logout plus the "Your session expired" toast), so the tab stops
+ * re-posting a dead refresh token on every visibility change. Any other failure (network, 5xx) is transient: the read
+ * goes out anyway and the next call tries again.
  */
 export async function ensureFreshSession(): Promise<void> {
     // A negative age means the clock stepped back: treat it as stale.
@@ -112,12 +114,19 @@ export async function ensureFreshSession(): Promise<void> {
         // Lazy: the store imports authService, and the client imports this module.
         const { useAuthStore } = await import('@/stores/auth')
         if (!useAuthStore().isAuthenticated) return
-        const { refreshSession } = await import('./axiosClient')
-        await refreshSession()
+        const { refreshSession, giveUpSession } = await import('./axiosClient')
+        try {
+            await refreshSession()
+        } catch (err) {
+            if (isRefused(err)) await giveUpSession()
+        }
     } catch {
-        // Nothing to add: see above.
+        // Transient (a failed import or a network error): nothing to add.
     }
 }
+
+const isRefused = (err: unknown): boolean =>
+    (err as { response?: { status?: number } } | null)?.response?.status === 401
 
 /** Runs ensureFreshSession whenever the tab becomes visible again. Returns the uninstaller. */
 export function installFreshSessionOnVisible(doc: Document = document): () => void {
