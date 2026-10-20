@@ -1,13 +1,15 @@
 <template>
     <div class="overflow-hidden" :style="{ height: height }"
         :class="{ 'opacity-50 pointer-events-none': disabled }">
-        <vue-monaco-editor :value="modelValue" @update:value="$emit('update:modelValue', $event)" :language="language" :theme="theme"
+        <VueMonacoEditor :value="modelValue" @update:value="$emit('update:modelValue', $event)" :language="language" :theme="theme"
             :options="options" @mount="onMount" />
     </div>
 </template>
 
 <script setup lang="ts">
-import type { MonacoEditor } from '@guolao/vue-monaco-editor'
+import { VueMonacoEditor, type MonacoEditor } from '@guolao/vue-monaco-editor'
+// Registers the bundled Monaco (languages, worker) with the wrapper before the first editor mounts.
+import '@/lib/monaco'
 
 export type MonacoInstance = MonacoEditor
 export type CodeEditorInstance = ReturnType<MonacoEditor['editor']['create']>

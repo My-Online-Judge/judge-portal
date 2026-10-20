@@ -15,9 +15,12 @@
     "lint": "eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "size:check": "node scripts/check-initial-js.mjs"
   },
   "dependencies": {
+    "@fontsource/be-vietnam-pro": "5.3.0",
+    "@fontsource/jetbrains-mono": "5.3.0",
     "@guolao/vue-monaco-editor": "^1.6.0",
     "@tanstack/vue-table": "^8.21.3",
     "@tiptap/extension-link": "^2.27.2",
@@ -36,6 +39,7 @@
     "dompurify": "^3.4.12",
     "jszip": "^3.10.1",
     "lucide-vue-next": "^0.562.0",
+    "monaco-editor": "0.55.1",
     "pinia": "^3.0.4",
     "reka-ui": "^2.7.0",
     "tailwind-merge": "^3.4.0",

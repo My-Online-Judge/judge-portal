@@ -1,67 +1,57 @@
 import { ROUTE_PATH } from '@/constants/routePath'
-import ProblemDetailPage from '@/pages/user/problem/ProblemDetailPage.vue'
-import ProblemListPage from '@/pages/user/problem/ProblemListPage.vue'
 import { createRouter, createWebHistory } from 'vue-router'
-import ForbiddenPage from '@/pages/ForbiddenPage.vue'
-import AdminLoginPage from '@/pages/admin/AdminLoginPage.vue'
-import AdminLayout from '@/pages/admin/AdminLayout.vue'
-import AdminDashboardPage from '@/pages/admin/AdminDashboardPage.vue'
-import AdminProblemsPage from '@/pages/admin/AdminProblemsPage.vue'
-import AdminProblemCreatePage from '@/pages/admin/problem/ProblemCreatePage.vue'
-import AdminProblemDetailPage from '@/pages/admin/problem/ProblemDetailPage.vue'
-import AdminJudgeServersPage from '@/pages/admin/AdminJudgeServersPage.vue'
-import AdminRolesPage from '@/pages/admin/AdminRolesPage.vue'
-import AdminPermissionsPage from '@/pages/admin/AdminPermissionsPage.vue'
-import AdminUsersPage from '@/pages/admin/AdminUsersPage.vue'
-import AdminSecurityPage from '@/pages/admin/AdminSecurityPage.vue'
-import ChangePasswordPage from '@/pages/user/account/ChangePasswordPage.vue'
 import { resolveAdminAccess } from '@/router/adminGuard'
 import { useAuthStore } from '@/stores/auth'
 
 const ADMIN_ANY = ['problem:create', 'problem:update', 'problem:delete', 'judgeserver:read', 'role:read', 'user:read']
 
+// Every page is a lazy chunk; vite.config.ts groups the admin pages into one "admin" chunk.
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: ROUTE_PATH.HOME,
+      redirect: ROUTE_PATH.PROBLEM
+    },
+    {
       path: ROUTE_PATH.PROBLEM,
       name: 'Problem',
-      component: ProblemListPage
+      component: () => import('@/pages/user/problem/ProblemListPage.vue')
     },
     {
       path: ROUTE_PATH.PROBLEM_DETAIL,
       name: 'ProblemDetail',
-      component: ProblemDetailPage
+      component: () => import('@/pages/user/problem/ProblemDetailPage.vue')
     },
     {
       path: ROUTE_PATH.FORBIDDEN,
       name: 'Forbidden',
-      component: ForbiddenPage
+      component: () => import('@/pages/ForbiddenPage.vue')
     },
     {
       path: ROUTE_PATH.ACCOUNT_PASSWORD,
       name: 'ChangePassword',
-      component: ChangePasswordPage,
+      component: () => import('@/pages/user/account/ChangePasswordPage.vue'),
       meta: { requiresAuth: true }
     },
     {
       path: ROUTE_PATH.ADMIN_LOGIN,
       name: 'AdminLogin',
-      component: AdminLoginPage
+      component: () => import('@/pages/admin/AdminLoginPage.vue')
     },
     {
       path: ROUTE_PATH.ADMIN,
-      component: AdminLayout,
+      component: () => import('@/pages/admin/AdminLayout.vue'),
       children: [
-        { path: '', name: 'AdminDashboard', component: AdminDashboardPage, meta: { permissions: ADMIN_ANY } },
-        { path: 'problems', name: 'AdminProblems', component: AdminProblemsPage, meta: { permissions: ['problem:create', 'problem:update', 'problem:delete'] } },
-        { path: 'problems/new', name: 'AdminProblemCreate', component: AdminProblemCreatePage, meta: { permissions: ['problem:create'] } },
-        { path: 'problems/:slug', name: 'AdminProblemDetail', component: AdminProblemDetailPage, meta: { permissions: ['problem:create', 'problem:update', 'problem:delete'] } },
-        { path: 'judge-servers', name: 'AdminJudgeServers', component: AdminJudgeServersPage, meta: { permissions: ['judgeserver:read'] } },
-        { path: 'roles', name: 'AdminRoles', component: AdminRolesPage, meta: { permissions: ['role:read'] } },
-        { path: 'permissions', name: 'AdminPermissions', component: AdminPermissionsPage, meta: { permissions: ['permission:read'] } },
-        { path: 'security', name: 'AdminSecurity', component: AdminSecurityPage, meta: { permissions: ['ban:read'] } },
-        { path: 'users', name: 'AdminUsers', component: AdminUsersPage, meta: { permissions: ['user:read'] } },
+        { path: '', name: 'AdminDashboard', component: () => import('@/pages/admin/AdminDashboardPage.vue'), meta: { permissions: ADMIN_ANY } },
+        { path: 'problems', name: 'AdminProblems', component: () => import('@/pages/admin/AdminProblemsPage.vue'), meta: { permissions: ['problem:create', 'problem:update', 'problem:delete'] } },
+        { path: 'problems/new', name: 'AdminProblemCreate', component: () => import('@/pages/admin/problem/ProblemCreatePage.vue'), meta: { permissions: ['problem:create'] } },
+        { path: 'problems/:slug', name: 'AdminProblemDetail', component: () => import('@/pages/admin/problem/ProblemDetailPage.vue'), meta: { permissions: ['problem:create', 'problem:update', 'problem:delete'] } },
+        { path: 'judge-servers', name: 'AdminJudgeServers', component: () => import('@/pages/admin/AdminJudgeServersPage.vue'), meta: { permissions: ['judgeserver:read'] } },
+        { path: 'roles', name: 'AdminRoles', component: () => import('@/pages/admin/AdminRolesPage.vue'), meta: { permissions: ['role:read'] } },
+        { path: 'permissions', name: 'AdminPermissions', component: () => import('@/pages/admin/AdminPermissionsPage.vue'), meta: { permissions: ['permission:read'] } },
+        { path: 'security', name: 'AdminSecurity', component: () => import('@/pages/admin/AdminSecurityPage.vue'), meta: { permissions: ['ban:read'] } },
+        { path: 'users', name: 'AdminUsers', component: () => import('@/pages/admin/AdminUsersPage.vue'), meta: { permissions: ['user:read'] } },
       ]
     }
   ],

@@ -1,4 +1,5 @@
 export const ROUTE_PATH = {
+    HOME: '/',
     PROBLEM: '/problems',
     PROBLEM_DETAIL: '/problems/:slug',
     FORBIDDEN: '/403',

@@ -1,23 +1,28 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
+// Self-hosted fonts (vietnamese, latin-ext and latin ranges, font-display: swap): no Google Fonts, so text renders in
+// the right face on a LAN without internet. main.css names the families in --font-sans and --font-mono.
+import '@fontsource/be-vietnam-pro/400.css'
+import '@fontsource/be-vietnam-pro/500.css'
+import '@fontsource/be-vietnam-pro/600.css'
+import '@fontsource/be-vietnam-pro/700.css'
+import '@fontsource/jetbrains-mono/400.css'
+import '@fontsource/jetbrains-mono/500.css'
+import '@fontsource/jetbrains-mono/600.css'
 import './assets/main.css'
 
 import App from './App.vue'
 import router from './router'
 import { useTheme } from './composables/useTheme'
-
-import { install as VueMonacoEditorPlugin } from '@guolao/vue-monaco-editor'
+import { installChunkReload } from './lib/chunkReload'
 
 const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
-app.use(VueMonacoEditorPlugin, {
-    paths: {
-        vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs'
-    }
-})
+// A tab still running the previous build reloads once when its lazy chunks are gone after a redeploy.
+installChunkReload(router)
 
 // Start following the OS theme for everyone, signed in or not, before any menu exists.
 useTheme()

@@ -1,6 +1,9 @@
 <template>
     <header class="sticky top-0 z-50 border-b border-border bg-card">
-        <div class="mx-auto flex h-14 max-w-[84rem] items-center gap-5 px-4 md:px-6 lg:px-8">
+        <div class="mx-auto flex h-14 max-w-[84rem] items-center gap-2.5 px-4 md:gap-5 md:px-6 lg:px-8">
+            <!-- Below md the nav moves into a left sheet behind this button -->
+            <MobileNav :items="navItems" />
+
             <RouterLink to="/problems" class="flex items-center gap-[9px] text-[15px] font-bold tracking-[-0.03em] text-foreground"
                 aria-label="My Online Judge, problems">
                 <span class="strip" aria-hidden="true"><i class="ok" /><i class="ok" /><i class="ok" /><i class="ok" /><i class="p" /><i class="dim" /></span>
@@ -65,6 +68,7 @@ import { ListChecks, ShieldCheck, KeyRound, LogOut } from 'lucide-vue-next'
 import LoginModal from '@/components/auth/LoginModal.vue'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import ThemeMenu from '@/components/layout/ThemeMenu.vue'
+import MobileNav from '@/components/layout/MobileNav.vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ROUTE_PATH } from '@/constants/routePath'
@@ -89,7 +93,7 @@ const router = useRouter()
 const ADMIN_ANY = ['problem:create', 'problem:update', 'problem:delete', 'judgeserver:read', 'role:read', 'user:read']
 const isAdmin = computed(() => ADMIN_ANY.some((p) => authStore.hasPermission(p)))
 
-// One array so more sections (Contests, a mobile menu) can be added later.
+// One array for the desktop nav and the mobile sheet; more sections (Contests) are added here.
 const navItems = computed(() => [
     { to: '/problems', label: 'Problems', icon: ListChecks },
     ...(isAdmin.value ? [{ to: ROUTE_PATH.ADMIN as string, label: 'Admin', icon: ShieldCheck }] : []),

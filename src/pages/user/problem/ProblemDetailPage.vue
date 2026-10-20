@@ -23,17 +23,12 @@
                 class="h-[calc(100vh-15rem)] min-h-[560px] overflow-hidden rounded-xl border border-border bg-background">
                 <ResizablePanelGroup direction="horizontal" auto-save-id="problem-detail-split">
                     <ResizablePanel ref="statementPanel" :default-size="SPLIT_DEFAULT" :min-size="30">
-                        <section aria-label="Problem" class="h-full">
-                            <StatementPane :problem="problem" :slug="slug" :pending-submission="pendingSubmission"
-                                @consumed="pendingSubmission = null" />
-                        </section>
+                        <section id="problem-pane-problem" aria-label="Problem" class="h-full" />
                     </ResizablePanel>
                     <ResizableHandle with-handle aria-label="Resize panes" @dblclick="resetSplit"
                         @keydown.enter.prevent="resetSplit" />
                     <ResizablePanel :default-size="100 - SPLIT_DEFAULT" :min-size="30">
-                        <section aria-label="Code" class="h-full">
-                            <SolvePane :slug="slug" @success="handleSubmissionSuccess" @judged="refreshStats" />
-                        </section>
+                        <section id="problem-pane-code" aria-label="Code" class="h-full" />
                     </ResizablePanel>
                 </ResizablePanelGroup>
             </div>
@@ -57,21 +52,26 @@
                     </div>
                     <div class="h-[calc(100dvh-10rem)] min-h-[420px]">
                         <div v-show="mobileView === 'problem'" id="problem-view-problem" role="tabpanel"
-                            aria-labelledby="problem-view-tab-problem" class="h-full">
-                            <StatementPane :problem="problem" :slug="slug" :pending-submission="pendingSubmission"
-                                @consumed="pendingSubmission = null" />
-                        </div>
+                            aria-labelledby="problem-view-tab-problem" class="h-full" />
                         <div v-show="mobileView === 'code'" id="problem-view-code" role="tabpanel"
-                            aria-labelledby="problem-view-tab-code" class="h-full">
-                            <SolvePane :slug="slug" :submit-bar-to="`#${SUBMIT_BAR_ID}`"
-                                @success="handleSubmissionSuccess" @judged="refreshStats" />
-                        </div>
+                            aria-labelledby="problem-view-tab-code" class="h-full" />
                     </div>
                 </div>
                 <!-- ProblemSubmit renders its submit bar in here. Full width, above the safe area. -->
                 <div :id="SUBMIT_BAR_ID" ref="submitBarEl"
                     class="sticky bottom-0 z-30 -mx-4 bg-card pb-[env(safe-area-inset-bottom,0px)] md:-mx-6" />
             </div>
+
+            <!-- One statement pane and one solve pane serve both layouts. Crossing 900 px moves them into the other
+                 layout's slots instead of mounting new ones, so typed code, the console and its stream survive. -->
+            <Teleport defer :to="isDesktop ? '#problem-pane-problem' : '#problem-view-problem'">
+                <StatementPane :problem="problem" :slug="slug" :pending-submission="pendingSubmission"
+                    @consumed="pendingSubmission = null" />
+            </Teleport>
+            <Teleport defer :to="isDesktop ? '#problem-pane-code' : '#problem-view-code'">
+                <SolvePane :slug="slug" :submit-bar-to="isDesktop ? undefined : `#${SUBMIT_BAR_ID}`"
+                    @success="handleSubmissionSuccess" @judged="refreshStats" />
+            </Teleport>
         </template>
     </div>
 </template>

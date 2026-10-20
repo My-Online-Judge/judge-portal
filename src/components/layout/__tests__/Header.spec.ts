@@ -20,6 +20,7 @@ const mountHeader = async (permissions: string[]) => {
                 RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
                 LoginModal: true,
                 ThemeMenu: true,
+                MobileNav: true,
             },
         },
     })
