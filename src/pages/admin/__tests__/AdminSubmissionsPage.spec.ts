@@ -6,6 +6,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import { AxiosError, AxiosHeaders } from 'axios'
 
 const h = vi.hoisted(() => ({
+    watched: new Map<string, { onVerdict: (v: unknown) => void; onGiveUp?: () => void }>(),
+    stopped: [] as string[],
     search: vi.fn(),
     rejudge: vi.fn(),
     rejudgeProblem: vi.fn(),
@@ -20,6 +22,16 @@ vi.mock('vue-router', async () => {
 })
 vi.mock('@/services/submissionService', () => ({
     default: { search: h.search, rejudge: h.rejudge, rejudgeProblem: h.rejudgeProblem },
+}))
+vi.mock('@/composables/useSubmissionStream', () => ({
+    useSubmissionStream: () => ({
+        watch: (id: string, onVerdict: (v: unknown) => void, onGiveUp?: () => void) => h.watched.set(id, { onVerdict, onGiveUp }),
+        stop: (id: string) => {
+            h.watched.delete(id)
+            h.stopped.push(id)
+        },
+        stopAll: vi.fn(),
+    }),
 }))
 vi.mock('@/composables/useToast', () => ({ useToast: () => ({ triggerToast: h.toast, error: h.error }) }))
 // The real dialog loads the submission and Monaco; only the props the page passes matter here.
@@ -101,6 +113,8 @@ beforeEach(() => {
     h.search.mockResolvedValue({ data: { data: [row], pagination } })
 })
 afterEach(() => {
+    h.watched.clear()
+    h.stopped.length = 0
     wrapper?.unmount()
     wrapper = undefined
     document.body.innerHTML = ''
@@ -209,5 +223,53 @@ describe('AdminSubmissionsPage', () => {
         await flushPromises()
         expect(h.error).toHaveBeenCalledWith('The judge is busy, try again in a moment', { description: 'Try again in 30 s.' })
         expect(h.toast).not.toHaveBeenCalledWith('Submission queued for judging', 'success')
+    })
+
+    describe('a row that is still being judged', () => {
+        const judging = { ...row, status: 7, cpuTime: null, memory: null }
+        beforeEach(() => {
+            h.search.mockResolvedValue({ data: { data: [judging], pagination } })
+        })
+
+        it('isWatchedAndPatchedWhenItsVerdictArrives', async () => {
+            await mountPage()
+            expect([...h.watched.keys()]).toEqual([row.id])
+            expect(document.body.textContent).toContain('Judging')
+            const callsBefore = h.search.mock.calls.length
+            h.watched.get(row.id)!.onVerdict({ status: 0, cpuTime: 30, memory: 4194304 })
+            await flushPromises()
+            expect(document.body.textContent).toContain('Accepted')
+            // No list reload and no spinner for a patch.
+            expect(h.search.mock.calls.length).toBe(callsBefore)
+            // The row is terminal now, so Rejudge is available again.
+            await openMenu()
+            expect(menuItem('Rejudge…')!.getAttribute('aria-disabled')).not.toBe('true')
+            expect(menuItem('Rejudge…')!.hasAttribute('data-disabled')).toBe(false)
+        })
+
+        it('aGivenUpWatchRefreshesTheListQuietly', async () => {
+            await mountPage()
+            h.search.mockResolvedValue({ data: { data: [{ ...judging, status: -1 }], pagination } })
+            h.watched.get(row.id)!.onGiveUp!()
+            await flushPromises()
+            expect(h.search).toHaveBeenCalledTimes(2)
+            expect(document.body.textContent).toContain('Wrong answer')
+        })
+
+        it('closingTheDetailDialogReloadsTheList', async () => {
+            await mountPage()
+            await pickMenu('View')
+            const dialog = wrapper!.findComponent({ name: 'SubmissionDetailDialogStub' })
+            expect(dialog.props('open')).toBe(true)
+            h.search.mockResolvedValue({ data: { data: [{ ...judging, status: 0 }], pagination } })
+            dialog.vm.$emit('update:open', false)
+            await flushPromises()
+            expect(h.search).toHaveBeenCalledTimes(2)
+        })
+    })
+
+    it('aTerminalRowIsNotWatched', async () => {
+        await mountPage()
+        expect(h.watched.size).toBe(0)
     })
 })

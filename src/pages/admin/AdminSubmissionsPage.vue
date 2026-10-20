@@ -106,7 +106,7 @@
             </div>
         </div>
 
-        <SubmissionDetailDialog :open="viewOpen" :submission-id="viewId" show-source @update:open="(v: boolean) => (viewOpen = v)" />
+        <SubmissionDetailDialog :open="viewOpen" :submission-id="viewId" show-source @update:open="onViewOpenChange" />
 
         <ConfirmDialog
             :open="rejudgeOpen"
@@ -169,6 +169,7 @@ import VerdictChip from '@/components/common/VerdictChip.vue'
 import ProblemPicker from '@/components/admin/ProblemPicker.vue'
 import type { RowAction } from '@/components/common/rowActions'
 import { useFetch } from '@/composables/useFetch'
+import { useSubmissionStream } from '@/composables/useSubmissionStream'
 import { useToast } from '@/composables/useToast'
 import { getErrorMessage } from '@/lib/errorMessage'
 import { parseRetryAfter } from '@/lib/retryAfter'
@@ -179,7 +180,7 @@ import { formatMem, formatMs } from '@/lib/verdictFormat'
 import { formatDateTime } from '@/utils/dateTimeUtils'
 import submissionService from '@/services/submissionService'
 import { useAuthStore } from '@/stores/auth'
-import { isTerminalStatus, SubmissionResult, type SubmissionListItem } from '@/types/submission'
+import { isTerminalStatus, SubmissionResult, type Submission, type SubmissionListItem, type SubmissionSearchParams } from '@/types/submission'
 
 // Loaded on first use: the problem page imports this dialog too, so a static import here would move it (and its
 // verdict tiles) into the chunk every page loads.
@@ -228,18 +229,80 @@ const hasFilters = computed(
     () => !!fProblem.value || !!fUsername.value || fResult.value !== 'all' || !!fFrom.value || !!fTo.value,
 )
 
+const searchParams = (): SubmissionSearchParams => ({
+    page: page.value,
+    size: size.value,
+    problemSlug: fProblem.value.trim() || undefined,
+    username: fUsername.value.trim() || undefined,
+    result: fResult.value === 'all' ? undefined : Number(fResult.value),
+    from: fFrom.value || undefined,
+    to: fTo.value || undefined,
+})
+
+// Counts the list loads, so a background refresh that a newer load overtook is dropped.
+let loadSeq = 0
 const load = () => {
     if (!rangeValid.value) return
-    return execute({
-        page: page.value,
-        size: size.value,
-        problemSlug: fProblem.value.trim() || undefined,
-        username: fUsername.value.trim() || undefined,
-        result: fResult.value === 'all' ? undefined : Number(fResult.value),
-        from: fFrom.value || undefined,
-        to: fTo.value || undefined,
-    })
+    loadSeq += 1
+    return execute(searchParams())
 }
+
+// Re-reads the current page without the spinner or a new error state; a failure keeps the rows on screen.
+const refreshQuietly = async () => {
+    if (!rangeValid.value) return
+    const mine = loadSeq
+    try {
+        const res = await submissionService.search(new AbortController().signal, searchParams())
+        if (mine === loadSeq) data.value = res.data
+    } catch {
+        // The next load or watch shows the problem.
+    }
+}
+
+// --- Rows still being judged: each one is watched, and its verdict patches the row in place ---
+const stream = useSubmissionStream()
+const watched = new Set<string>()
+
+const patchRow = (id: string, verdict: Submission) => {
+    const current = data.value
+    if (!current) return
+    data.value = {
+        ...current,
+        data: current.data.map((r) =>
+            r.id === id ? { ...r, status: verdict.status, cpuTime: verdict.cpuTime ?? r.cpuTime, memory: verdict.memory ?? r.memory } : r,
+        ),
+    }
+}
+
+watch(
+    rows,
+    (list) => {
+        const open = new Set(list.filter((r) => !isTerminalStatus(r.status)).map((r) => r.id))
+        for (const id of Array.from(watched)) {
+            if (!open.has(id)) {
+                stream.stop(id)
+                watched.delete(id)
+            }
+        }
+        for (const id of open) {
+            if (watched.has(id)) continue
+            watched.add(id)
+            stream.watch(
+                id,
+                (verdict) => {
+                    watched.delete(id)
+                    patchRow(id, verdict)
+                },
+                // The watch ended without a verdict: read the list again instead of leaving a stale row.
+                () => {
+                    watched.delete(id)
+                    void refreshQuietly()
+                },
+            )
+        }
+    },
+    { immediate: true },
+)
 
 const clearFilters = () => {
     fProblem.value = ''
@@ -269,6 +332,12 @@ const onSizeChange = (n: number) => {
 // --- View: the detail dialog with the source ---
 const viewOpen = ref(false)
 const viewId = ref<string | null>(null)
+// The dialog can rejudge or otherwise change the submission, so the list is read again when it closes.
+const onViewOpenChange = (v: boolean) => {
+    const wasOpen = viewOpen.value
+    viewOpen.value = v
+    if (wasOpen && !v) void refreshQuietly()
+}
 const openView = (s: SubmissionListItem) => {
     viewId.value = s.id
     viewOpen.value = true
