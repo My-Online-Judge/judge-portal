@@ -158,22 +158,44 @@ describe('AdminContestsPage', () => {
         expect(h.list).toHaveBeenCalledTimes(2)
     })
 
-    it('conflictToastsTheApiMessage', async () => {
+    it('deleteOfAStartedPublishedContestIsDisabledWithGuidance', async () => {
+        await mountPage()
+        for (const title of ['Spring cup', 'Summer cup']) {
+            await openMenu(title)
+            const item = menuItem('Delete…')
+            expect(item.getAttribute('aria-label')).toBe('Delete…. Set it to Draft first, then delete')
+            expect(item.hasAttribute('data-disabled')).toBe(true)
+            item.click()
+            await flushPromises()
+            expect(document.body.textContent).not.toContain('Delete contest “')
+            expect(h.remove).not.toHaveBeenCalled()
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+            await nextTick()
+        }
+    })
+
+    it('aDraftsPhaseIsNotShownAsLive', async () => {
+        h.list.mockImplementation(async () => answer({ running: [contest('d', 'Open draft', 'DRAFT', 'RUNNING')] }))
+        await mountPage()
+        const phase = row('Open draft').findAll('td')[2]!
+        expect(phase.classes()).not.toContain('text-success-ink')
+    })
+
+    it('aDraftCanBeDeleted', async () => {
+        await mountPage()
+        await openMenu('Autumn cup')
+        expect(menuItem('Delete…').hasAttribute('data-disabled')).toBe(false)
+    })
+
+    it('conflictToastsTheApiMessageWithTheHintForAStaleRow', async () => {
         const message = 'This contest has started: its problems and start time are locked and it cannot be deleted'
         h.remove.mockRejectedValue({ isAxiosError: true, response: { status: 409, data: { message } } })
         await mountPage()
-        // A published contest that has started: the way out is to set it to Draft.
-        await askToDelete('Spring cup')
-        button('Delete contest')!.click()
-        await flushPromises()
-        expect(h.error).toHaveBeenCalledWith(message, { description: 'Set it to Draft first to delete it.' })
-
-        // Any other refusal: the API's message alone.
-        h.error.mockClear()
+        // The row said Draft; the contest was published and started since.
         await askToDelete('Autumn cup')
         button('Delete contest')!.click()
         await flushPromises()
-        expect(h.error).toHaveBeenCalledWith(message, {})
+        expect(h.error).toHaveBeenCalledWith(message, { description: 'Set it to Draft first to delete it.' })
     })
 
     it('aFailedListOffersARetry', async () => {

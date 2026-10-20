@@ -50,17 +50,37 @@ const destructive = computed(() => props.items.filter((i) => i.destructive))
         </DropdownMenuItem>
       </template>
       <DropdownMenuSeparator v-if="normal.length && destructive.length" />
-      <DropdownMenuItem
-        v-for="item in destructive"
-        :key="item.label"
-        variant="destructive"
-        class="text-destructive"
-        :disabled="item.disabled"
-        @select="item.onSelect()"
-      >
-        <component :is="item.icon" />
-        {{ item.label }}
-      </DropdownMenuItem>
+      <template v-for="item in destructive" :key="item.label">
+        <TooltipProvider v-if="item.hint">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <div>
+                <DropdownMenuItem
+                  variant="destructive"
+                  class="text-destructive"
+                  :disabled="item.disabled"
+                  :aria-label="`${item.label}. ${item.hint}`"
+                  @select="item.onSelect()"
+                >
+                  <component :is="item.icon" />
+                  {{ item.label }}
+                </DropdownMenuItem>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="left">{{ item.hint }}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <DropdownMenuItem
+          v-else
+          variant="destructive"
+          class="text-destructive"
+          :disabled="item.disabled"
+          @select="item.onSelect()"
+        >
+          <component :is="item.icon" />
+          {{ item.label }}
+        </DropdownMenuItem>
+      </template>
     </DropdownMenuContent>
   </DropdownMenu>
 </template>

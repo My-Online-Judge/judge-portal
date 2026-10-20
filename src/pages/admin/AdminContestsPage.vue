@@ -52,7 +52,7 @@
                                     <Badge v-if="c.status === 'DRAFT'" variant="neutral">Draft</Badge>
                                     <Badge v-else variant="success">Published</Badge>
                                 </td>
-                                <td :class="PHASES[c.phase].class">{{ PHASES[c.phase].label }}</td>
+                                <td :class="c.status === 'DRAFT' ? 'text-muted-foreground' : PHASES[c.phase].class">{{ PHASES[c.phase].label }}</td>
                                 <td class="whitespace-nowrap text-muted-foreground">{{ formatContestDate(c.startsAt) }}</td>
                                 <td class="whitespace-nowrap text-muted-foreground">{{ formatContestDate(c.endsAt) }}</td>
                                 <td class="num">{{ c.problemCount }}</td>
@@ -169,7 +169,17 @@ const onSaved = () => {
 const rowActions = (c: ContestSummary): RowAction[] => {
     const items: RowAction[] = []
     if (canUpdate.value) items.push({ label: 'Edit', icon: Pencil, onSelect: () => openEdit(c) })
-    if (canDelete.value) items.push({ label: 'Delete…', icon: Trash2, destructive: true, onSelect: () => openDelete(c) })
+    if (canDelete.value) {
+        // The server refuses to delete a published contest that has started, so the item says what to do instead.
+        const started = c.status === 'PUBLISHED' && c.phase !== 'UPCOMING'
+        items.push({
+            label: 'Delete…',
+            icon: Trash2,
+            destructive: true,
+            onSelect: () => openDelete(c),
+            ...(started ? { disabled: true, hint: 'Set it to Draft first, then delete' } : {}),
+        })
+    }
     return items
 }
 
@@ -193,12 +203,11 @@ const confirmDelete = async () => {
         void load()
     } catch (err) {
         deleteOpen.value = false
-        // The server refuses to delete a published contest that has started (409); a draft can always go.
-        const started = target.status === 'PUBLISHED' && target.phase !== 'UPCOMING'
+        // A row that was stale: the contest has started since the list was read (409), and the way out is Draft.
         const conflict = isAxiosError(err) && err.response?.status === 409
         errorToast(
             getErrorMessage(err, "Couldn't delete the contest. Try again."),
-            conflict && started ? { description: 'Set it to Draft first to delete it.' } : {},
+            conflict ? { description: 'Set it to Draft first to delete it.' } : {},
         )
     } finally {
         deleting.value = false
