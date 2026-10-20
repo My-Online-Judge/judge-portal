@@ -2,6 +2,7 @@ export const ROUTE_PATH = {
     HOME: '/',
     PROBLEM: '/problems',
     PROBLEM_DETAIL: '/problems/:slug',
+    USER_PROFILE: '/u/:username',
     FORBIDDEN: '/403',
     ADMIN: '/admin',
     ADMIN_LOGIN: '/admin/login',

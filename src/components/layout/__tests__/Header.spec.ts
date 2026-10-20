@@ -12,13 +12,15 @@ import Header from '../Header.vue'
 const mountHeader = async (permissions: string[]) => {
     setActivePinia(createPinia())
     h.getMe.mockResolvedValue({
-        data: { data: { username: 'an.nguyen', name: 'An Nguyen', email: 'a@b.c', permissions } },
+        data: { data: { username: 'alice', name: 'An Nguyen', email: 'a@b.c', permissions } },
     })
     const w = mount(Header, {
         global: {
             stubs: {
                 RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
                 LoginModal: true,
+                DropdownMenuContent: { template: '<div><slot /></div>' },
+                DropdownMenuItem: { template: '<div role="menuitem"><slot /></div>' },
                 ThemeMenu: true,
                 MobileNav: true,
             },
@@ -44,5 +46,14 @@ describe('Header nav', () => {
         expect(plain.findAll('nav a').map((a) => a.text())).not.toContain('Admin')
         const admin = await mountHeader(['user:read'])
         expect(admin.findAll('nav a').map((a) => a.text())).toContain('Admin')
+    })
+
+    it('profileIsTheFirstAccountMenuItem', async () => {
+        const w = await mountHeader([])
+        const items = w.findAll('[role="menuitem"]')
+        expect(items[0]!.text()).toBe('Profile')
+        expect(items[0]!.get('a').attributes('href')).toBe('/u/alice')
+        expect(items[1]!.text()).toBe('Change password')
+        expect(items.at(-1)!.text()).toBe('Log out')
     })
 })

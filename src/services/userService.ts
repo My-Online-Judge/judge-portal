@@ -2,6 +2,7 @@ import axiosClient, { API_BASE_URL } from '@/api/axiosClient'
 import type { AxiosResponse } from 'axios'
 import type { ApiResponse } from '@/types/common'
 import type { UserResponse, UserListParams, CreateUserPayload, UpdateUserPayload } from '@/types/user'
+import type { PublicProfile } from '@/types/profile'
 import { API_ROUTES } from '@/constants/apiPath'
 
 class UserService {
@@ -12,6 +13,11 @@ class UserService {
 
     get(signal: AbortSignal, id: string): Promise<AxiosResponse<ApiResponse<UserResponse>>> {
         return axiosClient.get<ApiResponse<UserResponse>>(API_ROUTES.USERS.PROFILE(id), { signal })
+    }
+
+    // Anyone may read this; deleted accounts are 404.
+    getPublicProfile(username: string): Promise<AxiosResponse<ApiResponse<PublicProfile>>> {
+        return axiosClient.get<ApiResponse<PublicProfile>>(API_ROUTES.USERS.PUBLIC(username))
     }
 
     // Create a local account (username + password). Returns the created user.

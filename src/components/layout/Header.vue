@@ -39,6 +39,12 @@
                                 </div>
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
+                            <DropdownMenuItem as-child>
+                                <RouterLink :to="`/u/${encodeURIComponent(authStore.user.username)}`">
+                                    <UserRound class="size-4" />
+                                    Profile
+                                </RouterLink>
+                            </DropdownMenuItem>
                             <DropdownMenuItem @click="router.push(ROUTE_PATH.ACCOUNT_PASSWORD)">
                                 <KeyRound class="size-4" />
                                 Change password
@@ -64,7 +70,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
-import { ListChecks, ShieldCheck, KeyRound, LogOut } from 'lucide-vue-next'
+import { ListChecks, ShieldCheck, KeyRound, LogOut, UserRound } from 'lucide-vue-next'
 import LoginModal from '@/components/auth/LoginModal.vue'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import ThemeMenu from '@/components/layout/ThemeMenu.vue'

@@ -2,6 +2,7 @@ import axiosClient from '@/api/axiosClient'
 import type { AxiosResponse } from 'axios'
 import type { ApiResponse } from '@/types/common'
 import { API_ROUTES } from '@/constants/apiPath'
+import type { UserStats } from '@/types/profile'
 import type { Submission, SubmissionListItem, SubmissionRequest, SubmissionSearchParams } from '@/types/submission'
 
 class SubmissionService {
@@ -12,6 +13,11 @@ class SubmissionService {
     // Every submission, newest first (submission:read_any). Undefined filters are left out.
     search(signal: AbortSignal, params: SubmissionSearchParams): Promise<AxiosResponse<ApiResponse<SubmissionListItem[]>>> {
         return axiosClient.get(API_ROUTES.SUBMISSIONS.ROOT, { params, signal })
+    }
+
+    // Public per-user statistics; the server hides non-visible problem slugs from non-owners.
+    getUserStats(userId: string): Promise<AxiosResponse<ApiResponse<UserStats>>> {
+        return axiosClient.get(API_ROUTES.USERS.STATS(userId))
     }
 
     getSubmissionById(id: string): Promise<AxiosResponse<ApiResponse<Submission>>> {
