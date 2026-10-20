@@ -65,8 +65,9 @@ import contestService from '@/services/contestService'
 import { SCOREBOARD_POLL_MS } from '@/lib/contestTime'
 import type { ContestPhase, Scoreboard, ScoreboardCell } from '@/types/contest'
 
-// Only a running contest's board changes: an upcoming or ended one is read once, and a phase change reads it again (the
-// end gives one last read, then the board is final).
+// Only a running contest's board changes: an upcoming or ended one is read once, and a phase change reads it again. A
+// contest that ends while the board is open keeps polling for a 2 minute grace (verdicts judged just after the end still
+// score), then the board is final.
 const props = defineProps<{ slug: string; phase: ContestPhase }>()
 
 const board = shallowRef<Scoreboard | null>(null)
@@ -94,7 +95,9 @@ let timer: ReturnType<typeof setTimeout> | null = null
 let inFlight: AbortController | null = null
 let stopped = false
 const hidden = () => document.visibilityState === 'hidden'
-const polls = () => !stopped && props.phase === 'RUNNING' && !hidden()
+const GRACE_POLLS = 120_000 / SCOREBOARD_POLL_MS
+let graceLeft = 0
+const polls = () => !stopped && (props.phase === 'RUNNING' || (props.phase === 'ENDED' && graceLeft > 0)) && !hidden()
 
 const load = async () => {
     if (timer !== null) clearTimeout(timer)
@@ -116,7 +119,10 @@ const load = async () => {
         if (inFlight === ctl) {
             inFlight = null
             loading.value = false
-            if (polls()) timer = setTimeout(load, SCOREBOARD_POLL_MS)
+            if (polls()) {
+                if (props.phase === 'ENDED') graceLeft--
+                timer = setTimeout(load, SCOREBOARD_POLL_MS)
+            }
         }
     }
 }
@@ -139,7 +145,10 @@ watch(
 )
 watch(
     () => props.phase,
-    () => void load(),
+    (phase, before) => {
+        graceLeft = before === 'RUNNING' && phase === 'ENDED' ? GRACE_POLLS : 0
+        void load()
+    },
 )
 onMounted(() => {
     document.addEventListener('visibilitychange', onVisibilityChange)

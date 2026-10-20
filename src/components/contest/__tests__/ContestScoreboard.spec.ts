@@ -190,13 +190,16 @@ describe('ContestScoreboard', () => {
         expect(h.scoreboard).toHaveBeenCalledTimes(3)
     })
 
-    it('anEndedBoardIsFinalAfterOneLastRead', async () => {
+    it('anEndedBoardKeepsPollingForAGracePeriodThenIsFinal', async () => {
         const w = await mountBoard()
         await w.setProps({ phase: 'ENDED' })
         await flushPromises()
         expect(h.scoreboard).toHaveBeenCalledTimes(2)
+        // Verdicts judged just after the end still reach the board: 2 minutes at the same 15 s cadence.
         await vi.advanceTimersByTimeAsync(120_000)
-        expect(h.scoreboard).toHaveBeenCalledTimes(2)
+        expect(h.scoreboard).toHaveBeenCalledTimes(2 + 8)
+        await vi.advanceTimersByTimeAsync(120_000)
+        expect(h.scoreboard).toHaveBeenCalledTimes(2 + 8)
         wrapper!.unmount()
 
         // Opened after the end: read once.
@@ -204,6 +207,22 @@ describe('ContestScoreboard', () => {
         await mountBoard('ENDED')
         await vi.advanceTimersByTimeAsync(120_000)
         expect(h.scoreboard).toHaveBeenCalledTimes(1)
+    })
+
+    it('theGracePeriodPausesWhileTheTabIsHidden', async () => {
+        const vis = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
+        try {
+            const w = await mountBoard()
+            await w.setProps({ phase: 'ENDED' })
+            await flushPromises()
+            vis.mockReturnValue('hidden')
+            document.dispatchEvent(new Event('visibilitychange'))
+            h.scoreboard.mockClear()
+            await vi.advanceTimersByTimeAsync(120_000)
+            expect(h.scoreboard).not.toHaveBeenCalled()
+        } finally {
+            vis.mockRestore()
+        }
     })
 
     it('aBackgroundPollShowsNoRefreshBar', async () => {
