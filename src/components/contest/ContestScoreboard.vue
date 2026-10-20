@@ -8,8 +8,9 @@
                 <caption class="sr-only">Scoreboard: solved problems first, then the lowest penalty in minutes</caption>
                 <thead>
                     <tr>
-                        <th class="w-16 pl-4">Rank</th>
-                        <th>Contestant</th>
+                        <!-- Rank and Contestant stay in view while the problem columns scroll (phones, many problems). -->
+                        <th class="sticky left-0 z-[1] w-16 min-w-16 pl-4">Rank</th>
+                        <th class="sticky left-16 z-[1]">Contestant</th>
                         <th class="num w-20">Solved</th>
                         <th class="num w-24">Penalty</th>
                         <th v-for="label in labels" :key="label" class="w-16 text-center font-mono">{{ label }}</th>
@@ -26,8 +27,8 @@
                         </td>
                     </tr>
                     <tr v-for="row in rows" :key="row.user.id">
-                        <td class="pl-4 font-mono tabular-nums" data-col="rank">{{ row.rank }}</td>
-                        <td data-col="user">
+                        <td class="sticky left-0 z-[1] bg-card pl-4 font-mono tabular-nums" data-col="rank">{{ row.rank }}</td>
+                        <td class="sticky left-16 z-[1] bg-card" data-col="user">
                             <RouterLink v-if="row.user.username" :to="`/u/${encodeURIComponent(row.user.username)}`"
                                 class="font-medium text-foreground hover:text-link hover:underline">{{ row.user.username }}</RouterLink>
                             <!-- Identity did not know this user (or was down): the id's start tells rows apart. -->

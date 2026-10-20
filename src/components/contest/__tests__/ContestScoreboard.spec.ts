@@ -143,6 +143,17 @@ describe('ContestScoreboard', () => {
         expect(first.get('a').attributes('href')).toBe('/u/alice')
     })
 
+    it('rankAndContestantStayInViewWhenTheTableScrolls', async () => {
+        const w = await mountBoard()
+        const [rank, user] = w.findAll('thead th')
+        const first = w.findAll('tbody tr')[0]!
+        for (const el of [rank!, first.get('td[data-col="rank"]')]) expect(el.classes()).toEqual(expect.arrayContaining(['sticky', 'left-0']))
+        for (const el of [user!, first.get('td[data-col="user"]')]) expect(el.classes()).toEqual(expect.arrayContaining(['sticky', 'left-16']))
+        // Body cells cover what scrolls under them.
+        expect(first.get('td[data-col="rank"]').classes()).toContain('bg-card')
+        expect(first.get('td[data-col="user"]').classes()).toContain('bg-card')
+    })
+
     it('unknownUserShowsTheIdPrefix', async () => {
         await mountBoard()
         const second = wrapper!.findAll('tbody tr')[1]!
