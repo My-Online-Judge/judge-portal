@@ -344,6 +344,28 @@ describe('AdminSubmissionsPage', () => {
             await vi.advanceTimersByTimeAsync(60_000)
             expect(h.search).toHaveBeenCalledTimes(1)
         })
+
+        it('leavingWhileARefreshIsInFlightAbortsItAndStartsNothing', async () => {
+            await mountPage()
+            let answerIt!: (v: unknown) => void
+            let signal: AbortSignal | undefined
+            h.search.mockImplementation((s: AbortSignal) => {
+                signal = s
+                return new Promise((resolve) => (answerIt = resolve))
+            })
+            await vi.advanceTimersByTimeAsync(5000)
+            expect(h.search).toHaveBeenCalledTimes(2)
+
+            wrapper!.unmount()
+            wrapper = undefined
+            expect(signal!.aborted).toBe(true)
+            // The answer arrives anyway, with the four watched rows finished: nothing may take their slots.
+            answerIt(answer(pending(10).map((r, i) => (i < 4 ? { ...r, status: 0 } : r))))
+            await flushPromises()
+            expect(h.watchCalls).toHaveLength(4)
+            await vi.advanceTimersByTimeAsync(600_000)
+            expect(h.search).toHaveBeenCalledTimes(2)
+        })
     })
 
     it('aRowThatGaveUpIsNotWatchedAgain', async () => {

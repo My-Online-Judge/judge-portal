@@ -252,17 +252,26 @@ const load = () => {
     return execute(lastParams)
 }
 
+// Set when the page goes: an answer or timer that comes later must not open streams or schedule reads.
+let unmounted = false
+// The quiet refreshes in flight, aborted when the page goes.
+const refreshes = new Set<AbortController>()
+
 // Re-reads the current page without the spinner or a new error state; a failure keeps the rows on screen.
 const refreshQuietly = async () => {
-    if (!lastParams) return
+    if (!lastParams || unmounted) return
     const mine = loadSeq
+    const ctl = new AbortController()
+    refreshes.add(ctl)
     try {
-        const res = await submissionService.search(new AbortController().signal, lastParams)
-        if (mine !== loadSeq) return
+        const res = await submissionService.search(ctl.signal, lastParams)
+        if (mine !== loadSeq || unmounted) return
         data.value = res.data
         error.value = null
     } catch {
         // The next load or watch shows the problem.
+    } finally {
+        refreshes.delete(ctl)
     }
 }
 
@@ -309,7 +318,7 @@ const resetLiveRows = () => {
 }
 
 const scheduleListRefresh = () => {
-    if (listTimer !== null || listExpired) return
+    if (listTimer !== null || listExpired || unmounted) return
     const now = Date.now()
     listStartedAt ??= now
     if (now + listDelay - listStartedAt > LIST_REFRESH_DEADLINE_MS) {
@@ -326,6 +335,7 @@ const scheduleListRefresh = () => {
 }
 
 function followLiveRows(list: SubmissionListItem[]) {
+    if (unmounted) return
     const open = list.filter((r) => !isTerminalStatus(r.status)).map((r) => r.id)
     const openSet = new Set(open)
     for (const id of Array.from(watched)) {
@@ -357,7 +367,11 @@ function followLiveRows(list: SubmissionListItem[]) {
 }
 
 watch(rows, followLiveRows, { immediate: true })
-onBeforeUnmount(stopListRefresh)
+onBeforeUnmount(() => {
+    unmounted = true
+    stopListRefresh()
+    refreshes.forEach((ctl) => ctl.abort())
+})
 
 const clearFilters = () => {
     fProblem.value = ''
