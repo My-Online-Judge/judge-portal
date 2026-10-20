@@ -14,8 +14,13 @@
             <Loading />
         </div>
 
-        <div v-else-if="error || contestError" class="flex flex-col items-center gap-3 py-20 text-center text-destructive">
-            Couldn't load this problem. Please try again.
+        <div v-else-if="error || contestError" class="flex flex-col items-center gap-3 py-20 text-center">
+            <!-- In a contest a 404 means hidden before the start, removed, or a wrong link: not a failure to retry. -->
+            <template v-if="unavailable">
+                <p class="text-sm font-semibold text-foreground">This problem is not available</p>
+                <p class="text-sm text-muted-foreground">The contest may not have started yet, or the link is wrong.</p>
+            </template>
+            <p v-else class="text-destructive">Couldn't load this problem. Please try again.</p>
             <RouterLink v-if="contestSlug" :to="backTo" class="text-sm font-medium text-link hover:underline">Back to the contest</RouterLink>
         </div>
 
@@ -217,10 +222,13 @@ const contest = shallowRef<ContestDetail | null>(null)
 const contestLoading = ref(false)
 const contestError = ref<unknown>(null)
 let contestSeq = 0
+let contestRead: AbortController | null = null
 
 // Read on entry, and again when a submit finds the contest no longer running. A failed re-read keeps the last answer.
 const loadContest = async () => {
     const mine = ++contestSeq
+    contestRead?.abort()
+    contestRead = null
     if (!contestSlug.value) {
         contest.value = null
         contestError.value = null
@@ -228,8 +236,10 @@ const loadContest = async () => {
         return
     }
     if (!contest.value) contestLoading.value = true
+    const ctl = new AbortController()
+    contestRead = ctl
     try {
-        const res = await contestService.get(new AbortController().signal, contestSlug.value)
+        const res = await contestService.get(ctl.signal, contestSlug.value)
         if (mine !== contestSeq) return
         contest.value = res.data.data
         contestError.value = null
@@ -237,10 +247,18 @@ const loadContest = async () => {
         if (mine !== contestSeq) return
         if (!contest.value) contestError.value = err
     } finally {
+        if (contestRead === ctl) contestRead = null
         if (mine === contestSeq) contestLoading.value = false
     }
 }
 void loadContest()
+onBeforeUnmount(() => {
+    contestSeq++
+    contestRead?.abort()
+})
+
+const isNotFound = (err: unknown) => (err as { response?: { status?: number } } | null)?.response?.status === 404
+const unavailable = computed(() => !!contestSlug.value && (isNotFound(error.value) || isNotFound(contestError.value)))
 
 const INACTIVE = 0
 // Only a published contest that is running takes the submission; after the end, before the start or in a draft (both

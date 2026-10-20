@@ -174,6 +174,42 @@ describe('ProblemDetailPage', () => {
             expect(w.text()).toContain('Preview: this contest is a draft, so submissions do not count.')
         })
 
+        it('aProblemTheContestDoesNotShowIsNotAvailable', async () => {
+            h.getContest.mockResolvedValue({ data: { data: contest('UPCOMING') } })
+            h.getContestProblem.mockRejectedValue({ isAxiosError: true, response: { status: 404 } })
+            const w = await mountContestPage()
+            expect(w.text()).toContain('This problem is not available')
+            expect(w.text()).not.toContain('Please try again')
+        })
+
+        it('aContestThatIsNotThereIsNotAvailableEither', async () => {
+            h.getContest.mockRejectedValue({ isAxiosError: true, response: { status: 404 } })
+            h.getContestProblem.mockRejectedValue({ isAxiosError: true, response: { status: 404 } })
+            const w = await mountContestPage()
+            expect(w.text()).toContain('This problem is not available')
+        })
+
+        it('aNetworkFailureStillSaysTryAgain', async () => {
+            h.getContest.mockResolvedValue({ data: { data: contest('RUNNING') } })
+            h.getContestProblem.mockRejectedValue(new Error('Network Error'))
+            const w = await mountContestPage()
+            expect(w.text()).toContain("Couldn't load this problem. Please try again.")
+            expect(w.text()).not.toContain('This problem is not available')
+        })
+
+        it('leavingAbortsTheContestRead', async () => {
+            let signal: AbortSignal | undefined
+            h.getContest.mockImplementation((s: AbortSignal) => {
+                signal = s
+                return new Promise(() => {})
+            })
+            h.getContestProblem.mockResolvedValue({ data: { data: problem } })
+            await mountContestPage()
+            wrapper!.unmount()
+            wrapper = null
+            expect(signal!.aborted).toBe(true)
+        })
+
         it('anEndedContestIsPracticeWithABanner', async () => {
             h.getContest.mockResolvedValue({ data: { data: contest('ENDED') } })
             h.getContestProblem.mockResolvedValue({ data: { data: problem } })
