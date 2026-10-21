@@ -24,7 +24,9 @@ vi.mock('@/composables/useToast', () => ({
 // Monaco needs a real browser: a textarea stands in for the editor.
 vi.mock('@/components/common/CodeEditor.vue', async () => {
     const { defineComponent, h: render } = await import('vue')
+    // __esModule: ProblemSubmit loads the editor through defineAsyncComponent, which unwraps `default` only from a module.
     return {
+        __esModule: true,
         default: defineComponent({
             props: { modelValue: String },
             emits: ['update:modelValue', 'mount'],

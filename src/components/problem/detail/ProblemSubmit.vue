@@ -91,12 +91,13 @@ import {
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Language } from '@/types/language'
-import CodeEditor, { type CodeEditorInstance, type MonacoInstance } from '@/components/common/CodeEditor.vue'
+import type { CodeEditorInstance, MonacoInstance } from '@/components/common/CodeEditor.vue'
+import EditorPlaceholder from '@/components/common/EditorPlaceholder.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import { useAuthStore } from '@/stores/auth'
 import LoginModal from '@/components/auth/LoginModal.vue'
 
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, defineAsyncComponent, defineComponent, h } from 'vue'
 import { isAxiosError } from 'axios'
 import { useToast, type ToastHandle } from '@/composables/useToast'
 import { useCooldown } from '@/composables/useCooldown'
@@ -107,6 +108,18 @@ import { shouldShowTooFast, submissionToasts } from '@/lib/submissionToasts'
 import submissionService from '@/services/submissionService'
 import type { Submission, SubmissionRequest } from '@/types/submission'
 import { getMonacoLanguage } from '@/utils/editorUtils'
+
+// Monaco (3.7 MB) loads on its own: the page, and the statement beside this pane, render without waiting for it, and
+// the editor area shows a skeleton until it arrives.
+const CodeEditor = defineAsyncComponent({
+    loader: () => import('@/components/common/CodeEditor.vue'),
+    loadingComponent: defineComponent(() => () => h(EditorPlaceholder, { height: '100%' })),
+    errorComponent: defineComponent({
+        props: { error: { type: null, default: undefined } },
+        setup: (p) => () => h(EditorPlaceholder, { error: p.error ?? true, height: '100%' }),
+    }),
+    delay: 0,
+})
 
 const authStore = useAuthStore()
 const isLoginOpen = ref(false)
