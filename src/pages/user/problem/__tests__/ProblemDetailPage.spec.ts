@@ -294,5 +294,62 @@ describe('ProblemDetailPage', () => {
             expect(document.querySelector('[data-testid="editor"]')).toBe(editor)
             expect(editor.value).toBe('int main() {}')
         })
+
+        const STOPPED = 'Practice: this contest is no longer running, so submissions do not count.'
+
+        it('aContestUnpublishedWhileRunningFallsBackToPractice', async () => {
+            h.getContest.mockResolvedValueOnce({ data: { data: contest('RUNNING') } })
+            h.getContestProblem.mockResolvedValue({ data: { data: problem } })
+            const w = await mountContestPage()
+            const editor = document.querySelector<HTMLTextAreaElement>('[data-testid="editor"]')!
+            editor.value = 'int main() {}'
+
+            // Now a draft: a reader who is not an editor gets a 404 for it.
+            h.getContest.mockRejectedValueOnce({ isAxiosError: true, response: { status: 404 } })
+            w.findComponent(SolvePane).vm.$emit('contest-not-running')
+            await flushPromises()
+
+            expect(h.getContest).toHaveBeenCalledTimes(2)
+            expect(w.findComponent(SolvePane).props('contestSlug')).toBeUndefined()
+            expect(w.findComponent(SolvePane).props('disabledReason')).toBeUndefined()
+            expect(w.text()).toContain(STOPPED)
+            expect(w.text()).not.toContain('This problem is not available')
+            expect(document.querySelector('[data-testid="editor"]')).toBe(editor)
+            expect(editor.value).toBe('int main() {}')
+        })
+
+        it('aReReadThatFailsAfterTheRefusalStillPractises', async () => {
+            h.getContest.mockResolvedValueOnce({ data: { data: contest('RUNNING') } })
+            h.getContestProblem.mockResolvedValue({ data: { data: problem } })
+            const w = await mountContestPage()
+            h.getContest.mockRejectedValueOnce(new Error('Network Error'))
+            w.findComponent(SolvePane).vm.$emit('contest-not-running')
+            await flushPromises()
+            expect(w.findComponent(SolvePane).props('contestSlug')).toBeUndefined()
+            expect(w.text()).toContain(STOPPED)
+        })
+
+        it('aContestThatRunsAgainOnTheReReadTakesSubmissionsAgain', async () => {
+            // Unpublished and published again in between: the fresh read is what counts.
+            h.getContest.mockResolvedValue({ data: { data: contest('RUNNING') } })
+            h.getContestProblem.mockResolvedValue({ data: { data: problem } })
+            const w = await mountContestPage()
+            w.findComponent(SolvePane).vm.$emit('contest-not-running')
+            await flushPromises()
+            expect(w.findComponent(SolvePane).props('contestSlug')).toBe('spring-cup')
+            expect(w.text()).not.toContain(STOPPED)
+        })
+
+        it('anInactiveProblemOfAContestThatStoppedCannotBePractised', async () => {
+            h.getContest.mockResolvedValueOnce({ data: { data: contest('RUNNING') } })
+            h.getContestProblem.mockResolvedValue({ data: { data: { ...problem, status: 0 } } })
+            const w = await mountContestPage()
+            h.getContest.mockRejectedValueOnce({ isAxiosError: true, response: { status: 404 } })
+            w.findComponent(SolvePane).vm.$emit('contest-not-running')
+            await flushPromises()
+            expect(w.findComponent(SolvePane).props('disabledReason')).toBe(
+                'This problem opens for practice when an admin makes it public.',
+            )
+        })
     })
 })

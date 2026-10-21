@@ -93,7 +93,7 @@
             <Teleport defer :to="isDesktop ? '#problem-pane-code' : '#problem-view-code'">
                 <SolvePane :slug="slug" :submit-bar-to="isDesktop ? undefined : `#${SUBMIT_BAR_ID}`"
                     :contest-slug="submitContestSlug" :disabled-reason="disabledReason"
-                    @success="handleSubmissionSuccess" @judged="refreshStats" @contest-not-running="loadContest" />
+                    @success="handleSubmissionSuccess" @judged="refreshStats" @contest-not-running="onContestNotRunning" />
             </Teleport>
         </template>
     </div>
@@ -234,7 +234,8 @@ let contestSeq = 0
 let contestRead: AbortController | null = null
 
 // Read on entry, and again when a submit finds the contest no longer running. A failed re-read keeps the last answer.
-const loadContest = async () => {
+// True when this read landed.
+const loadContest = async (): Promise<boolean> => {
     const mine = ++contestSeq
     contestRead?.abort()
     contestRead = null
@@ -242,19 +243,21 @@ const loadContest = async () => {
         contest.value = null
         contestError.value = null
         contestLoading.value = false
-        return
+        return false
     }
     if (!contest.value) contestLoading.value = true
     const ctl = new AbortController()
     contestRead = ctl
     try {
         const res = await contestService.get(ctl.signal, contestSlug.value)
-        if (mine !== contestSeq) return
+        if (mine !== contestSeq) return false
         contest.value = res.data.data
         contestError.value = null
+        return true
     } catch (err) {
-        if (mine !== contestSeq) return
+        if (mine !== contestSeq) return false
         if (!contest.value) contestError.value = err
+        return false
     } finally {
         if (contestRead === ctl) contestRead = null
         if (mine === contestSeq) contestLoading.value = false
@@ -266,6 +269,16 @@ onBeforeUnmount(() => {
     contestRead?.abort()
 })
 
+// The judge refused a contest submission: the contest ended or was unpublished while the page was open. Submissions are
+// practice from then on, even when the re-read fails or (a draft now) is a 404; a re-read that finds the contest
+// published and running again takes them for the contest again.
+const contestStopped = ref(false)
+const onContestNotRunning = async () => {
+    contestStopped.value = true
+    const landed = await loadContest()
+    if (landed && contest.value?.status === 'PUBLISHED' && contest.value.phase === 'RUNNING') contestStopped.value = false
+}
+
 const isNotFound = (err: unknown) => (err as { response?: { status?: number } } | null)?.response?.status === 404
 const unavailable = computed(() => !!contestSlug.value && (isNotFound(error.value) || isNotFound(contestError.value)))
 
@@ -273,17 +286,22 @@ const INACTIVE = 0
 // Only a published contest that is running takes the submission; after the end, before the start or in a draft (both
 // seen by editors only) it is practice, so a draft never loops on the judge's "not running" refusal.
 const submitContestSlug = computed(() =>
-    contest.value?.status === 'PUBLISHED' && contest.value.phase === 'RUNNING' ? contestSlug.value : undefined,
+    !contestStopped.value && contest.value?.status === 'PUBLISHED' && contest.value.phase === 'RUNNING'
+        ? contestSlug.value
+        : undefined,
 )
 const contestNote = computed(() => {
     if (contest.value?.phase === 'ENDED') return 'Practice: this contest has ended, so submissions do not count.'
     if (contest.value?.status === 'DRAFT') return 'Preview: this contest is a draft, so submissions do not count.'
     if (contest.value?.phase === 'UPCOMING') return 'Preview: this contest has not started, so submissions do not count.'
+    if (contestStopped.value) return 'Practice: this contest is no longer running, so submissions do not count.'
     return null
 })
 // A contest may hold an unpublished problem: once the contest is over, only problem editors may still submit to it.
 const disabledReason = computed(() =>
-    contest.value?.phase === 'ENDED' && problem.value?.status === INACTIVE && !authStore.hasPermission('problem:update')
+    (contest.value?.phase === 'ENDED' || contestStopped.value) &&
+    problem.value?.status === INACTIVE &&
+    !authStore.hasPermission('problem:update')
         ? 'This problem opens for practice when an admin makes it public.'
         : undefined,
 )
@@ -300,6 +318,7 @@ watch(routeKey, () => {
 })
 watch(contestSlug, () => {
     contest.value = null
+    contestStopped.value = false
     void loadContest()
 })
 
