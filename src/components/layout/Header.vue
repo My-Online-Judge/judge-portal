@@ -40,7 +40,8 @@
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem as-child>
-                                <RouterLink :to="`/u/${encodeURIComponent(authStore.user.username)}`">
+                                <!-- Keyed by id when the username is an email address (a Google account). -->
+                                <RouterLink :to="profilePath(authStore.user)">
                                     <UserRound class="size-4" />
                                     Profile
                                 </RouterLink>
@@ -78,6 +79,7 @@ import MobileNav from '@/components/layout/MobileNav.vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ROUTE_PATH } from '@/constants/routePath'
+import { profilePath } from '@/lib/publicName'
 import {
     DropdownMenu,
     DropdownMenuContent,

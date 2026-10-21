@@ -140,6 +140,24 @@ describe('AdminSubmissionsPage', () => {
         expect(document.body.textContent).toContain('2.0 MB')
     })
 
+    it('aUserWithoutAPublicUsernameIsContestantAndTheIdStart', async () => {
+        // Identity answers a Google account's username (its email address) as null; an older one may still send it.
+        h.search.mockResolvedValue({
+            data: {
+                data: [
+                    { ...row, id: 's2', userId: 'abcdef12-0000-0000-0000-000000000000', username: null },
+                    { ...row, id: 's3', userId: 'fedcba98-0000-0000-0000-000000000000', username: 'binh@gmail.com' },
+                    { ...row, id: 's4', userId: null, username: null },
+                ],
+                pagination,
+            },
+        })
+        await mountPage()
+        const users = [...document.body.querySelectorAll('tbody tr')].map((tr) => tr.querySelectorAll('td')[1]!.textContent!.trim())
+        expect(users).toEqual(['Contestant abcdef12', 'Contestant fedcba98', '-'])
+        expect(document.body.textContent).not.toContain('binh@gmail.com')
+    })
+
     it('filtersAreSentToTheApi', async () => {
         await mountPage()
         await type('input[aria-label="Filter by problem slug"]', 'two-sum')

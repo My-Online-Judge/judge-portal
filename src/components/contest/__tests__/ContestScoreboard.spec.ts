@@ -154,12 +154,36 @@ describe('ContestScoreboard', () => {
         expect(first.get('td[data-col="user"]').classes()).toContain('bg-card')
     })
 
-    it('unknownUserShowsTheIdPrefix', async () => {
+    it('unknownUserShowsContestantAndTheIdPrefix', async () => {
         await mountBoard()
         const second = wrapper!.findAll('tbody tr')[1]!
-        expect(second.text()).toContain('deadbeef')
+        expect(second.get('td[data-col="user"]').text()).toBe('Contestant deadbeef')
         expect(second.text()).not.toContain(ANON_ID)
         expect(second.find('a').exists()).toBe(false)
+    })
+
+    it('aUserWithoutAPublicUsernameShowsTheNameAndLinksByIdNeverTheEmail', async () => {
+        const GOOGLE_ID = 'b2b2b2b2-0000-0000-0000-000000000000'
+        h.scoreboard.mockResolvedValue({
+            data: {
+                data: {
+                    labels: ['A'],
+                    rows: [
+                        // Identity answers null for a Google account, whose username is its email address.
+                        { rank: 1, user: { id: GOOGLE_ID, username: null, name: 'Bình Lê' }, solved: 0, penalty: 0, problems: {} },
+                        // An email that still arrives (an older identity) is never shown or linked.
+                        { rank: 2, user: { id: ANON_ID, username: 'cuong@gmail.com', name: 'Cường' }, solved: 0, penalty: 0, problems: {} },
+                    ],
+                },
+            },
+        })
+        const w = await mountBoard()
+        const [first, second] = w.findAll('tbody tr')
+        expect(first!.get('td[data-col="user"]').text()).toBe('Bình Lê')
+        expect(first!.get('a').attributes('href')).toBe(`/u/id/${GOOGLE_ID}`)
+        expect(second!.get('td[data-col="user"]').text()).toBe('Cường')
+        expect(second!.get('a').attributes('href')).toBe(`/u/id/${ANON_ID}`)
+        expect(w.html()).not.toContain('@')
     })
 
     it('aContestThatHasNotStartedShowsTheLabelsAndIsReadOnce', async () => {

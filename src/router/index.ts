@@ -48,6 +48,11 @@ const router = createRouter({
       component: () => import('@/pages/user/profile/UserProfilePage.vue')
     },
     {
+      path: ROUTE_PATH.USER_PROFILE_BY_ID,
+      name: 'UserProfileById',
+      component: () => import('@/pages/user/profile/UserProfilePage.vue')
+    },
+    {
       path: ROUTE_PATH.FORBIDDEN,
       name: 'Forbidden',
       component: () => import('@/pages/ForbiddenPage.vue')

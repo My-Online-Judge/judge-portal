@@ -30,6 +30,11 @@ describe('userService', () => {
         expect(get).toHaveBeenCalledWith('/users/u1', { signal: sig })
     })
 
+    it('getPublicProfilesByIds -> GET /users/public?ids=a,b', () => {
+        userService.getPublicProfilesByIds(['u1', 'u2'])
+        expect(get).toHaveBeenCalledWith('/users/public', { params: { ids: 'u1,u2' } })
+    })
+
     it('create -> POST /users', () => {
         const payload = { username: 'a', name: 'A', email: 'a@b.io', password: 'Passw0rd1' }
         userService.create(payload)

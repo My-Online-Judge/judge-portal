@@ -20,6 +20,11 @@ class UserService {
         return axiosClient.get<ApiResponse<PublicProfile>>(API_ROUTES.USERS.PUBLIC(username))
     }
 
+    // Anyone may read these (1 to 100 ids); unknown and deleted accounts are left out.
+    getPublicProfilesByIds(ids: string[]): Promise<AxiosResponse<ApiResponse<PublicProfile[]>>> {
+        return axiosClient.get<ApiResponse<PublicProfile[]>>(API_ROUTES.USERS.PUBLIC_BY_IDS, { params: { ids: ids.join(',') } })
+    }
+
     // Create a local account (username + password). Returns the created user.
     create(payload: CreateUserPayload): Promise<AxiosResponse<ApiResponse<UserResponse>>> {
         return axiosClient.post<ApiResponse<UserResponse>>(API_ROUTES.USERS.ROOT, payload)

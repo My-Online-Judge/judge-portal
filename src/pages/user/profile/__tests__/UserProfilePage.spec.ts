@@ -6,23 +6,26 @@ import { createPinia, setActivePinia } from 'pinia'
 
 const h = vi.hoisted(() => ({
   getPublicProfile: vi.fn(),
+  getPublicProfilesByIds: vi.fn(),
   getUserStats: vi.fn(),
   ensureFreshSession: vi.fn(),
   getMe: vi.fn(),
   calls: [] as string[],
-  route: null as unknown as { params: { username: string } },
+  route: null as unknown as { params: Record<string, string> },
 }))
 
 vi.mock('vue-router', async () => {
   const { reactive: r } = await import('vue')
-  h.route = r({ params: { username: 'alice' } })
+  h.route = r({ params: { username: 'alice' } as Record<string, string> })
   const RouterLink = defineComponent({
     props: ['to'],
     setup: (p, { slots }) => () => render('a', { href: typeof p.to === 'string' ? p.to : '' }, slots.default?.()),
   })
   return { useRoute: () => h.route, RouterLink }
 })
-vi.mock('@/services/userService', () => ({ default: { getPublicProfile: h.getPublicProfile } }))
+vi.mock('@/services/userService', () => ({
+  default: { getPublicProfile: h.getPublicProfile, getPublicProfilesByIds: h.getPublicProfilesByIds },
+}))
 vi.mock('@/services/submissionService', () => ({ default: { getUserStats: h.getUserStats } }))
 vi.mock('@/services/authService', () => ({ default: { getMe: h.getMe, logout: vi.fn() } }))
 vi.mock('@/api/refreshSession', async (importOriginal) => ({
@@ -59,7 +62,7 @@ async function mountPage(viewerId: string | null) {
 beforeEach(() => {
   vi.clearAllMocks()
   h.calls.length = 0
-  h.route.params.username = 'alice'
+  h.route.params = { username: 'alice' }
   h.ensureFreshSession.mockImplementation(async () => void h.calls.push('fresh'))
   h.getPublicProfile.mockResolvedValue({ data: { data: profile } })
   h.getUserStats.mockImplementation(async () => {
@@ -207,6 +210,46 @@ describe('UserProfilePage', () => {
     expect(strip.className).toContain('grid-cols-3')
     // The 2-by-2 phone rule would give the third tile a top border and no left one.
     expect(strip.className).not.toContain('nth-child(n+3)')
+  })
+
+  describe('without a public username', () => {
+    // A Google account: identity answers its username (its email address) as null, and the profile is keyed by id.
+    const GOOGLE = { id: 'g1', username: null, name: 'Bình Lê', avatar: null, createdAt: '2026-03-05T10:00:00' }
+
+    it('theIdRouteReadsTheProfileByIdAndShowsNoHandle', async () => {
+      h.route.params = { id: 'g1' }
+      h.getPublicProfilesByIds.mockResolvedValue({ data: { data: [GOOGLE] } })
+      const w = await mountPage(null)
+      expect(h.getPublicProfilesByIds).toHaveBeenCalledWith(['g1'])
+      expect(h.getPublicProfile).not.toHaveBeenCalled()
+      expect(h.getUserStats).toHaveBeenCalledWith('g1')
+      expect(w.text()).toContain('Bình Lê')
+      expect(w.text()).toContain('Joined')
+      expect(w.text()).not.toContain('@')
+    })
+
+    it('anUnknownIdIsNotFound', async () => {
+      h.route.params = { id: 'nobody' }
+      h.getPublicProfilesByIds.mockResolvedValue({ data: { data: [] } })
+      const w = await mountPage(null)
+      expect(w.text()).toContain('User not found')
+      expect(h.getUserStats).not.toHaveBeenCalled()
+    })
+
+    it('anEmailInTheAddressIsNeverEchoed', async () => {
+      h.route.params = { username: 'binh@gmail.com' }
+      h.getPublicProfile.mockRejectedValue({ isAxiosError: true, response: { status: 404 } })
+      const w = await mountPage(null)
+      expect(w.text()).toContain('User not found')
+      expect(w.text()).not.toContain('binh@gmail.com')
+    })
+
+    it('anEmailShapedUsernameThatStillArrivesIsNotShown', async () => {
+      h.getPublicProfile.mockResolvedValue({ data: { data: { ...profile, username: 'alice@gmail.com' } } })
+      const w = await mountPage(null)
+      expect(w.text()).toContain('Alice Tran')
+      expect(w.html()).not.toContain('alice@gmail.com')
+    })
   })
 
   it('theOwnerCanOpenASubmissionFromTheKeyboard', async () => {

@@ -3,6 +3,8 @@ export const ROUTE_PATH = {
     PROBLEM: '/problems',
     PROBLEM_DETAIL: '/problems/:slug',
     USER_PROFILE: '/u/:username',
+    // A user without a public username (a Google account, whose username is its email address).
+    USER_PROFILE_BY_ID: '/u/id/:id',
     CONTESTS: '/contests',
     CONTEST_DETAIL: '/contests/:slug',
     CONTEST_PROBLEM: '/contests/:contestSlug/problems/:label',

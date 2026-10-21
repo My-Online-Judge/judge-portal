@@ -74,12 +74,13 @@
                             <tr v-for="s in rows" :key="s.id" class="cursor-pointer" @click="openView(s)">
                                 <td class="pl-4 font-mono text-xs whitespace-nowrap">{{ formatDateTime(s.createdAt) }}</td>
                                 <td>
+                                    <!-- Without a public username (a Google account), "Contestant" and the id's start. -->
                                     <RouterLink
-                                        v-if="s.username"
-                                        :to="`/u/${encodeURIComponent(s.username)}`"
+                                        v-if="s.userId || publicHandle(s.username)"
+                                        :to="profilePath({ id: s.userId ?? '', username: s.username })"
                                         class="font-medium text-foreground hover:text-link hover:underline"
                                         @click.stop
-                                    >{{ s.username }}</RouterLink>
+                                    >{{ publicName({ id: s.userId ?? '', username: s.username }) }}</RouterLink>
                                     <span v-else class="text-muted-foreground">-</span>
                                 </td>
                                 <td>
@@ -179,6 +180,7 @@ import { isValidRange } from '@/lib/dateRange'
 import { verdictMeta } from '@/lib/verdict'
 import { formatMem, formatMs } from '@/lib/verdictFormat'
 import { formatDateTime } from '@/utils/dateTimeUtils'
+import { profilePath, publicHandle, publicName } from '@/lib/publicName'
 import submissionService from '@/services/submissionService'
 import { useAuthStore } from '@/stores/auth'
 import { isTerminalStatus, SubmissionResult, type Submission, type SubmissionListItem, type SubmissionSearchParams } from '@/types/submission'

@@ -4,7 +4,9 @@
 
         <div v-else-if="state === 'notFound'" class="rounded-xl border bg-card p-10 text-center" role="alert">
             <h1 class="text-lg font-semibold">User not found</h1>
-            <p class="mt-1 text-sm text-muted-foreground">No account has the username @{{ username }}.</p>
+            <!-- Never echo an email address from the address bar. -->
+            <p v-if="routeHandle" class="mt-1 text-sm text-muted-foreground">No account has the username @{{ routeHandle }}.</p>
+            <p v-else class="mt-1 text-sm text-muted-foreground">This account does not exist.</p>
         </div>
 
         <div v-else-if="state === 'error'" class="rounded-xl border bg-card p-10 text-center" role="alert">
@@ -15,14 +17,15 @@
         <template v-else-if="profile && stats">
             <header class="flex items-center gap-4">
                 <Avatar class="size-16">
-                    <AvatarImage v-if="profile.avatar" :src="profile.avatar" :alt="profile.username" />
+                    <AvatarImage v-if="profile.avatar" :src="profile.avatar" :alt="heading" />
                     <AvatarFallback class="bg-primary-soft text-lg font-semibold text-info-ink">{{ initials }}</AvatarFallback>
                 </Avatar>
                 <div class="min-w-0">
-                    <h1 class="truncate text-xl font-semibold tracking-[-0.02em]">{{ profile.name }}</h1>
+                    <h1 class="truncate text-xl font-semibold tracking-[-0.02em]">{{ heading }}</h1>
                     <p class="text-sm text-muted-foreground">
-                        <span class="font-mono">@{{ profile.username }}</span>
-                        <span class="ml-2">Joined {{ joined }}</span>
+                        <!-- A Google account has no public username: its username is its email address. -->
+                        <span v-if="handle" class="mr-2 font-mono">@{{ handle }}</span>
+                        <span>Joined {{ joined }}</span>
                     </p>
                 </div>
             </header>
@@ -98,6 +101,7 @@ import submissionService from '@/services/submissionService'
 import { ensureFreshSession } from '@/api/refreshSession'
 import { useAuthStore } from '@/stores/auth'
 import { formatDateTime } from '@/utils/dateTimeUtils'
+import { publicHandle, publicName } from '@/lib/publicName'
 import type { PublicProfile, UserStats } from '@/types/profile'
 
 // Only an owner can open a row, so the dialog (and its verdict tiles) loads on demand.
@@ -106,7 +110,11 @@ const SubmissionDetailDialog = defineAsyncComponent(() => import('@/components/p
 const route = useRoute()
 const authStore = useAuthStore()
 
+// Two routes: /u/:username, and /u/id/:id for an account without a public username.
 const username = computed(() => String(route.params.username ?? ''))
+const userId = computed(() => String(route.params.id ?? ''))
+const routeKey = computed(() => (userId.value ? `id:${userId.value}` : `username:${username.value}`))
+const routeHandle = computed(() => publicHandle(username.value))
 const state = ref<'loading' | 'ready' | 'notFound' | 'error'>('loading')
 const profile = ref<PublicProfile | null>(null)
 const stats = ref<UserStats | null>(null)
@@ -114,6 +122,9 @@ const detailOpen = ref(false)
 const detailId = ref<string | null>(null)
 
 const isOwner = computed(() => !!profile.value && authStore.user?.id === profile.value.id)
+const handle = computed(() => publicHandle(profile.value?.username))
+// The name, or "Contestant" and the start of the id; never an email address.
+const heading = computed(() => (profile.value ? publicName({ id: profile.value.id, name: profile.value.name }) : ''))
 
 const acceptance = computed(() => {
     const s = stats.value
@@ -128,7 +139,7 @@ const joined = computed(() =>
 )
 
 const initials = computed(() => {
-    const parts = (profile.value?.name || profile.value?.username || '').trim().split(/\s+/).filter(Boolean)
+    const parts = heading.value.trim().split(/\s+/).filter(Boolean)
     if (parts.length > 1) return ((parts[0]?.[0] ?? '') + (parts[parts.length - 1]?.[0] ?? '')).toUpperCase()
     return (parts[0] ?? '').slice(0, 2).toUpperCase()
 })
@@ -145,14 +156,16 @@ const load = async () => {
         await authStore.ensureLoaded()
         if (mine !== seq) return
         viewer = authStore.user?.id ?? null
-        const p = await userService.getPublicProfile(username.value).then(
-            (res) => res.data.data,
-            (err) => {
-                // Only the profile's 404 means there is no such user; a stats failure is an error to retry.
-                if (isAxiosError(err) && err.response?.status === 404) return null
-                throw err
-            },
-        )
+        const read = userId.value
+            ? userService.getPublicProfilesByIds([userId.value]).then((res) => res.data.data[0] ?? null)
+            : userService.getPublicProfile(username.value).then((res) => res.data.data)
+        const p = await read.catch((err) => {
+            // Only the profile's 404 (or a malformed id's 400) means there is no such user; a stats failure is an
+            // error to retry.
+            const status = isAxiosError(err) ? err.response?.status : undefined
+            if (status === 404 || (userId.value && status === 400)) return null
+            throw err
+        })
         if (mine !== seq) return
         if (!p) {
             state.value = 'notFound'
@@ -177,7 +190,7 @@ const openDetail = (id: string) => {
     detailOpen.value = true
 }
 
-watch(username, load, { immediate: true })
+watch(routeKey, load, { immediate: true })
 // A login or logout on the page changes whose view the stats are: read them again. A load still waiting for the
 // session reads the new user itself.
 watch(

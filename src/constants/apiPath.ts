@@ -12,6 +12,7 @@ export const API_ROUTES = {
         ME_PASSWORD: '/users/me/password',
         PROFILE: (id: number | string) => `/users/${id}`,
         PUBLIC: (username: string) => `/users/public/${encodeURIComponent(username)}`,
+        PUBLIC_BY_IDS: '/users/public',
         STATS: (id: string) => `/users/${id}/stats`,
         STATUS: (id: string) => `/users/${id}/status`,
         ROLES: (id: string) => `/users/${id}/roles`,

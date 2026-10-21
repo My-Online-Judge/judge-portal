@@ -9,10 +9,10 @@ vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 
 import Header from '../Header.vue'
 
-const mountHeader = async (permissions: string[]) => {
+const mountHeader = async (permissions: string[], username = 'alice') => {
     setActivePinia(createPinia())
     h.getMe.mockResolvedValue({
-        data: { data: { username: 'alice', name: 'An Nguyen', email: 'a@b.c', permissions } },
+        data: { data: { id: 'u-1', username, name: 'An Nguyen', email: 'a@b.c', permissions } },
     })
     const w = mount(Header, {
         global: {
@@ -62,5 +62,12 @@ describe('Header nav', () => {
         expect(items[0]!.get('a').attributes('href')).toBe('/u/alice')
         expect(items[1]!.text()).toBe('Change password')
         expect(items.at(-1)!.text()).toBe('Log out')
+    })
+
+    it('aGoogleUsersProfileLinkIsKeyedByIdNotTheEmail', async () => {
+        // A Google account's username is its email address: it must never go in a URL.
+        const w = await mountHeader([], 'an.nguyen@gmail.com')
+        const profile = w.findAll('[role="menuitem"]')[0]!
+        expect(profile.get('a').attributes('href')).toBe('/u/id/u-1')
     })
 })

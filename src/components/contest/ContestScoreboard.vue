@@ -29,10 +29,12 @@
                     <tr v-for="row in rows" :key="row.user.id">
                         <td class="sticky left-0 z-[1] bg-card pl-4 font-mono tabular-nums" data-col="rank">{{ row.rank }}</td>
                         <td class="sticky left-16 z-[1] bg-card" data-col="user">
-                            <RouterLink v-if="row.user.username" :to="`/u/${encodeURIComponent(row.user.username)}`"
-                                class="font-medium text-foreground hover:text-link hover:underline">{{ row.user.username }}</RouterLink>
+                            <!-- The username, else the name (a Google account's username is its email address, which
+                                 identity never shows), linked to the profile. -->
+                            <RouterLink v-if="publicHandle(row.user.username) || row.user.name" :to="profilePath(row.user)"
+                                class="font-medium text-foreground hover:text-link hover:underline">{{ publicName(row.user) }}</RouterLink>
                             <!-- Identity did not know this user (or was down): the id's start tells rows apart. -->
-                            <span v-else class="font-mono text-xs text-muted-foreground" :title="row.user.id">{{ row.user.id.slice(0, 8) }}</span>
+                            <span v-else class="text-muted-foreground" :title="row.user.id">{{ publicName(row.user) }}</span>
                         </td>
                         <td class="num" data-col="solved">{{ row.solved }}</td>
                         <td class="num" data-col="penalty">{{ row.penalty }}</td>
@@ -63,6 +65,7 @@ import axios from 'axios'
 import ListStateShell from '@/components/common/ListStateShell.vue'
 import contestService from '@/services/contestService'
 import { SCOREBOARD_POLL_MS } from '@/lib/contestTime'
+import { profilePath, publicHandle, publicName } from '@/lib/publicName'
 import type { ContestPhase, Scoreboard, ScoreboardCell } from '@/types/contest'
 
 // Only a running contest's board changes: an upcoming or ended one is read once, and a phase change reads it again. A
