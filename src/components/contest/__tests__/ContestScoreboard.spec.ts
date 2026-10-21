@@ -38,10 +38,15 @@ const board = {
 }
 
 let wrapper: VueWrapper | undefined
-async function mountBoard(phase = 'RUNNING') {
-    wrapper = mount(ContestScoreboard, { props: { slug: 'spring-cup', phase }, global: { components: { RouterLink } } })
+async function mountBoard(phase = 'RUNNING', more: Record<string, unknown> = {}) {
+    wrapper = mount(ContestScoreboard, { props: { slug: 'spring-cup', phase, ...more }, global: { components: { RouterLink } } })
     await flushPromises()
     return wrapper
+}
+// Faking again is a no-op while the setTimeout-only fake of beforeEach is installed.
+const fakeTheClockToo = () => {
+    vi.useRealTimers()
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
 }
 const cell = (row: number, label: string) => wrapper!.findAll('tbody tr')[row]!.get(`td[data-label="${label}"]`)
 // What a sighted reader sees in a cell; screen readers get a sentence instead.
@@ -231,6 +236,28 @@ describe('ContestScoreboard', () => {
         await mountBoard('ENDED')
         await vi.advanceTimersByTimeAsync(120_000)
         expect(h.scoreboard).toHaveBeenCalledTimes(1)
+    })
+
+    it('stopsPollingTwoMinutesAfterTheEndEvenIfThePhaseNeverChanged', async () => {
+        // The page could not read the contest again at the end, so the phase it passes is still RUNNING.
+        fakeTheClockToo()
+        const now = Date.now()
+        // The server's clock is 1 s ahead of this one.
+        await mountBoard('RUNNING', { endsAt: new Date(now - 60_000).toISOString(), offsetMs: 1_000 })
+        await vi.advanceTimersByTimeAsync(45_000)
+        expect(h.scoreboard).toHaveBeenCalledTimes(4)
+        // The grace ends at 59 s here (60 s by the server): the read at 60 s is the last one.
+        await vi.advanceTimersByTimeAsync(15_000)
+        expect(h.scoreboard).toHaveBeenCalledTimes(5)
+        await vi.advanceTimersByTimeAsync(600_000)
+        expect(h.scoreboard).toHaveBeenCalledTimes(5)
+    })
+
+    it('aRunningBoardBeforeTheEndKeepsPolling', async () => {
+        fakeTheClockToo()
+        await mountBoard('RUNNING', { endsAt: new Date(Date.now() + 3_600_000).toISOString(), offsetMs: 0 })
+        await vi.advanceTimersByTimeAsync(600_000)
+        expect(h.scoreboard).toHaveBeenCalledTimes(41)
     })
 
     it('theGracePeriodPausesWhileTheTabIsHidden', async () => {

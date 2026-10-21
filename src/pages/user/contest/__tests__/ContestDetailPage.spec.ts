@@ -32,7 +32,7 @@ import ContestDetailPage from '../ContestDetailPage.vue'
 
 const ScoreboardStub = defineComponent({
     name: 'ContestScoreboard',
-    props: ['slug', 'phase'],
+    props: ['slug', 'phase', 'endsAt', 'offsetMs'],
     setup: () => () => render('div', { 'data-test': 'scoreboard' }),
 })
 
@@ -153,6 +153,94 @@ describe('ContestDetailPage', () => {
         await tab('Problems').trigger('mousedown', { button: 0 })
         await flushPromises()
         expect(w.find('[data-test="scoreboard"]').exists()).toBe(false)
+    })
+
+    describe('at the end of the countdown', () => {
+        const network = async () => {
+            throw Object.assign(new Error('Network Error'), { isAxiosError: true })
+        }
+        // Each answer carries the server's clock at the time it is read, as the real one does.
+        const answer = (over: Record<string, unknown>) => async () => ({
+            data: { data: detail({ ...over, serverTime: new Date(Date.now()).toISOString() }) },
+        })
+        const endsSoon = answer({ endsAt: at(5_000) })
+        const ended = answer({ phase: 'ENDED', startsAt: at(-7_195_000), endsAt: at(5_000) })
+        // The countdown ticks each second; a read at its end is a few promise hops away.
+        const advance = async (ms: number) => {
+            await vi.advanceTimersByTimeAsync(ms)
+            await flushPromises()
+        }
+        beforeEach(() => {
+            // Faking again is a no-op while the outer Date-only fake is installed.
+            vi.useRealTimers()
+            vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
+            vi.setSystemTime(NOW)
+        })
+        // Answers queued for one test must not reach the next.
+        afterEach(() => h.get.mockReset())
+
+        it('aFailedReadIsRetriedWithBackoffUntilThePhaseChanges', async () => {
+            h.get.mockImplementationOnce(endsSoon).mockImplementationOnce(network).mockImplementationOnce(network)
+                .mockImplementation(ended)
+            const w = await mountPage()
+            expect(w.text()).toContain('Ends in')
+
+            await advance(5_000) // the countdown ends: the read fails
+            expect(h.get).toHaveBeenCalledTimes(2)
+            expect(w.text()).toContain('Ends in')
+            await advance(5_000) // 5 s later: fails again
+            expect(h.get).toHaveBeenCalledTimes(3)
+            await advance(9_999)
+            expect(h.get).toHaveBeenCalledTimes(3)
+            await advance(1) // 10 s later: the contest has ended
+            expect(h.get).toHaveBeenCalledTimes(4)
+            expect(w.text()).toContain('Ended')
+            expect(w.text()).not.toContain('Ends in')
+
+            await advance(600_000)
+            expect(h.get).toHaveBeenCalledTimes(4)
+        })
+
+        it('aServerThatStillSaysRunningIsAskedAgainToo', async () => {
+            // The browser's clock (corrected by the server's) got there a moment before the server did.
+            h.get.mockImplementationOnce(endsSoon).mockImplementationOnce(endsSoon).mockImplementation(ended)
+            const w = await mountPage()
+            await advance(5_000)
+            expect(h.get).toHaveBeenCalledTimes(2)
+            await advance(5_000)
+            expect(h.get).toHaveBeenCalledTimes(3)
+            expect(w.text()).toContain('Ended')
+        })
+
+        it('theRetriesStopAfterTheLastDelay', async () => {
+            h.get.mockImplementationOnce(endsSoon).mockImplementation(network)
+            const w = await mountPage()
+            await advance(3_600_000)
+            // The read at the end, then six retries (5, 10, 20, 30, 30 and 30 s apart).
+            expect(h.get).toHaveBeenCalledTimes(8)
+            // What was shown stays.
+            expect(w.text()).toContain('Spring cup')
+        })
+
+        it('leavingThePageStopsTheRetries', async () => {
+            h.get.mockImplementationOnce(endsSoon).mockImplementation(network)
+            await mountPage()
+            await advance(5_000)
+            expect(h.get).toHaveBeenCalledTimes(2)
+            wrapper!.unmount()
+            wrapper = undefined
+            await advance(600_000)
+            expect(h.get).toHaveBeenCalledTimes(2)
+        })
+
+        it('theScoreboardKnowsWhenTheContestEnds', async () => {
+            const w = await mountPage()
+            const tab = w.findAll('[role="tab"]').find((t) => t.text() === 'Scoreboard')!
+            await tab.trigger('mousedown', { button: 0 })
+            await flushPromises()
+            expect(w.getComponent(ScoreboardStub).props('endsAt')).toBe(detail().endsAt)
+            expect(w.getComponent(ScoreboardStub).props('offsetMs')).toBe(0)
+        })
     })
 
     it('anUnknownContestSaysNotFound', async () => {

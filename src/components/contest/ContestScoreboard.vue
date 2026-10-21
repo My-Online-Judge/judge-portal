@@ -70,8 +70,9 @@ import type { ContestPhase, Scoreboard, ScoreboardCell } from '@/types/contest'
 
 // Only a running contest's board changes: an upcoming or ended one is read once, and a phase change reads it again. A
 // contest that ends while the board is open keeps polling for a 2 minute grace (verdicts judged just after the end still
-// score), then the board is final.
-const props = defineProps<{ slug: string; phase: ContestPhase }>()
+// score), then the board is final. With `endsAt` the polling stops two minutes after the end (by the server's clock,
+// through `offsetMs`) even when the page never learned that the phase changed.
+const props = defineProps<{ slug: string; phase: ContestPhase; endsAt?: string; offsetMs?: number }>()
 
 const board = shallowRef<Scoreboard | null>(null)
 const loading = ref(false)
@@ -98,9 +99,12 @@ let timer: ReturnType<typeof setTimeout> | null = null
 let inFlight: AbortController | null = null
 let stopped = false
 const hidden = () => document.visibilityState === 'hidden'
-const GRACE_POLLS = 120_000 / SCOREBOARD_POLL_MS
+const GRACE_MS = 120_000
+const GRACE_POLLS = GRACE_MS / SCOREBOARD_POLL_MS
 let graceLeft = 0
-const polls = () => !stopped && (props.phase === 'RUNNING' || (props.phase === 'ENDED' && graceLeft > 0)) && !hidden()
+const pastGrace = () => !!props.endsAt && Date.now() + (props.offsetMs ?? 0) >= Date.parse(props.endsAt) + GRACE_MS
+const polls = () =>
+    !stopped && !pastGrace() && (props.phase === 'RUNNING' || (props.phase === 'ENDED' && graceLeft > 0)) && !hidden()
 
 const load = async () => {
     if (timer !== null) clearTimeout(timer)

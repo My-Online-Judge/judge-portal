@@ -25,7 +25,7 @@
                             <template v-if="contest.phase !== 'ENDED'">
                                 <span class="text-xs text-muted-foreground">{{ contest.phase === 'UPCOMING' ? 'Starts in' : 'Ends in' }}</span>
                                 <ContestCountdown :target="contest.phase === 'UPCOMING' ? contest.startsAt : contest.endsAt"
-                                    :offset-ms="offsetMs" class="text-[20px] leading-tight font-semibold" @elapsed="load({ quiet: true })" />
+                                    :offset-ms="offsetMs" class="text-[20px] leading-tight font-semibold" @elapsed="onElapsed()" />
                             </template>
                             <span v-else class="text-[15px] leading-[44px] font-semibold text-muted-foreground">Ended</span>
                         </div>
@@ -91,7 +91,8 @@
 
                     <TabsContent value="scoreboard" class="mt-0">
                         <!-- Mounted only while shown: it polls every 15 s while the contest runs. -->
-                        <ContestScoreboard v-if="tab === 'scoreboard'" :slug="contest.slug" :phase="contest.phase" />
+                        <ContestScoreboard v-if="tab === 'scoreboard'" :slug="contest.slug" :phase="contest.phase"
+                            :ends-at="contest.endsAt" :offset-ms="offsetMs" />
                     </TabsContent>
                 </div>
             </Tabs>
@@ -134,8 +135,8 @@ let inFlight: AbortController | null = null
 // The signed-in user myProgress was read for; undefined until a load has asked.
 let viewer: string | null | undefined
 
-/** `quiet` keeps the page as it is while reading (a countdown ended, or the user changed). */
-const load = async ({ quiet = false } = {}) => {
+/** `quiet` keeps the page as it is while reading (a countdown ended, or the user changed). True when the read landed. */
+const load = async ({ quiet = false } = {}): Promise<boolean> => {
     const mine = ++seq
     inFlight?.abort()
     const ctl = new AbortController()
@@ -145,28 +146,56 @@ const load = async ({ quiet = false } = {}) => {
         // Right after a reload the header's /auth/me may still be on its way: wait for it. myProgress rides on the
         // access cookie, which a public read does not refresh by itself.
         await authStore.ensureLoaded()
-        if (mine !== seq) return
+        if (mine !== seq) return false
         viewer = authStore.user?.id ?? null
         if (authStore.user) await ensureFreshSession()
-        if (mine !== seq) return
+        if (mine !== seq) return false
         const res = await contestService.get(ctl.signal, slug.value)
-        if (mine !== seq) return
+        if (mine !== seq) return false
         contest.value = res.data.data
         offsetMs.value = serverOffsetMs(res.data.data.serverTime, Date.now())
         state.value = 'ready'
+        return true
     } catch (err) {
-        if (mine !== seq || ctl.signal.aborted) return
-        // A quiet read that fails keeps what is shown; the next countdown or visit tries again.
-        if (quiet && contest.value) return
+        if (mine !== seq || ctl.signal.aborted) return false
+        // A quiet read that fails keeps what is shown; the countdown's end retries it, a visit reads again.
+        if (quiet && contest.value) return false
         state.value = isAxiosError(err) && err.response?.status === 404 ? 'notFound' : 'error'
+        return false
     } finally {
         if (inFlight === ctl) inFlight = null
     }
 }
 
+// A countdown reached its end: read the contest again for its new phase. A read that fails (a network blip), or a
+// server that does not say so yet, is asked again after 5, 10, 20, 30, 30 and 30 s; the scoreboard stops polling two
+// minutes after the end whatever this learns.
+const ELAPSED_RETRY_MS = [5_000, 10_000, 20_000, 30_000, 30_000, 30_000]
+let elapsedTimer: ReturnType<typeof setTimeout> | null = null
+let elapsedRun = 0
+const stopElapsedRetry = () => {
+    elapsedRun++
+    if (elapsedTimer !== null) clearTimeout(elapsedTimer)
+    elapsedTimer = null
+}
+const onElapsed = () => {
+    stopElapsedRetry()
+    const run = elapsedRun
+    const before = contest.value?.phase
+    const attempt = async (i: number) => {
+        elapsedTimer = null
+        const landed = await load({ quiet: true })
+        if (run !== elapsedRun || (landed && contest.value?.phase !== before)) return
+        const delay = ELAPSED_RETRY_MS[i]
+        if (delay !== undefined) elapsedTimer = setTimeout(() => void attempt(i + 1), delay)
+    }
+    void attempt(0)
+}
+
 watch(
     slug,
     () => {
+        stopElapsedRetry()
         tab.value = 'problems'
         contest.value = null
         void load()
@@ -183,5 +212,6 @@ watch(
 onBeforeUnmount(() => {
     seq++
     inFlight?.abort()
+    stopElapsedRetry()
 })
 </script>
