@@ -52,6 +52,13 @@ const detail = (over: Record<string, unknown> = {}) => ({
 })
 const LOCKED = 'Problems and start time are locked once the contest has started'
 
+/** The `datetime-local` value for an instant, in the runner's timezone. */
+function localInput(iso: string): string {
+    const d = new Date(iso)
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
 let wrapper: VueWrapper | undefined
 
 async function mountDialog(slug: string | null, permissions = ['contest:create', 'contest:update', 'problem:update']) {
@@ -230,10 +237,10 @@ describe('ContestFormDialog', () => {
             response: { status: 409, data: { message: 'This contest has scores: its start time is locked' } },
         })
         await mountDialog('spring-cup')
-        await type('#contest-starts', '2026-11-01T10:00')
+        // A new start that stays before the fixture's end in any timezone (a datetime-local value is local time).
+        await type('#contest-starts', localInput('2026-11-01T03:00:00Z'))
         await save()
-        // The refusal settles after the save's own awaits; a slower CI runner needs more than one flush.
-        await vi.waitFor(() => expect(h.error).toHaveBeenCalledWith('This contest has scores: its start time is locked'))
+        expect(h.error).toHaveBeenCalledWith('This contest has scores: its start time is locked')
         expect(wrapper!.emitted('update:open')).toBeUndefined()
     })
 
