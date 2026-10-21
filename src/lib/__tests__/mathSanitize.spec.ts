@@ -167,6 +167,36 @@ describe('sanitizeMathOutput', () => {
         expect(sanitizeMathOutput('<a href="https://example.com/doc">doc</a>')).not.toContain('href')
     })
 
+    it('theStatementStageDropsMathmlAttributesKatexNeverEmits', () => {
+        const payloads = [
+            '<math><mi style="position:fixed" class="x" id="y" mathvariant="normal">x</mi></math>',
+            '<math><mi xmlns="javascript:alert(1)">x</mi></math>',
+            '<math xmlns="https://example.com/ns"><mi>x</mi></math>',
+        ]
+        for (const payload of payloads) {
+            const doc = new DOMParser().parseFromString(sanitizeMathStatement(payload), 'text/html')
+            const mi = doc.querySelector('math mi')
+            expect(mi?.textContent, payload).toBe('x')
+            for (const el of doc.querySelectorAll('math, math *')) {
+                for (const a of el.attributes) expect(['mathvariant'], `${payload}: ${el.localName} ${a.name}`).toContain(a.name)
+            }
+        }
+        // The attributes KaTeX does emit stay, xmlns included on <math> when it names MathML.
+        const kept = '<math xmlns="http://www.w3.org/1998/Math/MathML"><mi mathvariant="normal">x</mi></math>'
+        expect(sanitizeMathStatement(kept)).toBe(kept)
+    })
+
+    it('theStatementStageKeepsEverythingTheFirstStageKept', () => {
+        const narrowed: string[] = []
+        for (const tex of CORPUS) {
+            for (const displayMode of [false, true]) {
+                const first = sanitizeMathOutput(katex.renderToString(tex, { ...OPTIONS, displayMode }))
+                if (sanitizeMathStatement(first) !== first) narrowed.push(`${displayMode ? '$$' : '$'}${tex}`)
+            }
+        }
+        expect(narrowed).toEqual([])
+    })
+
     it('theHrefHookIsGoneAfterTheCall', async () => {
         sanitizeMathStatement('<math><mi>x</mi></math>')
         const DOMPurify = (await import('dompurify')).default

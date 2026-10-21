@@ -37,20 +37,29 @@ export function sanitizeMathOutput(html: string): string {
 }
 
 const HTML_NS = 'http://www.w3.org/1999/xhtml'
+const MATHML_NS = 'http://www.w3.org/1998/Math/MathML'
 const LINK_ATTRS = new Set(['href', 'xlink:href'])
+const MATHML_ATTRS = new Set(KATEX_MATHML_ATTRS)
 
-// Drops a link on anything that is not an HTML element (MathML, SVG): an author's <a href> keeps working.
-const dropForeignLinks = (node: Element, data: { attrName: string; keepAttr: boolean }) => {
+// Drops a link on anything that is not an HTML element (MathML, SVG): an author's <a href> keeps working. DOMPurify's
+// attribute allowlist is global, so on a MathML element this also drops every attribute KaTeX never emits (style,
+// class, id), and xmlns anywhere but on <math> naming MathML.
+const dropForeignAttrs = (node: Element, data: { attrName: string; attrValue: string; keepAttr: boolean }) => {
     if (LINK_ATTRS.has(data.attrName) && node.namespaceURI !== HTML_NS) data.keepAttr = false
+    if (node.namespaceURI !== MATHML_NS) return
+    if (data.attrName === 'xmlns') {
+        if (node.localName !== 'math' || data.attrValue !== MATHML_NS) data.keepAttr = false
+    } else if (!MATHML_ATTRS.has(data.attrName)) data.keepAttr = false
 }
 
 /**
  * The second pass, over the whole statement with its formulas in place: the same profiles and MathML lists, but an
- * href is dropped only outside HTML, so the statement's own links survive, and images get no-referrer as in
+ * href is dropped only outside HTML, so the statement's own links survive; MathML keeps only the attributes KaTeX
+ * emits; and images get no-referrer as in
  * sanitizeHtml. The hooks are registered for this call only.
  */
 export function sanitizeMathStatement(html: string): string {
-    DOMPurify.addHook('uponSanitizeAttribute', dropForeignLinks)
+    DOMPurify.addHook('uponSanitizeAttribute', dropForeignAttrs)
     try {
         return withNoReferrerImages(() => DOMPurify.sanitize(html, {
             USE_PROFILES: { html: true, svg: true },
@@ -59,7 +68,7 @@ export function sanitizeMathStatement(html: string): string {
             FORBID_TAGS: ['annotation-xml', 'maction', 'mglyph'],
         }))
     } finally {
-        DOMPurify.removeHook('uponSanitizeAttribute', dropForeignLinks)
+        DOMPurify.removeHook('uponSanitizeAttribute', dropForeignAttrs)
     }
 }
 
@@ -127,8 +136,6 @@ function texNodes(root: Node): Text[] {
     }
     return found
 }
-
-const MATHML_NS = 'http://www.w3.org/1998/Math/MathML'
 
 /**
  * KaTeX nests elements inside an <mo> for a few constructs (\bmod, \overset and \underset of a relation). <mo> is a
