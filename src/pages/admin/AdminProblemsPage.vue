@@ -14,7 +14,7 @@
             <div class="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2.5">
                 <div class="relative w-full sm:w-[280px]">
                     <Search class="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-                    <Input v-model="search" type="search" placeholder="Search title" class="pl-8" aria-label="Search problems" />
+                    <Input v-model="search" type="search" placeholder="Search title or slug" class="pl-8" aria-label="Search problems" />
                 </div>
                 <span v-if="pagination" class="ml-auto text-xs text-muted-foreground tabular-nums">
                     {{ pagination.totalElements.toLocaleString('en-US') }} {{ pagination.totalElements === 1 ? 'problem' : 'problems' }}
