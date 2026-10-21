@@ -2,7 +2,7 @@ import axiosClient from '@/api/axiosClient'
 import type { AxiosResponse } from 'axios'
 import type { ApiResponse } from '@/types/common'
 import type { Problem } from '@/types/problem'
-import type { ContestDetail, ContestList, ContestPayload, Scoreboard } from '@/types/contest'
+import type { ContestDetail, ContestList, ContestPayload, ContestSummary, Scoreboard } from '@/types/contest'
 import { API_ROUTES } from '@/constants/apiPath'
 
 // The signal comes first so that useFetch can call these directly.
@@ -10,6 +10,14 @@ class ContestService {
     // Public: published contests by phase (drafts too for contest editors), with the server's clock.
     list(signal?: AbortSignal): Promise<AxiosResponse<ApiResponse<ContestList>>> {
         return axiosClient.get(API_ROUTES.CONTESTS.ROOT, { signal })
+    }
+
+    // contest:create, update or delete: every contest, drafts included, newest start first. Needs a valid access token.
+    listAll(
+        signal: AbortSignal,
+        params: { page?: number; size?: number; q?: string },
+    ): Promise<AxiosResponse<ApiResponse<ContestSummary[]>>> {
+        return axiosClient.get(API_ROUTES.CONTESTS.ALL, { signal, params })
     }
 
     // Public: a draft is a 404 for anyone but contest editors. myProgress needs a valid access cookie.

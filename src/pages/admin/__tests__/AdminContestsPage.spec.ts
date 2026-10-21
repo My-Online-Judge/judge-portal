@@ -5,7 +5,7 @@ import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 
 const h = vi.hoisted(() => ({
-    list: vi.fn(),
+    listAll: vi.fn(),
     remove: vi.fn(),
     ensureFreshSession: vi.fn(),
     success: vi.fn(),
@@ -17,7 +17,7 @@ vi.mock('vue-router', async () => {
     const RouterLink = define({ props: ['to'], setup: (p, { slots }) => () => r('a', { href: p.to }, slots.default?.()) })
     return { RouterLink }
 })
-vi.mock('@/services/contestService', () => ({ default: { list: h.list, remove: h.remove } }))
+vi.mock('@/services/contestService', () => ({ default: { listAll: h.listAll, remove: h.remove } }))
 vi.mock('@/api/refreshSession', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/api/refreshSession')>()),
     ensureFreshSession: h.ensureFreshSession,
@@ -37,6 +37,7 @@ vi.mock('@/components/admin/contest/ContestFormDialog.vue', async () => {
 
 import { RouterLink } from 'vue-router'
 import AdminContestsPage from '../AdminContestsPage.vue'
+import PaginationFooter from '@/components/common/PaginationFooter.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const contest = (slug: string, title: string, status: string, phase: string, problemCount = 3) => ({
@@ -45,9 +46,27 @@ const contest = (slug: string, title: string, status: string, phase: string, pro
 const running = contest('spring-cup', 'Spring cup', 'PUBLISHED', 'RUNNING')
 const draft = contest('autumn-cup', 'Autumn cup', 'DRAFT', 'UPCOMING', 1)
 const past = contest('summer-cup', 'Summer cup', 'PUBLISHED', 'ENDED', 26)
-const answer = (over: Record<string, unknown> = {}) => ({
-    data: { data: { running: [running], upcoming: [draft], past: [past], serverTime: '2026-10-21T03:00:00Z', ...over } },
-})
+
+// The server's side of GET /contests/all: the rows it holds, sliced into the requested page.
+let rows: ReturnType<typeof contest>[] = []
+const serve = async (_signal: AbortSignal, params: { page?: number; size?: number; q?: string }) => {
+    const page = params.page ?? 0
+    const size = params.size ?? 20
+    const q = params.q?.toLowerCase()
+    const hits = q ? rows.filter((r) => r.slug.includes(q) || r.title.toLowerCase().includes(q)) : rows
+    const totalPages = Math.ceil(hits.length / size)
+    return {
+        data: {
+            data: hits.slice(page * size, (page + 1) * size),
+            pagination: {
+                page, size, totalElements: hits.length, totalPages,
+                hasPrev: page > 0, hasNext: page + 1 < totalPages,
+                prevPage: page > 0 ? page - 1 : null, nextPage: page + 1 < totalPages ? page + 1 : null,
+            },
+        },
+    }
+}
+const many = (n: number) => Array.from({ length: n }, (_, i) => contest(`c-${i}`, `Contest ${i}`, 'DRAFT', 'UPCOMING'))
 
 let wrapper: VueWrapper | undefined
 async function mountPage(permissions = ['contest:create', 'contest:update', 'contest:delete']) {
@@ -64,6 +83,11 @@ const button = (name: string) =>
 const menuItems = () => [...document.body.querySelectorAll('[role="menuitem"]')].map((e) => e.textContent?.trim())
 const menuItem = (t: string) =>
     [...document.body.querySelectorAll('[role="menuitem"]')].find((e) => e.textContent?.trim() === t) as HTMLElement
+async function next() {
+    const nextButton = wrapper!.findAll('button').find((b) => b.text() === 'Next')!
+    await nextButton.trigger('click')
+    await flushPromises()
+}
 async function openMenu(title: string) {
     await wrapper!.get(`button[aria-label="Actions for ${title}"]`).trigger('click')
     await nextTick()
@@ -77,8 +101,12 @@ async function askToDelete(title: string) {
 
 beforeEach(() => {
     h.ensureFreshSession.mockResolvedValue(undefined)
-    h.list.mockImplementation(async () => answer())
-    h.remove.mockResolvedValue({})
+    rows = [running, draft, past]
+    h.listAll.mockImplementation(serve)
+    h.remove.mockImplementation(async (slug: string) => {
+        rows = rows.filter((r) => r.slug !== slug)
+        return {}
+    })
 })
 afterEach(() => {
     wrapper?.unmount()
@@ -90,8 +118,8 @@ afterEach(() => {
 describe('AdminContestsPage', () => {
     it('listsDraftsAndPublished', async () => {
         await mountPage()
-        // Drafts come only with a valid token (the list is public and lenient): refresh first.
-        expect(h.ensureFreshSession.mock.invocationCallOrder[0]).toBeLessThan(h.list.mock.invocationCallOrder[0]!)
+        // The endpoint needs a valid token, so the session is refreshed first.
+        expect(h.ensureFreshSession.mock.invocationCallOrder[0]).toBeLessThan(h.listAll.mock.invocationCallOrder[0]!)
         expect(wrapper!.findAll('thead th').map((th) => th.text())).toEqual(
             ['Title', 'Status', 'Phase', 'Starts', 'Ends', 'Problems', 'Actions'],
         )
@@ -105,14 +133,104 @@ describe('AdminContestsPage', () => {
         // The title opens the contest's public page.
         expect(row('Autumn cup').get('a').attributes('href')).toBe('/contests/autumn-cup')
         expect(button('New contest')).toBeTruthy()
-        expect(wrapper!.text()).not.toContain('Showing the')
     })
 
-    it('saysSoWhenTheListIsCapped', async () => {
-        const many = Array.from({ length: 50 }, (_, i) => contest(`old-${i}`, `Old ${i}`, 'PUBLISHED', 'ENDED'))
-        h.list.mockImplementation(async () => answer({ past: many }))
+    it('listsThePageFromTheAdminEndpoint', async () => {
         await mountPage()
-        expect(wrapper!.text()).toContain('Showing the 50 most recently ended contests. Older ones are not listed.')
+        expect(h.listAll).toHaveBeenCalledTimes(1)
+        expect(h.listAll).toHaveBeenCalledWith(expect.any(AbortSignal), { page: 0, size: 20 })
+        expect(h.ensureFreshSession.mock.invocationCallOrder[0]).toBeLessThan(h.listAll.mock.invocationCallOrder[0]!)
+    })
+
+    it('pagesThroughEveryContest', async () => {
+        rows = many(55)
+        await mountPage()
+        expect(wrapper!.findAll('tbody tr')).toHaveLength(20)
+        expect(wrapper!.text()).toContain('Page 1 of 3')
+        await next()
+        expect(h.listAll).toHaveBeenLastCalledWith(expect.any(AbortSignal), { page: 1, size: 20 })
+        expect(wrapper!.text()).toContain('Page 2 of 3')
+        await next()
+        expect(h.listAll).toHaveBeenLastCalledWith(expect.any(AbortSignal), { page: 2, size: 20 })
+        expect(wrapper!.findAll('tbody tr')).toHaveLength(15)
+        expect(wrapper!.find('td').text()).toContain('Contest 40')
+    })
+
+    it('aNewPageSizeReturnsToTheFirstPage', async () => {
+        rows = many(55)
+        await mountPage()
+        await next()
+        wrapper!.findComponent(PaginationFooter).vm.$emit('update:size', 50)
+        await flushPromises()
+        expect(h.listAll).toHaveBeenLastCalledWith(expect.any(AbortSignal), { page: 0, size: 50 })
+    })
+
+    it('searchResetsToPageOne', async () => {
+        rows = many(55)
+        await mountPage()
+        await next()
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+        const input = wrapper!.get('input[type="search"]')
+        expect(input.attributes('placeholder')).toBe('Search slug or title')
+        expect(input.attributes('aria-label')).toBe('Search contests')
+        h.listAll.mockClear()
+        await input.setValue('Contest 4')
+        // Typing alone asks for nothing: the search waits 300 ms for more keys.
+        vi.advanceTimersByTime(299)
+        expect(h.listAll).not.toHaveBeenCalled()
+        vi.advanceTimersByTime(1)
+        vi.useRealTimers()
+        await flushPromises()
+        expect(h.listAll).toHaveBeenCalledTimes(1)
+        expect(h.listAll).toHaveBeenCalledWith(expect.any(AbortSignal), { page: 0, size: 20, q: 'Contest 4' })
+        expect(wrapper!.findAll('tbody tr').map((tr) => tr.find('td').text())).toEqual([
+            'Contest 4c-4', 'Contest 40c-40', 'Contest 41c-41', 'Contest 42c-42', 'Contest 43c-43',
+            'Contest 44c-44', 'Contest 45c-45', 'Contest 46c-46', 'Contest 47c-47', 'Contest 48c-48', 'Contest 49c-49',
+        ])
+    })
+
+    it('aSearchWithNoHitsSaysSo', async () => {
+        await mountPage()
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+        await wrapper!.get('input[type="search"]').setValue('zzz')
+        vi.advanceTimersByTime(300)
+        vi.useRealTimers()
+        await flushPromises()
+        expect(wrapper!.findAll('tbody tr')).toHaveLength(0)
+        expect(wrapper!.text()).toContain('“zzz”')
+        expect(wrapper!.text()).not.toContain('No contests yet')
+    })
+
+    it('noCapNoteAnyMore', async () => {
+        rows = many(120)
+        await mountPage()
+        expect(wrapper!.text()).not.toContain('Showing the')
+        expect(wrapper!.text()).not.toContain('not listed')
+    })
+
+    it('aDeleteOnTheLastRowOfTheLastPageStepsBack', async () => {
+        rows = many(41)
+        await mountPage()
+        await next()
+        await next()
+        expect(wrapper!.findAll('tbody tr')).toHaveLength(1)
+        expect(h.listAll).toHaveBeenLastCalledWith(expect.any(AbortSignal), { page: 2, size: 20 })
+        await askToDelete('Contest 40')
+        button('Delete contest')!.click()
+        await flushPromises()
+        expect(h.remove).toHaveBeenCalledWith('c-40')
+        expect(h.listAll).toHaveBeenLastCalledWith(expect.any(AbortSignal), { page: 1, size: 20 })
+        expect(wrapper!.findAll('tbody tr')).toHaveLength(20)
+    })
+
+    it('aDeleteOnAMiddleRowReloadsTheSamePage', async () => {
+        rows = many(41)
+        await mountPage()
+        await next()
+        await askToDelete('Contest 25')
+        button('Delete contest')!.click()
+        await flushPromises()
+        expect(h.listAll).toHaveBeenLastCalledWith(expect.any(AbortSignal), { page: 1, size: 20 })
     })
 
     it('menuItemsFollowThePermissions', async () => {
@@ -132,7 +250,7 @@ describe('AdminContestsPage', () => {
         dialog.vm.$emit('saved', { ...draft, title: 'Autumn cup 2026' })
         await flushPromises()
         expect(h.success).toHaveBeenCalledWith('Contest saved')
-        expect(h.list).toHaveBeenCalledTimes(2)
+        expect(h.listAll).toHaveBeenCalledTimes(2)
     })
 
     it('newContestOpensAnEmptyDialog', async () => {
@@ -155,7 +273,7 @@ describe('AdminContestsPage', () => {
         expect(h.remove).toHaveBeenCalledTimes(1)
         expect(h.remove).toHaveBeenCalledWith('autumn-cup')
         expect(h.success).toHaveBeenCalledWith('Contest deleted', { description: '“Autumn cup”' })
-        expect(h.list).toHaveBeenCalledTimes(2)
+        expect(h.listAll).toHaveBeenCalledTimes(2)
     })
 
     it('deleteOfAStartedPublishedContestIsDisabledWithGuidance', async () => {
@@ -175,7 +293,7 @@ describe('AdminContestsPage', () => {
     })
 
     it('aDraftsPhaseIsNotShownAsLive', async () => {
-        h.list.mockImplementation(async () => answer({ running: [contest('d', 'Open draft', 'DRAFT', 'RUNNING')] }))
+        rows = [contest('d', 'Open draft', 'DRAFT', 'RUNNING')]
         await mountPage()
         const phase = row('Open draft').findAll('td')[2]!
         expect(phase.classes()).not.toContain('text-success-ink')
@@ -199,12 +317,12 @@ describe('AdminContestsPage', () => {
     })
 
     it('aFailedListOffersARetry', async () => {
-        h.list.mockRejectedValueOnce(new Error('Network Error'))
+        h.listAll.mockRejectedValueOnce(new Error('Network Error'))
         await mountPage()
         expect(wrapper!.text()).toContain("Couldn't load this list")
         button('Retry')!.click()
         await flushPromises()
-        expect(h.list).toHaveBeenCalledTimes(2)
+        expect(h.listAll).toHaveBeenCalledTimes(2)
         expect(wrapper!.text()).toContain('Spring cup')
     })
 })

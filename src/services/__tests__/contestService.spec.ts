@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const h = vi.hoisted(() => ({ post: vi.fn(), put: vi.fn(), delete: vi.fn() }))
-vi.mock('@/api/axiosClient', () => ({ default: { post: h.post, put: h.put, delete: h.delete } }))
+const h = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() }))
+vi.mock('@/api/axiosClient', () => ({ default: { get: h.get, post: h.post, put: h.put, delete: h.delete } }))
 
 import contestService from '@/services/contestService'
 import type { ContestPayload } from '@/types/contest'
@@ -26,5 +26,11 @@ describe('contestService admin calls', () => {
     it('removeDeletesTheEncodedSlug', () => {
         contestService.remove('spring-cup')
         expect(h.delete).toHaveBeenCalledWith('/contests/spring-cup')
+    })
+
+    it('listAllGetsThePagedAdminEndpoint', () => {
+        const signal = new AbortController().signal
+        contestService.listAll(signal, { page: 2, size: 20, q: 'cup' })
+        expect(h.get).toHaveBeenCalledWith('/contests/all', { signal, params: { page: 2, size: 20, q: 'cup' } })
     })
 })

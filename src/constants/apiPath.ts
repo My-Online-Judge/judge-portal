@@ -32,6 +32,7 @@ export const API_ROUTES = {
     },
     CONTESTS: {
         ROOT: '/contests',
+        ALL: '/contests/all',
         DETAIL: (slug: string) => `/contests/${encodeURIComponent(slug)}`,
         PROBLEM: (slug: string, label: string) => `/contests/${encodeURIComponent(slug)}/problems/${encodeURIComponent(label)}`,
         SCOREBOARD: (slug: string) => `/contests/${encodeURIComponent(slug)}/scoreboard`,

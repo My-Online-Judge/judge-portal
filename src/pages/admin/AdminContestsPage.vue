@@ -10,15 +10,28 @@
         </PageHeader>
 
         <div class="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
+            <div class="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2.5">
+                <div class="relative w-full sm:w-[280px]">
+                    <Search class="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                    <Input v-model="search" type="search" placeholder="Search slug or title" class="pl-8" aria-label="Search contests" />
+                </div>
+                <span v-if="pagination" class="ml-auto text-xs text-muted-foreground tabular-nums">
+                    {{ pagination.totalElements.toLocaleString('en-US') }} {{ pagination.totalElements === 1 ? 'contest' : 'contests' }}
+                </span>
+            </div>
+
             <ListStateShell
                 :loading="isLoading || preparing"
                 :error="error ? 'The request failed. Check your connection and try again.' : null"
                 :has-data="data !== null"
                 :empty="contests.length === 0"
+                :filtered="!!query"
+                :filter-summary="query ? `“${query}”` : undefined"
                 :rows="4"
                 empty-title="No contests yet"
                 empty-hint="Create the first one. It stays a draft until you publish it."
                 @retry="load"
+                @clear-filters="search = ''"
             >
                 <template #empty-action>
                     <Button v-if="canCreate" variant="secondary" size="sm" @click="openCreate">
@@ -64,7 +77,9 @@
                     </table>
                 </div>
             </ListStateShell>
-            <p v-for="note in capNotes" :key="note" class="border-t border-border px-4 py-2.5 text-xs text-muted-foreground">{{ note }}</p>
+            <div class="px-4">
+                <PaginationFooter :pagination="pagination ?? undefined" @change-page="onPageChange" @update:size="onSizeChange" />
+            </div>
         </div>
 
         <ContestFormDialog :open="formOpen" :slug="formSlug" @update:open="(v) => (formOpen = v)" @saved="onSaved" />
@@ -86,11 +101,14 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { isAxiosError } from 'axios'
-import { Pencil, Plus, Trash2 } from 'lucide-vue-next'
+import { watchDebounced } from '@vueuse/core'
+import { Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import PageHeader from '@/components/common/PageHeader.vue'
 import ListStateShell from '@/components/common/ListStateShell.vue'
+import PaginationFooter from '@/components/common/PaginationFooter.vue'
 import RowActionsMenu from '@/components/common/RowActionsMenu.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import type { RowAction } from '@/components/common/rowActions'
@@ -118,26 +136,18 @@ const PHASES: Record<ContestPhase, { label: string; class: string }> = {
     ENDED: { label: 'Ended', class: 'text-muted-foreground' },
 }
 
-// The public list, which also carries drafts for contest editors. It has no pages: at most 50 running and upcoming
-// contests (the soonest) and the 50 most recently ended, so a full section says what it leaves out.
-const LIST_CAP = 50
-const { data, isLoading, error, execute } = useFetch(contestService.list, { immediate: false, transform: (res) => res.data })
-const contests = computed<ContestSummary[]>(() => {
-    const l = data.value
-    return l ? [...l.running, ...l.upcoming, ...l.past] : []
-})
-const capNotes = computed(() => {
-    const l = data.value
-    if (!l) return []
-    const notes: string[] = []
-    if (l.running.length + l.upcoming.length >= LIST_CAP) {
-        notes.push(`Showing the ${LIST_CAP} soonest running and upcoming contests. Later ones are not listed.`)
-    }
-    if (l.past.length >= LIST_CAP) notes.push(`Showing the ${LIST_CAP} most recently ended contests. Older ones are not listed.`)
-    return notes
-})
+// Every contest, drafts included, a page at a time: newest start first, as the server sorts. The search is the
+// server's too (slug or title), so a long list is never cut off.
+const { data, isLoading, error, execute } = useFetch(contestService.listAll, { immediate: false })
+const page = ref(0)
+const size = ref(20)
+const search = ref('')
+// The search the shown list answers: it moves with a request, not with each key.
+const query = ref('')
+const contests = computed<ContestSummary[]>(() => data.value?.data ?? [])
+const pagination = computed(() => data.value?.pagination ?? null)
 
-// Drafts are listed only for a valid token (a lapsed one reads as anonymous), so the session is made fresh first.
+// The endpoint needs a valid token (a lapsed one reads as anonymous), so the session is made fresh first.
 const preparing = ref(false)
 const load = async () => {
     preparing.value = true
@@ -146,9 +156,29 @@ const load = async () => {
     } finally {
         preparing.value = false
     }
-    await execute()
+    query.value = search.value.trim()
+    await execute({ page: page.value, size: size.value, ...(query.value ? { q: query.value } : {}) })
 }
 onMounted(load)
+
+const onPageChange = (p: number) => {
+    page.value = p
+    void load()
+}
+const onSizeChange = (n: number) => {
+    size.value = n
+    page.value = 0
+    void load()
+}
+// A new search starts on the first page, after the typing pauses.
+watchDebounced(
+    search,
+    () => {
+        page.value = 0
+        void load()
+    },
+    { debounce: 300 },
+)
 
 // --- Create and edit ---
 const formOpen = ref(false)
@@ -200,6 +230,8 @@ const confirmDelete = async () => {
         await contestService.remove(target.slug)
         deleteOpen.value = false
         successToast('Contest deleted', { description: `“${target.title}”` })
+        // The last row of a page that is not the first leaves it empty: step back one page.
+        if (contests.value.length === 1 && page.value > 0) page.value -= 1
         void load()
     } catch (err) {
         deleteOpen.value = false
