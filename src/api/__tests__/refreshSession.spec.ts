@@ -319,6 +319,22 @@ describe('one refresh path per tab', () => {
         expect(onVerdict).toHaveBeenCalledTimes(1)
     })
 
+    it('aStreamRefusedOnAFreshSessionPollsWithoutSpendingARefresh', async () => {
+        // A refused EventSource shows no status: on a session refreshed minutes ago it is not a lapsed cookie (a full
+        // per-user stream cap, a 404, an edge 502), so it polls instead of rotating the refresh token.
+        const app = await loadApp(okEverything)
+        await app.refreshSession()
+        expect(app.refreshes()).toBe(1)
+
+        app.useSubmissionStream().watch('s1', () => {})
+        const stream = MockEventSource.instances[0]
+        stream.readyState = MockEventSource.CLOSED
+        stream.emit('error', {})
+        await tick()
+        expect(app.refreshes()).toBe(1)
+        expect(MockEventSource.instances).toHaveLength(1)
+    })
+
     it('authService.refresh() joins the same flight', async () => {
         let releaseRefresh!: () => void
         const app = await loadApp((config) =>
@@ -347,6 +363,17 @@ describe('ensureFreshSession', () => {
     it('exports the 14-minute threshold', async () => {
         const app = await loadApp(okEverything)
         expect(app.session.SESSION_REFRESH_AFTER_MS).toBe(14 * MINUTE)
+    })
+
+    it('sessionIsFreshForUnder14MinutesAfterARefresh', async () => {
+        const app = await loadApp(okEverything)
+        expect(app.session.sessionIsFresh()).toBe(false)
+        await app.refreshSession()
+        expect(app.session.sessionIsFresh()).toBe(true)
+        vi.setSystemTime(Date.now() + 14 * MINUTE - 1)
+        expect(app.session.sessionIsFresh()).toBe(true)
+        vi.setSystemTime(Date.now() + 1)
+        expect(app.session.sessionIsFresh()).toBe(false)
     })
 
     it('refreshes first when the last login or refresh is unknown', async () => {

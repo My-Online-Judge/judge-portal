@@ -4,6 +4,7 @@ import { API_ROUTES } from '@/constants/apiPath'
 import { isTerminalStatus, type Submission } from '@/types/submission'
 import { API_BASE_URL } from '@/api/baseUrl'
 import { refreshSession } from '@/api/axiosClient'
+import { sessionIsFresh } from '@/api/refreshSession'
 
 /** A stream that stays silent this long gives way to polling. */
 export const FALLBACK_TIMEOUT_MS = 20_000
@@ -62,16 +63,20 @@ const statusOf = (error: unknown): number | undefined =>
 export interface SubmissionStreamDeps {
     /** Renews a lapsed session before the one reconnect; the tab's shared refresh by default. */
     refresh?: () => Promise<unknown>
+    /** Whether the session was renewed recently enough that a refusal cannot be a lapsed cookie. */
+    sessionIsFresh?: () => boolean
 }
 
 /**
  * Live verdicts: an EventSource per watched submission, with a polling fallback. A stream the server refuses on its
- * first connection (the access cookie lapsed) refreshes the session once and reconnects once. Any other failure, a
+ * first connection, while the session may have lapsed (no refresh in the last 14 minutes), refreshes the session once
+ * and reconnects once. Any other failure, a refusal on a fresh session, a
  * second refusal, 20 s of silence or an unreadable payload polls with backoff until a final verdict, a 404 or the
  * deadline. `onVerdict` runs once with the final verdict; `onGiveUp` runs once if the watch ends without one.
  */
 export function useSubmissionStream(deps: SubmissionStreamDeps = {}) {
     const refresh = deps.refresh ?? refreshSession
+    const isFresh = deps.sessionIsFresh ?? sessionIsFresh
     /** This caller's own subscriptions, by submission id. */
     const mine = new Map<string, { w: Watch; sub: Subscriber }>()
 
@@ -196,9 +201,11 @@ export function useSubmissionStream(deps: SubmissionStreamDeps = {}) {
 
         source.addEventListener('error', () => {
             if (w.source !== source) return
-            // CLOSED means the server refused the stream, typically a 401 once the access cookie has expired.
-            // Otherwise EventSource would reconnect on its own; we don't want that, so poll instead.
-            if (source.readyState === EventSource.CLOSED && !w.reconnected) {
+            // CLOSED means the server refused the stream: a 401 once the access cookie has expired, but also a full
+            // stream cap (429/503), a 404 or an edge 502, which EventSource cannot tell apart. Only a session that may
+            // have lapsed spends a refresh; on a fresh one the refusal is something else, so poll. Otherwise
+            // EventSource would reconnect on its own; we don't want that, so poll instead.
+            if (source.readyState === EventSource.CLOSED && !w.reconnected && !isFresh()) {
                 w.reconnected = true
                 void reconnectAfterRefresh(w)
             } else {

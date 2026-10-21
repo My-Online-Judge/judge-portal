@@ -309,6 +309,22 @@ describe('useSubmissionStream', () => {
     expect(onVerdict).toHaveBeenCalledWith(expect.objectContaining({ status: SubmissionResult.SUCCESS }))
   })
 
+  it('aClosedStreamOnAFreshSessionPollsWithoutARefresh', async () => {
+    // Under 14 minutes after a refresh a refusal is not a lapsed cookie: a full stream cap (429/503), a 404 or an
+    // edge 502. Only a lapsed session is worth a refresh rotation.
+    const refresh = vi.fn(() => Promise.resolve())
+    answerPolls(SubmissionResult.SUCCESS)
+    const onVerdict = vi.fn()
+    useSubmissionStream({ refresh, sessionIsFresh: () => true }).watch('s1', onVerdict)
+    MockEventSource.instances[0].refuse()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(refresh).not.toHaveBeenCalled()
+    expect(MockEventSource.instances).toHaveLength(1)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(getById).toHaveBeenCalledTimes(1)
+    expect(onVerdict).toHaveBeenCalledTimes(1)
+  })
+
   it('refreshFailureFallsBackToPolling', async () => {
     const refresh = vi.fn(() => Promise.reject(new Error('refresh token expired')))
     answerPolls(SubmissionResult.SUCCESS)

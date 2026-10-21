@@ -99,6 +99,12 @@ export function markSessionFresh(): void {
     lastFreshAt = Date.now()
 }
 
+/** True under 14 minutes after this tab's last login or refresh; false when that is unknown or the clock stepped back. */
+export function sessionIsFresh(): boolean {
+    const age = lastFreshAt === null ? -1 : Date.now() - lastFreshAt
+    return age >= 0 && age < SESSION_REFRESH_AFTER_MS
+}
+
 /**
  * Before a personalised read: a signed-in tab whose last login or refresh is unknown or at least 14 minutes old
  * refreshes first, through the tab's one refresh path. Never rejects. A refresh the server refuses (401) ends the
@@ -107,9 +113,7 @@ export function markSessionFresh(): void {
  * goes out anyway and the next call tries again.
  */
 export async function ensureFreshSession(): Promise<void> {
-    // A negative age means the clock stepped back: treat it as stale.
-    const age = lastFreshAt === null ? -1 : Date.now() - lastFreshAt
-    if (age >= 0 && age < SESSION_REFRESH_AFTER_MS) return
+    if (sessionIsFresh()) return
     try {
         // Lazy: the store imports authService, and the client imports this module.
         const { useAuthStore } = await import('@/stores/auth')
