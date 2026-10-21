@@ -2,12 +2,64 @@ import DOMPurify from 'dompurify'
 import katex from 'katex'
 
 // Math in statements: $...$ is inline, $$...$$ is display, \$ is a literal dollar sign. Runs on HTML that
-// sanitizeHtml has already cleaned, then sanitises its own output again, so nothing KaTeX emits is trusted.
+// sanitizeHtml has already cleaned. Nothing KaTeX emits is trusted: each formula goes through sanitizeMathOutput, and
+// the whole statement is sanitised once more (sanitizeMathStatement) after the formulas are put in.
 
 // Bounds on what one author can make the browser do. A macro may expand at most this many times (KaTeX's
 // default, kept explicit), and a size such as \rule{99999em}{1em} is clamped to this many em.
 const MAX_EXPAND = 1000
 const MAX_SIZE_EM = 50
+
+// The MathML KaTeX 0.16.47 emits; the corpus test keeps it complete. DOMPurify allows exactly these on top of its
+// html and svg profiles: never its whole MathML profile, never annotation-xml, maction or mglyph, never an href.
+export const KATEX_MATHML_TAGS: readonly string[] = Object.freeze([
+    'annotation', 'math', 'menclose', 'mfrac', 'mi', 'mn', 'mo', 'mover', 'mpadded', 'mphantom', 'mroot', 'mrow',
+    'mspace', 'msqrt', 'mstyle', 'msub', 'msubsup', 'msup', 'mtable', 'mtd', 'mtext', 'mtr', 'munder', 'munderover',
+    'semantics',
+])
+export const KATEX_MATHML_ATTRS: readonly string[] = Object.freeze([
+    'accent', 'accentunder', 'columnalign', 'columnlines', 'columnspacing', 'depth', 'display', 'displaystyle',
+    'encoding', 'fence', 'height', 'linebreak', 'linethickness', 'lspace', 'mathbackground', 'mathcolor', 'mathsize',
+    'mathvariant', 'maxsize', 'minsize', 'notation', 'rowlines', 'rowspacing', 'rspace', 'scriptlevel', 'separator',
+    'stretchy', 'voffset', 'width', 'xmlns',
+])
+
+/** Sanitises rendered math: KaTeX's HTML and SVG, plus exactly the MathML it emits. */
+export function sanitizeMathOutput(html: string): string {
+    return DOMPurify.sanitize(html, {
+        USE_PROFILES: { html: true, svg: true },
+        ADD_TAGS: [...KATEX_MATHML_TAGS],
+        ADD_ATTR: [...KATEX_MATHML_ATTRS],
+        FORBID_TAGS: ['annotation-xml', 'maction', 'mglyph'],
+        FORBID_ATTR: ['href', 'xlink:href'],
+    })
+}
+
+const HTML_NS = 'http://www.w3.org/1999/xhtml'
+const LINK_ATTRS = new Set(['href', 'xlink:href'])
+
+// Drops a link on anything that is not an HTML element (MathML, SVG): an author's <a href> keeps working.
+const dropForeignLinks = (node: Element, data: { attrName: string; keepAttr: boolean }) => {
+    if (LINK_ATTRS.has(data.attrName) && node.namespaceURI !== HTML_NS) data.keepAttr = false
+}
+
+/**
+ * The second pass, over the whole statement with its formulas in place: the same profiles and MathML lists, but an
+ * href is dropped only outside HTML, so the statement's own links survive. The hook is registered for this call only.
+ */
+export function sanitizeMathStatement(html: string): string {
+    DOMPurify.addHook('uponSanitizeAttribute', dropForeignLinks)
+    try {
+        return DOMPurify.sanitize(html, {
+            USE_PROFILES: { html: true, svg: true },
+            ADD_TAGS: [...KATEX_MATHML_TAGS],
+            ADD_ATTR: [...KATEX_MATHML_ATTRS],
+            FORBID_TAGS: ['annotation-xml', 'maction', 'mglyph'],
+        })
+    } finally {
+        DOMPurify.removeHook('uponSanitizeAttribute', dropForeignLinks)
+    }
+}
 
 const SKIP = 'code, pre'
 const isSpace = (c: string | undefined) => c === undefined || /\s/.test(c)
@@ -79,15 +131,15 @@ function texNodes(root: Node): Text[] {
 function renderOne(p: { tex: string; display: boolean }): Node {
     try {
         const holder = document.createElement('template')
-        holder.innerHTML = katex.renderToString(p.tex, {
+        holder.innerHTML = sanitizeMathOutput(katex.renderToString(p.tex, {
             displayMode: p.display,
             throwOnError: false,
             trust: false,
-            output: 'html',
+            output: 'htmlAndMathml',
             strict: 'ignore',
             maxExpand: MAX_EXPAND,
             maxSize: MAX_SIZE_EM,
-        })
+        }))
         return holder.content
     } catch {
         const mark = p.display ? '$$' : '$'
@@ -116,5 +168,5 @@ export function renderMath(safeHtml: string): string {
         changed = true
     }
     if (!changed) return safeHtml
-    return DOMPurify.sanitize(template.innerHTML, { USE_PROFILES: { html: true, svg: true } })
+    return sanitizeMathStatement(template.innerHTML)
 }
