@@ -6,6 +6,7 @@ import { installChunkReload } from '../chunkReload'
 type Location = { fullPath: string }
 type ErrorHandler = (error: unknown, to: Location, from: Location) => void
 type AfterHook = (to: Location, from: Location, failure?: unknown) => void
+type BeforeHook = (to: Location, from: Location) => unknown
 type Listener = (event: Event) => void
 type SessionStore = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
@@ -26,9 +27,11 @@ function load(session: SessionStore) {
   const listeners = new Map<string, Listener[]>()
   let onError: ErrorHandler = () => {}
   let afterEach: AfterHook = () => {}
+  let beforeEach: BeforeHook = () => {}
   const router = {
     onError: (h: ErrorHandler) => ((onError = h), () => {}),
     afterEach: (h: AfterHook) => ((afterEach = h), () => {}),
+    beforeEach: (h: BeforeHook) => ((beforeEach = h), () => {}),
   }
   const win = {
     location: { reload: vi.fn(), assign: vi.fn() },
@@ -45,6 +48,12 @@ function load(session: SessionStore) {
   return {
     reload: win.location.reload,
     assign: win.location.assign,
+    /** A navigation to `to` starts: its route chunk (and the chunk's preloads) are being fetched. */
+    navigating: (to: Location) => {
+      const answer = beforeEach(to, current)
+      // The hook only takes note: it never blocks or redirects a navigation.
+      expect(answer === undefined || answer === true).toBe(true)
+    },
     /** A navigation to `to` fails with `error` (the address bar stays where it was). */
     routerError: (e: unknown, to: Location = at('/problems')) => onError(e, to, current),
     /** A navigation to `to` lands (or ends in a navigation failure such as an aborted one). */
@@ -127,6 +136,50 @@ describe('installChunkReload', () => {
     const second = load(session)
     expect(second.preloadError().defaultPrevented).toBe(false)
     expect(second.reload).not.toHaveBeenCalled()
+  })
+
+  it('a preload error during a navigation loads the page that was asked for', () => {
+    // In a production build every lazy route goes through Vite's preload helper, so a chunk of an older build that is
+    // gone fires vite:preloadError before the router sees anything.
+    const session = tabSession()
+    const first = load(session)
+    first.navigated(at('/problems'))
+    first.navigating(at('/admin/problems'))
+    expect(first.preloadError().defaultPrevented).toBe(true)
+    expect(first.assign).toHaveBeenCalledExactlyOnceWith('/admin/problems')
+    expect(first.reload).not.toHaveBeenCalled()
+    // The prevented import resolves to nothing, so the router fails too; the page is already reloading.
+    first.routerError(new Error('Couldn\'t resolve component "default" at "/admin/problems"'), at('/admin/problems'))
+    expect(first.assign).toHaveBeenCalledTimes(1)
+    expect(consoleError).not.toHaveBeenCalled()
+
+    // Once, as for the router's own error: the reloaded page that fails again surfaces it.
+    const second = load(session)
+    second.navigating(at('/admin/problems'))
+    expect(second.preloadError().defaultPrevented).toBe(false)
+    expect(second.assign).not.toHaveBeenCalled()
+  })
+
+  it('a preload error after a navigation landed reloads the page it is on', () => {
+    const page = load(tabSession())
+    page.navigating(at('/problems'))
+    page.navigated(at('/problems'))
+    page.navigating(at('/problems/tong'))
+    page.navigated(at('/problems/tong'))
+    // A component loaded on demand inside the page, not a navigation.
+    expect(page.preloadError().defaultPrevented).toBe(true)
+    expect(page.reload).toHaveBeenCalledTimes(1)
+    expect(page.assign).not.toHaveBeenCalled()
+  })
+
+  it('a navigation that failed is no longer pending', () => {
+    const page = load(tabSession())
+    page.navigated(at('/problems'))
+    page.navigating(at('/admin'))
+    page.routerError(new Error('Navigation guard failed'), at('/admin'))
+    expect(page.preloadError().defaultPrevented).toBe(true)
+    expect(page.reload).toHaveBeenCalledTimes(1)
+    expect(page.assign).not.toHaveBeenCalled()
   })
 
   it('never reloads when sessionStorage throws', () => {

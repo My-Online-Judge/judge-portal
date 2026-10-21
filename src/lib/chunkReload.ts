@@ -35,8 +35,13 @@ function rearmReload(win: ReloadWindow): void {
 }
 
 /** Reloads the page once when a lazy route or a preloaded chunk of an older build can no longer be fetched. */
-export function installChunkReload(router: Pick<Router, 'onError' | 'afterEach'>, win: ReloadWindow = window): void {
+export function installChunkReload(
+  router: Pick<Router, 'onError' | 'afterEach' | 'beforeEach'>,
+  win: ReloadWindow = window,
+): void {
   let reloading = false
+  // The navigation under way, if any: a preload error while its route chunk loads should land on its page.
+  let pending: string | null = null
   // Without a target, reload the current page.
   const reload = (target?: string) => {
     reloading = true
@@ -44,7 +49,12 @@ export function installChunkReload(router: Pick<Router, 'onError' | 'afterEach'>
     else win.location.reload()
   }
 
+  router.beforeEach((to) => {
+    pending = to.fullPath
+  })
+
   router.onError((error, to) => {
+    pending = null
     // The page is going away; a prevented preload error also fails the navigation that asked for it.
     if (reloading) return
     // The failed navigation left the address bar on the previous page, so load the page that was asked for.
@@ -55,12 +65,15 @@ export function installChunkReload(router: Pick<Router, 'onError' | 'afterEach'>
   // A navigation of this page that lands re-arms the reload. The page's first navigation does not count: a chunk of
   // this build that fails right after it (a broken deploy) would otherwise reload the tab in a loop.
   router.afterEach((_to, from, failure) => {
+    pending = null
     if (!failure && from !== START_LOCATION) rearmReload(win)
   })
-  // Vite fires this when a dynamic import or one of its preloads fails; preventing it stops the throw.
+  // Vite fires this when a dynamic import or one of its preloads fails; preventing it stops the throw. In a production
+  // build every lazy route loads through Vite's preload helper, so a stale route chunk lands here before the router
+  // sees it: load the page that was asked for, or reload this one when no navigation is under way.
   win.addEventListener('vite:preloadError', (event) => {
     if (!claimReload(win)) return
     event.preventDefault()
-    reload()
+    reload(pending ?? undefined)
   })
 }
