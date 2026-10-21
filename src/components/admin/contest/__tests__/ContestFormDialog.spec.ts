@@ -232,7 +232,8 @@ describe('ContestFormDialog', () => {
         await mountDialog('spring-cup')
         await type('#contest-starts', '2026-11-01T10:00')
         await save()
-        expect(h.error).toHaveBeenCalledWith('This contest has scores: its start time is locked')
+        // The refusal settles after the save's own awaits; a slower CI runner needs more than one flush.
+        await vi.waitFor(() => expect(h.error).toHaveBeenCalledWith('This contest has scores: its start time is locked'))
         expect(wrapper!.emitted('update:open')).toBeUndefined()
     })
 
