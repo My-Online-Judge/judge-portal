@@ -31,6 +31,7 @@ import { useFetch } from '@/composables/useFetch'
 import contestService from '@/services/contestService'
 import { serverOffsetMs } from '@/lib/contestTime'
 import { ROUTE_PATH } from '@/constants/routePath'
+import type { ContestSummary } from '@/types/contest'
 
 // The sidebar card on /problems: running contests first, then the next ones, at most 3. Nothing shows when there is
 // nothing to show, or when the list cannot be read.
@@ -43,12 +44,14 @@ watch(list, (l) => {
     if (l) offsetMs.value = serverOffsetMs(l.serverTime, Date.now())
 })
 
+// A contest editor's list carries drafts too; this card is the public view, so it shows published contests only.
+const published = (c: ContestSummary) => c.status === 'PUBLISHED'
 const items = computed(() => {
     const l = list.value
     if (!l) return []
     return [
-        ...l.running.map((contest) => ({ contest, live: true })),
-        ...l.upcoming.map((contest) => ({ contest, live: false })),
+        ...l.running.filter(published).map((contest) => ({ contest, live: true })),
+        ...l.upcoming.filter(published).map((contest) => ({ contest, live: false })),
     ].slice(0, MAX_ITEMS)
 })
 

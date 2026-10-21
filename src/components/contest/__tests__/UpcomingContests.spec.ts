@@ -75,6 +75,37 @@ describe('UpcomingContests', () => {
         expect(items[2]!.text()).toContain('Starts in 1d 02:03:04')
     })
 
+    it('showsOnlyPublishedContestsEvenToEditors', async () => {
+        // A contest editor's list carries drafts too; the card is the public view, so a draft is never "Live" here.
+        h.list.mockResolvedValue({
+            data: {
+                data: {
+                    running: [{ ...contest('draft-live', 'RUNNING', -600_000), status: 'DRAFT' }, contest('live-cup', 'RUNNING', -600_000)],
+                    upcoming: [{ ...contest('draft-next', 'UPCOMING', 3_723_000), status: 'DRAFT' }, contest('next-1', 'UPCOMING', 93_784_000)],
+                    past: [],
+                    serverTime: at(0),
+                },
+            },
+        })
+        const w = await mountCard()
+        expect(w.findAll('li').map((li) => li.get('a').attributes('href'))).toEqual(['/contests/live-cup', '/contests/next-1'])
+    })
+
+    it('isHiddenWhenOnlyDraftsAreThere', async () => {
+        h.list.mockResolvedValue({
+            data: {
+                data: {
+                    running: [{ ...contest('draft-live', 'RUNNING', -600_000), status: 'DRAFT' }],
+                    upcoming: [],
+                    past: [],
+                    serverTime: at(0),
+                },
+            },
+        })
+        const w = await mountCard()
+        expect(w.text()).toBe('')
+    })
+
     it('isHiddenWhenThereIsNothingToShow', async () => {
         h.list.mockResolvedValue({
             data: { data: { running: [], upcoming: [], past: [contest('old', 'ENDED', -90_000_000)], serverTime: at(0) } },
