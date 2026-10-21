@@ -11,3 +11,11 @@ export function getErrorMessage(err: unknown, fallback: string): string {
     }
     return fallback
 }
+
+// The machine-readable code an API error body carries (the ErrorCode name, e.g. RATE_LIMITED; oj-common 0.8.1 and
+// later), or undefined: no response (a network error), a body that is not ours, or a backend from before 0.8.1.
+export function getErrorCode(err: unknown): string | undefined {
+    if (!axios.isAxiosError(err)) return undefined
+    const code = (err.response?.data as { code?: unknown } | undefined)?.code
+    return typeof code === 'string' && code ? code : undefined
+}

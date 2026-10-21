@@ -46,8 +46,19 @@ describe('isContestNotRunning', () => {
     new AxiosError('x', 'ERR', undefined, undefined, {
       status, data: { status, message }, statusText: '', headers: new AxiosHeaders(), config: { headers: new AxiosHeaders() },
     })
-  it('aContestSubmitAfterTheEndIsRecognised', () => {
+  const withCode = (status: number, code: string, message: string) =>
+    new AxiosError('x', 'ERR', undefined, undefined, {
+      status, data: { status, code, message }, statusText: '', headers: new AxiosHeaders(), config: { headers: new AxiosHeaders() },
+    })
+  it('aCodeIsEnough', () => {
+    expect(isContestNotRunning(withCode(400, 'CONTEST_NOT_RUNNING', 'The contest has ended'))).toBe(true)
+  })
+  it('anOldBackendIsRecognisedByItsMessage', () => {
     expect(isContestNotRunning(withBody(400, 'Contest is not running'))).toBe(true)
+  })
+  it('anotherCodeIsNotContestNotRunning', () => {
+    expect(isContestNotRunning(withCode(400, 'QUEUE_FULL', 'Contest is not running'))).toBe(false)
+    expect(isContestNotRunning(withCode(404, 'CONTEST_NOT_RUNNING', 'Contest is not running'))).toBe(false)
   })
   it('otherBadRequestsAreNot', () => {
     expect(isContestNotRunning(withBody(400, 'Invalid request'))).toBe(false)

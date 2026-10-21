@@ -1,5 +1,5 @@
 import { isAxiosError } from 'axios'
-import { getErrorMessage } from './errorMessage'
+import { getErrorCode, getErrorMessage } from './errorMessage'
 import { parseRetryAfter } from './retryAfter'
 
 // Seconds to wait before submitting again after the API pushed back (429 too fast, 503 judge busy,
@@ -11,12 +11,18 @@ export function retryAfterSeconds(err: unknown, fallback: number): number | null
     return parseRetryAfter(err.response?.headers?.['retry-after'], fallback)
 }
 
-// The submission service's answer to a contest submit outside the contest's window (CONTEST_NOT_RUNNING).
-const CONTEST_NOT_RUNNING = 'Contest is not running'
+// The submission service's answer to a contest submit outside the contest's window.
+const CONTEST_NOT_RUNNING = 'CONTEST_NOT_RUNNING'
+// Its message. Only for a backend from before oj-common 0.8.1, which sends no code: remove after the rollout window.
+const CONTEST_NOT_RUNNING_MESSAGE = 'Contest is not running'
 
-// True for that 400: the contest ended (or was withdrawn) while the page was open.
+// True for that 400: the contest ended (or was withdrawn) while the page was open. The code decides; the message
+// counts only when there is no code.
 export function isContestNotRunning(err: unknown): boolean {
-    return isAxiosError(err) && err.response?.status === 400 && getErrorMessage(err, '') === CONTEST_NOT_RUNNING
+    if (!isAxiosError(err) || err.response?.status !== 400) return false
+    const code = getErrorCode(err)
+    if (code !== undefined) return code === CONTEST_NOT_RUNNING
+    return getErrorMessage(err, '') === CONTEST_NOT_RUNNING_MESSAGE
 }
 
 // Toast text for a 429/503 push-back: the server's message when it sent one, else a status-aware fallback

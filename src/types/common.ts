@@ -26,6 +26,8 @@ export interface Pagination {
 export interface ApiResponse<T> {
     status: number
     message: string
+    /** On an error answer from oj-common 0.8.1 or later: its ErrorCode name, e.g. CONTEST_NOT_RUNNING. */
+    code?: string
     data: T
     errors?: Record<string, string>
     timestamp: string
