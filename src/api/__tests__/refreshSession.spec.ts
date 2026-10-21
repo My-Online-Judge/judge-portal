@@ -14,6 +14,8 @@ const err = (status: number | undefined, url: string, extra: Record<string, unkn
     }) as unknown as AxiosError
 
 const ok = { status: 200, data: 'retried' } as unknown as AxiosResponse
+/** A refresh the server refused: the refresh token is dead. */
+const refused = (status = 401) => Object.assign(new Error(`Request failed with status code ${status}`), { response: { status } })
 
 let refresh: ReturnType<typeof vi.fn>
 let retry: ReturnType<typeof vi.fn>
@@ -113,8 +115,8 @@ describe('createRefreshOn401', () => {
         expect(retry).toHaveBeenCalledTimes(3)
     })
 
-    it('gives up once and rejects the original error when the refresh fails', async () => {
-        refresh = vi.fn(() => Promise.reject(new Error('refresh token expired')))
+    it('gives up once and rejects the original error when the refresh is refused', async () => {
+        refresh = vi.fn(() => Promise.reject(refused()))
         const handle = build()
         const original = err(401, '/users')
 
@@ -123,9 +125,35 @@ describe('createRefreshOn401', () => {
         expect(retry).not.toHaveBeenCalled()
     })
 
+    it('a 403 from the refresh is a refusal too', async () => {
+        refresh = vi.fn(() => Promise.reject(refused(403)))
+        const handle = build()
+
+        await expect(handle(err(401, '/users'))).rejects.toBeDefined()
+        expect(onGiveUp).toHaveBeenCalledTimes(1)
+    })
+
+    it.each([
+        ['a network error', Object.assign(new Error('Network Error'), { request: {} })],
+        ['a 502 from the edge', refused(502)],
+        ['a 503 while identity restarts', refused(503)],
+    ])('%s on the refresh keeps the session: the original error is rejected, nobody is logged out', async (_, failure) => {
+        refresh = vi.fn(() => Promise.reject(failure))
+        const handle = build()
+        const original = err(401, '/users')
+
+        await expect(handle(original)).rejects.toBe(original)
+        expect(onGiveUp).not.toHaveBeenCalled()
+        expect(retry).not.toHaveBeenCalled()
+
+        // The refresh token is still good: the next 401 tries again.
+        refresh = vi.fn(() => Promise.resolve())
+        await expect(build()(err(401, '/users'))).resolves.toBe(ok)
+    })
+
     it('gives up only once when several concurrent requests share a failed refresh', async () => {
         let reject!: () => void
-        refresh = vi.fn(() => new Promise<void>((_, r) => { reject = () => r(new Error('nope')) }))
+        refresh = vi.fn(() => new Promise<void>((_, r) => { reject = () => r(refused()) }))
         const handle = build()
 
         const pending = [handle(err(401, '/users')), handle(err(401, '/roles'))]
@@ -178,7 +206,7 @@ describe('createRefreshOn401', () => {
         a.catch(() => {})
         b.catch(() => {})
 
-        rejectRound1(new Error('round1 failed'))
+        rejectRound1(refused())
         await flush()
 
         // Round 1 had two waiters sharing the same failed round: exactly one
@@ -192,7 +220,7 @@ describe('createRefreshOn401', () => {
         // Round 2 is a genuinely new, later round -- when it fails too, it
         // must get its own give-up call rather than being swallowed by the
         // round-1 dedupe.
-        rejectRound2(new Error('round2 failed'))
+        rejectRound2(refused())
         await flush()
         expect(onGiveUp).toHaveBeenCalledTimes(2)
 
