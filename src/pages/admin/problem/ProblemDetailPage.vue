@@ -202,6 +202,7 @@ import RichTextEditor from '@/components/admin/editor/RichTextEditor.vue'
 import { useToast } from '@/composables/useToast'
 import { getErrorMessage } from '@/lib/errorMessage'
 import problemService from '@/services/problemService'
+import { ensureFreshSession } from '@/api/refreshSession'
 import { useAuthStore } from '@/stores/auth'
 import type { Problem, UpdateProblemPayload } from '@/types/problem'
 import { relativeTime } from '@/lib/problemDisplay'
@@ -264,6 +265,11 @@ const fetchProblem = async () => {
     loading.value = true
     loadError.value = false
     try {
+        // The problem read is public and answers a lapsed access cookie as anonymous, so a draft would be a 404: wait
+        // for the session, then make it fresh.
+        await authStore.ensureLoaded()
+        await ensureFreshSession()
+        if (controller !== ac) return
         const res = await problemService.getProblemBySlug(ac.signal, slug)
         if (controller !== ac) return
         problem.value = res.data.data

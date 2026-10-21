@@ -12,6 +12,8 @@ const h = vi.hoisted(() => ({
     solveMounts: 0,
     route: null as unknown as { params: Record<string, string> },
     getMe: vi.fn(),
+    ensureFreshSession: vi.fn(),
+    calls: [] as string[],
 }))
 
 vi.mock('@vueuse/core', async (importOriginal) => {
@@ -28,6 +30,10 @@ vi.mock('vue-router', async (importOriginal) => {
 vi.mock('@/services/problemService', () => ({ default: { getProblemBySlug: h.getProblemBySlug } }))
 vi.mock('@/services/contestService', () => ({ default: { get: h.getContest, getProblem: h.getContestProblem } }))
 vi.mock('@/services/authService', () => ({ default: { getMe: h.getMe, logout: vi.fn() } }))
+vi.mock('@/api/refreshSession', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/api/refreshSession')>()),
+    ensureFreshSession: h.ensureFreshSession,
+}))
 // The real SolvePane is stubbed below, but its import chain still reaches Monaco, which needs a real browser.
 vi.mock('@/lib/monaco', () => ({}))
 
@@ -49,7 +55,13 @@ const Slot = defineComponent({ setup: (_, { slots }) => () => render('div', slot
 
 let wrapper: VueWrapper | null = null
 
-beforeEach(() => setActivePinia(createPinia()))
+beforeEach(() => {
+    setActivePinia(createPinia())
+    h.calls.length = 0
+    // Nobody signed in unless a test says so.
+    h.getMe.mockResolvedValue({ data: { data: null } })
+    h.ensureFreshSession.mockImplementation(async () => void h.calls.push('fresh'))
+})
 afterEach(() => {
     wrapper?.unmount()
     wrapper = null
@@ -109,6 +121,42 @@ describe('ProblemDetailPage', () => {
         expect(document.getElementById('problem-view-code')).toBeNull()
         expect(document.querySelector('[data-testid="editor"]')).toBe(editor)
         expect(editor.value).toBe('int main() {}')
+    })
+
+    describe('the session before the read', () => {
+        // A lapsed access cookie makes the public problem read anonymous, and a draft (INACTIVE) problem is a 404 then.
+        const draft = { problemSlug: 'tong-tu-1-den-n', title: 'TỔNG TỪ 1 ĐẾN N', status: 0 }
+        const mountProblemPage = async () => {
+            h.isDesktop.value = true
+            wrapper = mount(ProblemDetailPage, { attachTo: document.body, global: { stubs } })
+            await flushPromises()
+            return wrapper
+        }
+        beforeEach(() => {
+            h.getProblemBySlug.mockImplementation(async () => {
+                h.calls.push('problem')
+                return { data: { data: draft } }
+            })
+        })
+
+        it('aHardLoadAfterALapsedCookieWaitsForTheSessionAndFreshensItBeforeReadingTheProblem', async () => {
+            // The header's /auth/me is on its way (its 401 is being refreshed by the interceptor).
+            let signIn!: (v: unknown) => void
+            h.getMe.mockReturnValue(new Promise((r) => (signIn = r)))
+            const w = await mountProblemPage()
+            expect(h.getProblemBySlug).not.toHaveBeenCalled()
+
+            signIn({ data: { data: { id: 'admin', permissions: ['problem:update'] } } })
+            await flushPromises()
+            expect(h.calls).toEqual(['fresh', 'problem'])
+            expect(w.findComponent(SolvePane).exists()).toBe(true)
+        })
+
+        it('anAnonymousVisitorReadsWithoutARefresh', async () => {
+            await mountProblemPage()
+            expect(h.ensureFreshSession).not.toHaveBeenCalled()
+            expect(h.calls).toEqual(['problem'])
+        })
     })
 
     describe('in a contest', () => {

@@ -117,6 +117,7 @@ import { useFetch } from '@/composables/useFetch'
 import problemService from '@/services/problemService'
 import contestService from '@/services/contestService'
 import { useAuthStore } from '@/stores/auth'
+import { ensureFreshSession } from '@/api/refreshSession'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import type { ContestDetail } from '@/types/contest'
 import type { Submission } from '@/types/submission'
@@ -194,19 +195,27 @@ const {
 // once signed in (the Google sign-in comes back to this page, or a login in place re-runs this).
 const loginPrompt = useLoginPrompt()
 const needsLogin = ref(false)
+// A newer load (the route changed) or leaving the page drops a load still waiting for the session.
+let loadSeq = 0
 const loadProblem = async () => {
-    if (contestSlug.value) {
-        await authStore.ensureLoaded()
-        if (!authStore.user) {
-            needsLogin.value = true
-            loginPrompt.request()
-            return
-        }
+    const mine = ++loadSeq
+    // Wait for the session first: right after a reload the header's /auth/me (and the interceptor's refresh of a lapsed
+    // cookie) may still be on its way. The problem read is public and answers a lapsed cookie as anonymous, so an
+    // editor's draft would be a 404: a signed-in reader makes the session fresh before it.
+    await authStore.ensureLoaded()
+    if (mine !== loadSeq) return
+    if (contestSlug.value && !authStore.user) {
+        needsLogin.value = true
+        loginPrompt.request()
+        return
     }
+    if (authStore.user) await ensureFreshSession()
+    if (mine !== loadSeq) return
     needsLogin.value = false
     await execute()
 }
 onMounted(loadProblem)
+onBeforeUnmount(() => loadSeq++)
 watch(
     () => authStore.user?.id,
     (id) => {
