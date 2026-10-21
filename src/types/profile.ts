@@ -1,6 +1,6 @@
 export interface PublicProfile {
     id: string
-    /** Null when the account has no public username: a Google account's username is its email address. */
+    /** Null only for an unresolved or legacy email-shaped username; Google accounts have a handle since SP14. */
     username: string | null
     name: string
     createdAt: string

@@ -11,8 +11,10 @@ import { withNoReferrerImages } from './sanitize'
 const MAX_EXPAND = 1000
 const MAX_SIZE_EM = 50
 
-// The MathML KaTeX 0.16.47 emits; the corpus test keeps it complete. DOMPurify allows exactly these on top of its
-// html and svg profiles: never its whole MathML profile, never annotation-xml, maction or mglyph, never an href.
+// Every MathML tag and attribute KaTeX 0.16.47 emits for the corpus in the tests (which pin the lists to it). style
+// (on mstyle for \pmb, on menclose for \fcolorbox) is withheld on purpose: dropping it only changes the visually
+// hidden MathML copy. DOMPurify allows exactly these on top of its html and svg profiles: never its whole MathML
+// profile, never annotation-xml, maction or mglyph, never an href.
 export const KATEX_MATHML_TAGS: readonly string[] = Object.freeze([
     'annotation', 'math', 'menclose', 'mfrac', 'mi', 'mn', 'mo', 'mover', 'mpadded', 'mphantom', 'mroot', 'mrow',
     'mspace', 'msqrt', 'mstyle', 'msub', 'msubsup', 'msup', 'mtable', 'mtd', 'mtext', 'mtr', 'munder', 'munderover',
@@ -20,9 +22,9 @@ export const KATEX_MATHML_TAGS: readonly string[] = Object.freeze([
 ])
 export const KATEX_MATHML_ATTRS: readonly string[] = Object.freeze([
     'accent', 'accentunder', 'columnalign', 'columnlines', 'columnspacing', 'depth', 'display', 'displaystyle',
-    'encoding', 'fence', 'height', 'linebreak', 'linethickness', 'lspace', 'mathbackground', 'mathcolor', 'mathsize',
-    'mathvariant', 'maxsize', 'minsize', 'notation', 'rowlines', 'rowspacing', 'rspace', 'scriptlevel', 'separator',
-    'stretchy', 'voffset', 'width', 'xmlns',
+    'encoding', 'fence', 'height', 'largeop', 'linebreak', 'linethickness', 'lspace', 'mathbackground', 'mathcolor',
+    'mathsize', 'mathvariant', 'maxsize', 'minsize', 'notation', 'rowlines', 'rowspacing', 'rspace', 'scriptlevel',
+    'separator', 'stretchy', 'voffset', 'width', 'xmlns',
 ])
 
 /** Sanitises rendered math: KaTeX's HTML and SVG, plus exactly the MathML it emits. */

@@ -9,8 +9,9 @@ interface PublicUser {
 const isEmail = (s: string) => s.includes('@')
 
 /**
- * The username a public page may show. A Google account's username is its email address, which identity answers as
- * null on public reads; one that still arrives is dropped here, because an email is never shown or put in a URL.
+ * The username a public page may show. Since SP14 every account, Google ones included, has a handle; identity answers
+ * a legacy email-shaped username as null on public reads, and one that still arrives is dropped here (defence in
+ * depth), because an email is never shown or put in a URL.
  */
 export const publicHandle = (username: string | null | undefined): string | null =>
     username && !isEmail(username) ? username : null

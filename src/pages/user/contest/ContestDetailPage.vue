@@ -119,6 +119,9 @@ import { formatContestDate, formatDuration, serverOffsetMs } from '@/lib/contest
 import { ROUTE_PATH } from '@/constants/routePath'
 import type { ContestDetail } from '@/types/contest'
 
+// problem-service refuses this slug for a contest; the path /contests/all is the managers' list.
+const RESERVED_SLUG = 'all'
+
 const route = useRoute()
 const authStore = useAuthStore()
 
@@ -139,6 +142,12 @@ let viewer: string | null | undefined
 const load = async ({ quiet = false } = {}): Promise<boolean> => {
     const mine = ++seq
     inFlight?.abort()
+    // The slug "all" is reserved: GET /contests/all is the managers' paged list, never a contest, so do not read it.
+    if (slug.value === RESERVED_SLUG) {
+        inFlight = null
+        state.value = 'notFound'
+        return false
+    }
     const ctl = new AbortController()
     inFlight = ctl
     if (!quiet || !contest.value) state.value = 'loading'

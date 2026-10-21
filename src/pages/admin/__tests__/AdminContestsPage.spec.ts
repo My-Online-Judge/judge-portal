@@ -112,6 +112,8 @@ afterEach(() => {
     wrapper?.unmount()
     wrapper = undefined
     document.body.innerHTML = ''
+    // The debounce tests fake setTimeout; a failed assertion must not leave it faked for the next test.
+    vi.useRealTimers()
     vi.clearAllMocks()
 })
 

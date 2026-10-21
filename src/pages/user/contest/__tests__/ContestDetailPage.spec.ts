@@ -27,7 +27,7 @@ vi.mock('@/api/refreshSession', async (importOriginal) => ({
     ensureFreshSession: h.ensureFreshSession,
 }))
 
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import ContestDetailPage from '../ContestDetailPage.vue'
 
 const ScoreboardStub = defineComponent({
@@ -247,5 +247,18 @@ describe('ContestDetailPage', () => {
         h.get.mockRejectedValue({ isAxiosError: true, response: { status: 404 } })
         const w = await mountPage()
         expect(w.text()).toContain('Contest not found')
+    })
+
+    it('theReservedSlugAllSaysNotFoundWithoutReadingTheManagersList', async () => {
+        const route = useRoute() as unknown as { params: { slug: string } }
+        route.params.slug = 'all'
+        try {
+            const w = await mountPage()
+            expect(w.text()).toContain('Contest not found')
+            expect(h.get).not.toHaveBeenCalled()
+            expect(h.ensureFreshSession).not.toHaveBeenCalled()
+        } finally {
+            route.params.slug = 'spring-cup'
+        }
     })
 })

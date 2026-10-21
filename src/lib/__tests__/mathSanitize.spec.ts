@@ -66,6 +66,7 @@ const CORPUS = [
     '\\begin{array}{c}a\\\\\\hline b\\end{array}',
     '{\\large x}',
     'a \\newline b',
+    '\\smallint',
 ]
 
 const MATHML_NS = 'http://www.w3.org/1998/Math/MathML'

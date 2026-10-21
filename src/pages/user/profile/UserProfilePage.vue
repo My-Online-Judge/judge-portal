@@ -23,7 +23,7 @@
                 <div class="min-w-0">
                     <h1 class="truncate text-xl font-semibold tracking-[-0.02em]">{{ heading }}</h1>
                     <p class="text-sm text-muted-foreground">
-                        <!-- A Google account has no public username: its username is its email address. -->
+                        <!-- No handle only for an unresolved or legacy email-shaped username; Google accounts have a handle since SP14. -->
                         <span v-if="handle" class="mr-2 font-mono">@{{ handle }}</span>
                         <span>Joined {{ joined }}</span>
                     </p>
