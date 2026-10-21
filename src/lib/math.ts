@@ -1,5 +1,6 @@
 import DOMPurify from 'dompurify'
 import katex from 'katex'
+import { withNoReferrerImages } from './sanitize'
 
 // Math in statements: $...$ is inline, $$...$$ is display, \$ is a literal dollar sign. Runs on HTML that
 // sanitizeHtml has already cleaned. Nothing KaTeX emits is trusted: each formula goes through sanitizeMathOutput, and
@@ -45,17 +46,18 @@ const dropForeignLinks = (node: Element, data: { attrName: string; keepAttr: boo
 
 /**
  * The second pass, over the whole statement with its formulas in place: the same profiles and MathML lists, but an
- * href is dropped only outside HTML, so the statement's own links survive. The hook is registered for this call only.
+ * href is dropped only outside HTML, so the statement's own links survive, and images get no-referrer as in
+ * sanitizeHtml. The hooks are registered for this call only.
  */
 export function sanitizeMathStatement(html: string): string {
     DOMPurify.addHook('uponSanitizeAttribute', dropForeignLinks)
     try {
-        return DOMPurify.sanitize(html, {
+        return withNoReferrerImages(() => DOMPurify.sanitize(html, {
             USE_PROFILES: { html: true, svg: true },
             ADD_TAGS: [...KATEX_MATHML_TAGS],
             ADD_ATTR: [...KATEX_MATHML_ATTRS],
             FORBID_TAGS: ['annotation-xml', 'maction', 'mglyph'],
-        })
+        }))
     } finally {
         DOMPurify.removeHook('uponSanitizeAttribute', dropForeignLinks)
     }

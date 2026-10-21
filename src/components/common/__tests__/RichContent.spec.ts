@@ -18,6 +18,15 @@ describe('RichContent', () => {
         expect(w.find('.katex-mathml annotation[encoding="application/x-tex"]').text()).toBe('1 \\le n')
     })
 
+    it('statementImagesSendNoReferrer', () => {
+        // With and without math: the second sanitising pass (formulas present) must not lose the policy.
+        for (const html of ['<p><img src="https://example.com/p.gif"></p>', '<p><img src="https://example.com/p.gif"> $x$</p>']) {
+            const img = mount(RichContent, { props: { html } }).find('img')
+            expect(img.exists(), html).toBe(true)
+            expect(img.attributes('referrerpolicy'), html).toBe('no-referrer')
+        }
+    })
+
     it('rendersNothingForEmpty', () => {
         expect(mount(RichContent, { props: { html: null } }).text()).toBe('')
     })

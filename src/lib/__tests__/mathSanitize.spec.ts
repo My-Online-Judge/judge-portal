@@ -136,7 +136,9 @@ describe('sanitizeMathOutput', () => {
     })
 
     it('onlyTheListedMathmlPasses', () => {
-        for (const sanitize of [sanitizeMathOutput, sanitizeMathStatement]) expectInert(sanitize)
+        expectInert(sanitizeMathOutput, '<img src="x">')
+        // The statement stage also gives every image no-referrer (sanitize.ts).
+        expectInert(sanitizeMathStatement, '<img src="x" referrerpolicy="no-referrer">')
     })
 
     it('anHrefOnMathmlIsStrippedInBothStages', () => {
@@ -202,7 +204,7 @@ describe('renderMath MathML', () => {
     })
 })
 
-function expectInert(sanitize: (html: string) => string) {
+function expectInert(sanitize: (html: string) => string, img: string) {
     const payloads = [
         '<math><annotation-xml encoding="text/html"><img src=x onerror=alert(1)></annotation-xml></math>',
         '<math><maction actiontype="statusline#x">x</maction></math>',
@@ -217,9 +219,9 @@ function expectInert(sanitize: (html: string) => string) {
     // the image reaches DOMPurify as an ordinary top-level <img>, which statements may carry. Its handler is gone
     // and it is outside any MathML: the same as `<img src=x onerror=alert(1)>` written in plain HTML.
     const breakouts: Record<string, string> = {
-        '<svg><math><mi><img src=x onerror=alert(1)></mi></math></svg>': '<svg></svg><img src="x">',
+        '<svg><math><mi><img src=x onerror=alert(1)></mi></math></svg>': `<svg></svg>${img}`,
         '<math><semantics><annotation><img src=x onerror=alert(1)></annotation></semantics></math>':
-            '<math><semantics><annotation></annotation></semantics></math><img src="x">',
+            `<math><semantics><annotation></annotation></semantics></math>${img}`,
     }
     const banned = ['onerror', '<script', '<style', 'href', 'javascript:', 'annotation-xml', 'maction', 'mglyph']
     for (const payload of payloads) {

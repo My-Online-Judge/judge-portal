@@ -1,13 +1,29 @@
+// @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
+import DOMPurify from 'dompurify'
 import { sanitizeHtml } from '@/lib/sanitize'
 
-// Note: the actual HTML-stripping is DOMPurify's job and needs a DOM, which this
-// repo's node-based test env does not provide. These tests cover our own guard
-// logic — the nullish handling that lets callers pass optional fields directly.
 describe('sanitizeHtml', () => {
     it('returns empty string for nullish or empty input', () => {
         expect(sanitizeHtml('')).toBe('')
         expect(sanitizeHtml(null)).toBe('')
         expect(sanitizeHtml(undefined)).toBe('')
+    })
+
+    it('imagesSendNoReferrer', () => {
+        const doc = new DOMParser().parseFromString(sanitizeHtml('<p><img src="https://example.com/p.gif" alt="p"></p>'), 'text/html')
+        expect(doc.querySelector('img')?.getAttribute('referrerpolicy')).toBe('no-referrer')
+        expect(doc.querySelector('img')?.getAttribute('src')).toBe('https://example.com/p.gif')
+    })
+
+    it('anAuthorsReferrerPolicyIsReplaced', () => {
+        const out = sanitizeHtml('<img src="https://example.com/p.gif" referrerpolicy="unsafe-url">')
+        expect(out).toContain('referrerpolicy="no-referrer"')
+        expect(out).not.toContain('unsafe-url')
+    })
+
+    it('theImageHookIsGoneAfterTheCall', () => {
+        sanitizeHtml('<img src="https://example.com/p.gif">')
+        expect(DOMPurify.sanitize('<img src="https://example.com/p.gif">')).not.toContain('referrerpolicy')
     })
 })
