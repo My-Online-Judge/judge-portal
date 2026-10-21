@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import DOMPurify from 'dompurify'
 import { sanitizeHtml } from '@/lib/sanitize'
 
@@ -24,6 +24,18 @@ describe('sanitizeHtml', () => {
 
     it('theImageHookIsGoneAfterTheCall', () => {
         sanitizeHtml('<img src="https://example.com/p.gif">')
+        expect(DOMPurify.sanitize('<img src="https://example.com/p.gif">')).not.toContain('referrerpolicy')
+    })
+
+    it('theImageHookIsGoneWhenSanitisingThrows', () => {
+        const spy = vi.spyOn(DOMPurify, 'sanitize').mockImplementationOnce(() => {
+            throw new Error('boom')
+        })
+        try {
+            expect(() => sanitizeHtml('<img src="https://example.com/p.gif">')).toThrow('boom')
+        } finally {
+            spy.mockRestore()
+        }
         expect(DOMPurify.sanitize('<img src="https://example.com/p.gif">')).not.toContain('referrerpolicy')
     })
 })

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import katex from 'katex'
 import { KATEX_MATHML_ATTRS, KATEX_MATHML_TAGS, renderMath, sanitizeMathOutput, sanitizeMathStatement } from '../math'
 
@@ -205,6 +205,23 @@ describe('sanitizeMathOutput', () => {
             USE_PROFILES: { svg: true },
         })
         expect(plain).toContain('href')
+    })
+
+    it('theHooksAreGoneWhenSanitisingThrows', async () => {
+        const DOMPurify = (await import('dompurify')).default
+        const spy = vi.spyOn(DOMPurify, 'sanitize').mockImplementationOnce(() => {
+            throw new Error('boom')
+        })
+        try {
+            expect(() => sanitizeMathStatement('<math><mi>x</mi></math>')).toThrow('boom')
+        } finally {
+            spy.mockRestore()
+        }
+        const plain = DOMPurify.sanitize('<svg><a href="https://example.com/svg"><path d="M0 0"></path></a></svg><img src="a">', {
+            USE_PROFILES: { html: true, svg: true },
+        })
+        expect(plain).toContain('href')
+        expect(plain).not.toContain('referrerpolicy')
     })
 })
 
