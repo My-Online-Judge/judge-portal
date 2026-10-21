@@ -252,6 +252,24 @@ describe('UserProfilePage', () => {
     })
   })
 
+  it('aProfileRendersNoImageAtAll', async () => {
+    // An older identity still sends a Google photo URL: the page shows initials and never asks that host for anything.
+    h.getPublicProfile.mockResolvedValue({
+      data: { data: { ...profile, avatar: 'https://lh3.googleusercontent.com/a/photo' } },
+    })
+    const w = await mountPage(null)
+    expect(w.text()).toContain('Alice Tran')
+    expect(w.find('img').exists()).toBe(false)
+    expect(w.html()).not.toContain('googleusercontent')
+  })
+
+  it('initialsComeFromTheName', async () => {
+    h.getPublicProfile.mockResolvedValue({ data: { data: { ...profile, username: 'le_thanh_tuan', name: 'Lê Thanh Tuấn' } } })
+    const w = await mountPage(null)
+    expect(w.get('header').text()).toContain('LT')
+    expect(w.get('header').text()).toContain('@le_thanh_tuan')
+  })
+
   it('theOwnerCanOpenASubmissionFromTheKeyboard', async () => {
     const other = await mountPage('someone-else')
     expect(other.find('tbody button').exists()).toBe(false)

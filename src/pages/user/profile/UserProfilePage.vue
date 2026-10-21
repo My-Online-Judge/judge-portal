@@ -16,8 +16,8 @@
 
         <template v-else-if="profile && stats">
             <header class="flex items-center gap-4">
+                <!-- Initials only: a public page never loads a third-party photo, which would tell its host who looks. -->
                 <Avatar class="size-16">
-                    <AvatarImage v-if="profile.avatar" :src="profile.avatar" :alt="heading" />
                     <AvatarFallback class="bg-primary-soft text-lg font-semibold text-info-ink">{{ initials }}</AvatarFallback>
                 </Avatar>
                 <div class="min-w-0">
@@ -91,7 +91,7 @@ import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { isAxiosError } from 'axios'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import Loading from '@/components/common/Loading.vue'
 import StatCell from '@/components/common/StatCell.vue'
 import StatStrip from '@/components/common/StatStrip.vue'

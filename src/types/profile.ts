@@ -3,7 +3,6 @@ export interface PublicProfile {
     /** Null when the account has no public username: a Google account's username is its email address. */
     username: string | null
     name: string
-    avatar: string | null
     createdAt: string
 }
 

@@ -44,4 +44,18 @@ describe('profilePath', () => {
         expect(profilePath({ id: ID, username: 'alice@gmail.com' })).toBe(`/u/id/${ID}`)
         expect(profilePath({ id: ID, username: null })).toBe(`/u/id/${ID}`)
     })
+
+    // Google accounts get a handle derived from their display name (SP14 Q1): it links like any username.
+    it('aGoogleHandleLinksByHandle', () => {
+        expect(profilePath({ id: ID, username: 'nguyen_van_a' })).toBe('/u/nguyen_van_a')
+    })
+
+    it('anEmailUsernameStillLinksById', () => {
+        expect(profilePath({ id: ID, username: 'nguyen.van.a@gmail.com' })).toBe(`/u/id/${ID}`)
+    })
+
+    it('byIdRouteStaysForAccountsWithoutAHandle', () => {
+        expect(profilePath({ id: ID })).toBe(`/u/id/${ID}`)
+        expect(profilePath({ id: ID, username: '' })).toBe(`/u/id/${ID}`)
+    })
 })
