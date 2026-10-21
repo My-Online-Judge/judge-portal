@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
 import katex from 'katex'
-import { KATEX_MATHML_ATTRS, KATEX_MATHML_TAGS, sanitizeMathOutput, sanitizeMathStatement } from '../math'
+import { KATEX_MATHML_ATTRS, KATEX_MATHML_TAGS, renderMath, sanitizeMathOutput, sanitizeMathStatement } from '../math'
 
 // The production options (src/lib/math.ts renderOne), with both outputs.
 const OPTIONS = {
@@ -83,7 +83,8 @@ function mathmlOf(tex: string, displayMode: boolean): Element {
  * KaTeX nests elements inside an <mo> for a few constructs (\bmod, \overset and \underset of a relation). <mo> is a
  * MathML text integration point, so the HTML parser builds those children as HTML elements named mrow or mi: they
  * are not MathML in any browser, and DOMPurify drops them (an HTML element with a MathML name is how mXSS hides).
- * This is the subtree with them removed, which is what must come back unchanged.
+ * This is the subtree with them removed, which is what must come back unchanged. (renderMath unwraps them before
+ * this stage, so their text survives: see operatorsKatexNestsInsideAnMoKeepTheirText.)
  */
 function withoutStrayHtml(mathml: Element): string {
     const copy = mathml.cloneNode(true) as Element
@@ -172,6 +173,32 @@ describe('sanitizeMathOutput', () => {
             USE_PROFILES: { svg: true },
         })
         expect(plain).toContain('href')
+    })
+})
+
+describe('renderMath MathML', () => {
+    it('operatorsKatexNestsInsideAnMoKeepTheirText', () => {
+        // KaTeX nests elements inside these <mo>; the parser makes them HTML, so they are unwrapped, not dropped.
+        const spoken: Record<string, string> = {
+            'a \\bmod b': 'mod',
+            '\\overset{!}{=}': '=!',
+            '\\underset{x}{\\arg\\min}': 'arg',
+        }
+        for (const [tex, text] of Object.entries(spoken)) {
+            for (const display of [false, true]) {
+                const mark = display ? '$$' : '$'
+                const doc = new DOMParser().parseFromString(renderMath(`<p>${mark}${tex}${mark}</p>`), 'text/html')
+                const math = doc.querySelector('.katex-mathml math')
+                expect(math, tex).not.toBeNull()
+                expect(doc.querySelector('.katex-mathml annotation')?.textContent, tex).toBe(tex)
+                for (const mo of math!.querySelectorAll('mo')) expect(mo.textContent?.trim(), `${mark}${tex}`).not.toBe('')
+                const semantics = math!.querySelector('semantics')!.cloneNode(true) as Element
+                semantics.querySelector('annotation')?.remove()
+                expect(semantics.textContent, `${mark}${tex}`).toContain(text)
+                // Unwrapping leaves only MathML under <math>.
+                for (const el of math!.querySelectorAll('*')) expect(el.namespaceURI, `${mark}${tex}`).toBe(MATHML_NS)
+            }
+        }
     })
 })
 

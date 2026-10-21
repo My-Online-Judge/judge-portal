@@ -126,12 +126,29 @@ function texNodes(root: Node): Text[] {
     return found
 }
 
+const MATHML_NS = 'http://www.w3.org/1998/Math/MathML'
+
+/**
+ * KaTeX nests elements inside an <mo> for a few constructs (\bmod, \overset and \underset of a relation). <mo> is a
+ * MathML text integration point, so the HTML parser builds those children as HTML elements, which DOMPurify drops
+ * with their text. Each non-MathML element under <math> is replaced by its children, innermost first, so the <mo>
+ * keeps its text ("mod", "=") for screen readers. The result is still sanitised.
+ */
+function unwrapStrayHtml(rendered: string): string {
+    const holder = document.createElement('template')
+    holder.innerHTML = rendered
+    const stray = [...holder.content.querySelectorAll('math *')].filter((el) => el.namespaceURI !== MATHML_NS)
+    if (stray.length === 0) return rendered
+    for (const el of stray.reverse()) el.replaceWith(...el.childNodes)
+    return holder.innerHTML
+}
+
 // throwOnError:false only covers KaTeX's ParseError. Anything else (a RangeError from thousands of nested braces, an
 // internal bug) would break the whole statement, so the formula falls back to its own source as plain text.
 function renderOne(p: { tex: string; display: boolean }): Node {
     try {
         const holder = document.createElement('template')
-        holder.innerHTML = sanitizeMathOutput(katex.renderToString(p.tex, {
+        holder.innerHTML = sanitizeMathOutput(unwrapStrayHtml(katex.renderToString(p.tex, {
             displayMode: p.display,
             throwOnError: false,
             trust: false,
@@ -139,7 +156,7 @@ function renderOne(p: { tex: string; display: boolean }): Node {
             strict: 'ignore',
             maxExpand: MAX_EXPAND,
             maxSize: MAX_SIZE_EM,
-        }))
+        })))
         return holder.content
     } catch {
         const mark = p.display ? '$$' : '$'
