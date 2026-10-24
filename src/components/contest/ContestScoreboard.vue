@@ -34,9 +34,11 @@
                             </template>
                         </TableCell>
                     </TableRow>
+                    <!-- h-16 on the pinned and problem cells fits a solved cell's two lines, so every row keeps one height and a
+                         first accept does not push the rows below it down. A table cell's height is its minimum. -->
                     <TableRow v-for="row in rows" :key="row.user.id" class="group">
-                        <TableCell class="sticky left-0 z-[1] bg-card text-sm tabular-nums transition-colors group-hover:bg-muted motion-reduce:transition-none" data-col="rank">{{ row.rank }}</TableCell>
-                        <TableCell class="sticky left-16 z-[1] whitespace-normal break-words bg-card transition-colors group-hover:bg-muted motion-reduce:transition-none" data-col="user">
+                        <TableCell class="sticky left-0 z-[1] h-16 bg-card text-sm tabular-nums transition-colors group-hover:bg-muted motion-reduce:transition-none" data-col="rank">{{ row.rank }}</TableCell>
+                        <TableCell class="sticky left-16 z-[1] h-16 whitespace-normal break-words bg-card transition-colors group-hover:bg-muted motion-reduce:transition-none" data-col="user">
                             <!-- The username, else the name (a Google account's username is its email address, which
                                  identity never shows), linked to the profile. -->
                             <RouterLink v-if="publicHandle(row.user.username) || row.user.name" :to="profilePath(row.user)"
@@ -47,7 +49,7 @@
                         <TableCell class="text-right text-sm tabular-nums" data-col="solved">{{ row.solved }}</TableCell>
                         <TableCell class="text-right text-sm tabular-nums" data-col="penalty">{{ row.penalty }}</TableCell>
                         <TableCell v-for="label in labels" :key="label" :data-label="label"
-                            class="text-center text-sm tabular-nums" :class="cellClass(row.problems[label])">
+                            class="h-16 text-center text-sm tabular-nums" :class="cellClass(row.problems[label])">
                             <template v-if="row.problems[label]?.solved">
                                 <span aria-hidden="true" class="flex flex-col items-center leading-tight">
                                     <span class="text-sm font-semibold">{{ solvedMark(row.problems[label]!) }}</span>
