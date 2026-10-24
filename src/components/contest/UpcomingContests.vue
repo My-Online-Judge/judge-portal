@@ -9,7 +9,8 @@
                 <RouterLink :to="`${ROUTE_PATH.CONTESTS}/${item.contest.slug}`" class="group flex flex-col gap-0.5 rounded-sm px-2 py-1.5 transition-colors motion-reduce:transition-none hover:bg-muted">
                     <span class="flex min-w-0 items-start justify-between gap-2">
                         <span class="min-w-0 text-sm font-medium text-foreground group-hover:text-primary">{{ item.contest.title }}</span>
-                        <Badge v-if="item.live" variant="success"><Radio aria-hidden="true" />Live</Badge>
+                        <!-- The same status as the contests pages: text and one icon in the accent ink, at the rail's size. -->
+                        <ContestStatus v-if="item.live" phase="RUNNING" class="shrink-0 text-sm" />
                     </span>
                     <span class="text-sm tabular-nums text-muted-foreground">
                         {{ item.live ? 'Ends in' : 'Starts in' }}
@@ -24,9 +25,8 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Radio } from 'lucide-vue-next'
-import { Badge } from '@/components/ui/badge'
 import ContestCountdown from '@/components/contest/ContestCountdown.vue'
+import ContestStatus from '@/components/contest/ContestStatus.vue'
 import { useFetch } from '@/composables/useFetch'
 import contestService from '@/services/contestService'
 import { serverOffsetMs } from '@/lib/contestTime'
