@@ -67,7 +67,7 @@ function onConfirm() {
         </span>
         <div class="flex min-w-0 flex-col gap-1">
           <AlertDialogTitle class="text-base leading-snug font-semibold">{{ title }}</AlertDialogTitle>
-          <AlertDialogDescription class="text-[13px] text-muted-foreground">{{ description }}</AlertDialogDescription>
+          <AlertDialogDescription class="text-sm text-muted-foreground">{{ description }}</AlertDialogDescription>
         </div>
       </AlertDialogHeader>
       <div v-if="$slots.default" data-slot="confirm-body" class="px-5 pb-4">
