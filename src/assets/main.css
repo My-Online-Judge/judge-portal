@@ -2,6 +2,14 @@
  * nav: top bar, kept destinations · signature: the test ladder, one cell per test under the editor · states: loading, empty, error, full
  * axes: light/grotesk-sans/cool · posture: restrained · contrast: pass · modes: light+dark · v2.0.0 */
 /* Hallmark · pre-emit critique: P4 H5 E4 S4 R5 V4 · weakest: P, a white table app argues little; the judge's answer is the loudest object on the solve screen */
+/* Hallmark · dismissed 73 · the solve page statement scrolls inside its own pane, so its lower lines are clipped there and only sit under the footer in unclipped geometry; the 1440 shot shows the footer below the frame and no text painted over */
+/* Hallmark · dismissed 67 · problem titles arrive in capitals from the seed data; no CSS sets uppercase or tracking on them, and the seed titles are being recased separately */
+/* Hallmark · dismissed F18 · data-slot here is the shadcn-vue component name (button, badge), not a media slot; the sizes are the 36px and 32px controls and a 20px badge */
+/* Hallmark · hit targets: 44px waived on the owner's phone profile row, slug link 31px and time button 33px; the two targets do not overlap and both clear the 24px of WCAG 2.5.8 */
+/* Hallmark · dropped unsaved · it was the name of the Vue Transition in UnsavedChangesBar, not a field; the bar now enters through @starting-style */
+/* Hallmark · dropped onCopy(problem.sampleInput), onCopy(problem.sampleOutput) · not lost: both sample copy buttons now render from one v-for as onCopy(s.text) and keep their aria-labels */
+/* Hallmark · reworded "Sample Input" to "Input", "Sample Output" to "Output" · the two samples now sit under one Example head as figure captions */
+/* Hallmark · dropped 2026 · the copyright year was the footer's second line, which went when the footer became one quiet line */
 @import "tailwindcss";
 @import "tw-animate-css";
 
