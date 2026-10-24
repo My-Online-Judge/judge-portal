@@ -1,46 +1,47 @@
 <template>
-    <div class="tile-detail mt-3" role="region" :aria-label="`Test ${row.name} details`" data-test="detail-pane">
+    <div class="tile-detail" role="region" :aria-label="`Test ${row.name} details`" data-test="detail-pane">
         <div class="head-row">
             <VerdictChip :status="row.result" />
-            <b>Test {{ row.name }}</b>
-            <span class="rounded-md bg-primary/10 px-1.5 text-xs font-medium text-primary">Sample</span>
-            <span class="meta-strip tabular ml-auto font-mono text-xs text-muted-foreground">
+            <span class="font-medium text-foreground">Test {{ row.name }}</span>
+            <span class="text-muted-foreground">Sample</span>
+            <span class="ml-auto flex gap-4 text-ink-2 tabular-nums">
                 <span>{{ formatMs(row.cpuTime) }}</span>
                 <span>{{ formatMem(row.memory) }}</span>
             </span>
         </div>
         <div v-for="box in boxes" :key="box.key" data-test="detail-box">
             <div class="h">
-                <span>{{ box.title }}</span>
-                <span v-if="box.key === 'out' && diffLine != null" class="text-[var(--v-wa-ink)]" data-test="diff-line">
-                    Differs on line {{ diffLine }}
-                </span>
+                <span class="whitespace-nowrap">{{ box.title }}</span>
                 <Button
                     v-if="box.text != null && box.text !== ''"
                     variant="ghost"
-                    size="icon"
-                    class="h-6 w-6"
+                    size="icon-sm"
+                    class="size-6 after:-inset-2.5"
                     :aria-label="`Copy ${box.title.toLowerCase()}`"
                     data-test="copy"
                     @click="copy(box.text)"
                 >
-                    <Copy class="h-3 w-3" />
+                    <Copy class="size-3.5" />
                 </Button>
             </div>
-            <p v-if="box.text == null" class="text-xs italic text-muted-foreground">{{ box.missing }}</p>
-            <p v-else-if="box.text === ''" class="text-xs italic text-muted-foreground">(no output)</p>
+            <p v-if="box.text == null" class="text-sm italic text-muted-foreground">{{ box.missing }}</p>
+            <p v-else-if="box.text === ''" class="text-sm italic text-muted-foreground">(no output)</p>
             <template v-else>
                 <pre class="max-h-48 overflow-auto">{{ display(box) }}</pre>
                 <button
                     v-if="clip(box.text).clipped && !expanded[box.key]"
                     type="button"
-                    class="mt-1 text-xs text-primary underline"
+                    class="mt-1 cursor-pointer whitespace-nowrap text-sm text-primary underline"
                     data-test="show-all"
                     @click="expanded[box.key] = true"
                 >
                     Show all ({{ Math.ceil(box.text.length / 1024) }} KB)
                 </button>
             </template>
+            <!-- Under the well, so the three labels stay on one line in a narrow pane. -->
+            <div v-if="box.key === 'out' && diffLine != null" class="mt-1 text-sm text-v-wa-ink" data-test="diff-line">
+                Differs on line {{ diffLine }}
+            </div>
         </div>
     </div>
 </template>

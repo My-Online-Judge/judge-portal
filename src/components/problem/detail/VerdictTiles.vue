@@ -1,8 +1,8 @@
 <template>
-    <div class="space-y-3 text-sm">
+    <div class="space-y-3">
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
             <VerdictChip size="lg" :status="submission.status" :label="verdictTitle(submission.status, firstFail?.name)" />
-            <span v-if="rows.length" class="meta-strip tabular text-xs text-muted-foreground">
+            <span v-if="rows.length" class="flex flex-wrap gap-4 text-sm text-ink-2 tabular-nums">
                 <span data-test="summary-count">{{ passed }}/{{ rows.length }} tests</span>
                 <span>{{ formatMs(submission.cpuTime) }}</span>
                 <span>{{ formatMem(submission.memory) }}</span>
@@ -11,14 +11,14 @@
 
         <pre
             v-if="submission.status === SubmissionResult.COMPILE_ERROR"
-            class="max-h-48 overflow-auto whitespace-pre-wrap rounded-md bg-foreground p-3 font-mono text-xs text-background"
+            class="max-h-48 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 font-mono text-sm text-foreground"
             data-test="compile-error"
             >{{ submission.errorMessage }}</pre
         >
-        <p v-else-if="submission.status === SubmissionResult.SYSTEM_ERROR" class="text-muted-foreground">
+        <p v-else-if="submission.status === SubmissionResult.SYSTEM_ERROR" class="text-sm text-muted-foreground">
             Something went wrong while judging. Please submit again.
         </p>
-        <p v-else-if="submission.details == null" class="text-muted-foreground">
+        <p v-else-if="submission.details == null" class="text-sm text-muted-foreground">
             Per-test results are not available for this submission.
         </p>
         <template v-else-if="rows.length">
@@ -36,7 +36,7 @@
                                 @click="selected = r.name"
                             >
                                 <span class="tn">{{ r.name }}</span>
-                                <span class="tv"><component :is="iconOf(r)" v-if="iconOf(r)" aria-hidden="true" />{{ tileLabel(r.result) }}</span>
+                                <span class="tv">{{ tileLabel(r.result) }}</span>
                             </button>
                         </span>
                         <Tooltip v-else>
@@ -49,7 +49,7 @@
                                     :style="revealStyle(i)"
                                 >
                                     <span class="tn">{{ r.name }}</span>
-                                    <span class="tv"><component :is="iconOf(r)" v-if="iconOf(r)" aria-hidden="true" />{{ tileLabel(r.result) }}</span>
+                                    <span class="tv">{{ tileLabel(r.result) }}</span>
                                     <Lock class="lock" aria-hidden="true" />
                                 </span>
                             </TooltipTrigger>
@@ -98,7 +98,6 @@ const selectedRow = computed(() => rows.value.find((r) => r.sample && r.name ===
 
 const motionOk = useMediaQuery('(prefers-reduced-motion: no-preference)')
 const revealStyle = (i: number) => (motionOk.value ? { animationDelay: `${i * 30}ms` } : undefined)
-const iconOf = (r: TestCaseResult) => verdictMeta(r.result).icon
 
 const ariaLabel = (r: TestCaseResult) =>
     `Test ${r.name}: ${verdictMeta(r.result).name}${r.sample ? ', sample, show details' : ', hidden'}`

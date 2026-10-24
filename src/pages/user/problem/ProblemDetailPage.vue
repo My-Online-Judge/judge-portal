@@ -1,5 +1,5 @@
 <template>
-    <div class="animate-enter">
+    <div>
         <div v-if="needsLogin" class="flex flex-col items-center gap-3 py-20 text-center">
             <p class="text-sm text-muted-foreground">Log in to open this problem.</p>
             <div class="flex flex-wrap justify-center gap-2">
@@ -25,63 +25,66 @@
         </div>
 
         <template v-else-if="problem">
-            <!-- Page head: back link, title, meta bar (opens the statistics), tags -->
-            <div class="mb-4 flex flex-col gap-3">
-                <RouterLink :to="backTo"
-                    class="inline-flex items-center gap-1 self-start text-[13px] text-muted-foreground hover:text-foreground">
-                    <ChevronLeft class="size-4" aria-hidden="true" /> {{ backLabel }}
-                </RouterLink>
-                <ProblemHeader :problem="problem" />
-                <!-- In a contest that is not running, submissions are practice: say so above the editor. -->
-                <p v-if="contestNote" role="status"
-                    class="flex items-center gap-2 rounded-lg bg-warning-soft px-3.5 py-2.5 text-[13px] text-warning-ink">
-                    <Info class="size-4 shrink-0" aria-hidden="true" />
-                    {{ contestNote }}
-                </p>
-            </div>
+            <!-- 900 px and up the page is one screen tall (less the 65 px header and the main padding): the head takes
+                 what it needs and the workspace the rest, so the editor, the submit bar and the console stay on screen. -->
+            <div :class="isDesktop ? 'flex h-[calc(100dvh-129px)] min-h-[560px] flex-col' : undefined">
+                <!-- Page head: back link, title, meta (opens the statistics) -->
+                <div class="mb-4 flex flex-none flex-col gap-3">
+                    <RouterLink :to="backTo"
+                        class="relative inline-flex items-center gap-1 self-start rounded-sm text-sm text-ink-2 transition-colors motion-reduce:transition-none after:absolute after:inset-x-0 after:-inset-y-3 hover:text-primary">
+                        <ChevronLeft class="size-4" aria-hidden="true" /> {{ backLabel }}
+                    </RouterLink>
+                    <ProblemHeader :problem="problem" />
+                    <!-- In a contest that is not running, submissions are practice: say so above the editor. -->
+                    <p v-if="contestNote" role="status"
+                        class="flex items-center gap-2 rounded-md bg-warning-soft px-3 py-2 text-sm text-warning-ink">
+                        <Info class="size-4 shrink-0" aria-hidden="true" />
+                        {{ contestNote }}
+                    </p>
+                </div>
 
-            <!-- 900 px and up: resizable split-pane (statement | solve) -->
-            <div v-if="isDesktop"
-                class="h-[calc(100vh-15rem)] min-h-[560px] overflow-hidden rounded-xl border border-border bg-background">
-                <ResizablePanelGroup direction="horizontal" auto-save-id="problem-detail-split">
-                    <ResizablePanel ref="statementPanel" :default-size="SPLIT_DEFAULT" :min-size="30">
-                        <section id="problem-pane-problem" aria-label="Problem" class="h-full" />
-                    </ResizablePanel>
-                    <ResizableHandle with-handle aria-label="Resize panes" @dblclick="resetSplit"
-                        @keydown.enter.prevent="resetSplit" />
-                    <ResizablePanel :default-size="100 - SPLIT_DEFAULT" :min-size="30">
-                        <section id="problem-pane-code" aria-label="Code" class="h-full" />
-                    </ResizablePanel>
-                </ResizablePanelGroup>
-            </div>
+                <!-- 900 px and up: one bordered frame, a resizable split (statement | solve) -->
+                <div v-if="isDesktop" class="min-h-0 flex-1 overflow-hidden rounded-lg border border-rule-2 bg-card">
+                    <ResizablePanelGroup direction="horizontal" auto-save-id="problem-detail-split">
+                        <ResizablePanel ref="statementPanel" :default-size="SPLIT_DEFAULT" :min-size="30">
+                            <section id="problem-pane-problem" aria-label="Problem" class="h-full" />
+                        </ResizablePanel>
+                        <ResizableHandle with-handle aria-label="Resize panes" class="before:bg-rule-2" @dblclick="resetSplit"
+                            @keydown.enter.prevent="resetSplit" />
+                        <ResizablePanel :default-size="100 - SPLIT_DEFAULT" :min-size="30">
+                            <section id="problem-pane-code" aria-label="Code" class="h-full" />
+                        </ResizablePanel>
+                    </ResizablePanelGroup>
+                </div>
 
-            <!-- Narrower: a Problem | Code switch. Both views stay mounted, so the editor, the console and its
-                 verdict stream survive the switch; the submit bar is pinned to the bottom in both. -->
-            <div v-else>
-                <div class="overflow-hidden rounded-xl border border-border bg-card">
-                    <div class="border-b border-border px-3 py-2">
-                        <div role="tablist" aria-label="View"
-                            class="flex gap-0.5 rounded-lg border border-border bg-muted p-0.5" @keydown="onViewKeydown">
+                <!-- Narrower: a Problem | Code switch. Both views stay mounted, so the editor, the console and its
+                     verdict stream survive the switch; the submit bar is pinned to the bottom in both. -->
+                <div v-else>
+                    <div class="overflow-hidden rounded-lg border border-rule-2 bg-card">
+                        <div role="tablist" aria-label="View" class="flex gap-1 border-b border-border px-2 py-1.5"
+                            @keydown="onViewKeydown">
                             <button v-for="v in mobileViews" :id="`problem-view-tab-${v.key}`" :key="v.key" type="button"
                                 role="tab" :aria-selected="mobileView === v.key"
                                 :aria-controls="`problem-view-${v.key}`" :tabindex="mobileView === v.key ? 0 : -1"
-                                class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 py-1 text-[12.5px] font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-selected:bg-card aria-selected:text-foreground aria-selected:shadow-[var(--shadow-sm)]"
+                                class="relative inline-flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md px-3 text-base font-medium text-ink-2 transition-colors motion-reduce:transition-none after:absolute after:inset-x-0 after:-inset-y-1.5 hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring aria-selected:bg-primary-soft aria-selected:text-info-ink sm:text-sm"
                                 @click="mobileView = v.key">
-                                <component :is="v.icon" class="size-[15px]" aria-hidden="true" />
+                                <component :is="v.icon" class="size-4" aria-hidden="true" />
                                 {{ v.label }}
                             </button>
                         </div>
+                        <!-- One screen tall below the sticky 65 px header, less this switch row (45 px), the frame's
+                             borders and the pinned submit bar (61 px). -->
+                        <div class="h-[calc(100dvh-173px)] min-h-[420px]">
+                            <div v-show="mobileView === 'problem'" id="problem-view-problem" role="tabpanel"
+                                aria-labelledby="problem-view-tab-problem" class="h-full" />
+                            <div v-show="mobileView === 'code'" id="problem-view-code" role="tabpanel"
+                                aria-labelledby="problem-view-tab-code" class="h-full" />
+                        </div>
                     </div>
-                    <div class="h-[calc(100dvh-10rem)] min-h-[420px]">
-                        <div v-show="mobileView === 'problem'" id="problem-view-problem" role="tabpanel"
-                            aria-labelledby="problem-view-tab-problem" class="h-full" />
-                        <div v-show="mobileView === 'code'" id="problem-view-code" role="tabpanel"
-                            aria-labelledby="problem-view-tab-code" class="h-full" />
-                    </div>
+                    <!-- ProblemSubmit renders its submit bar in here. Full width, above the safe area. -->
+                    <div :id="SUBMIT_BAR_ID" ref="submitBarEl"
+                        class="sticky bottom-0 z-30 -mx-4 bg-background pb-[env(safe-area-inset-bottom,0px)] md:-mx-6" />
                 </div>
-                <!-- ProblemSubmit renders its submit bar in here. Full width, above the safe area. -->
-                <div :id="SUBMIT_BAR_ID" ref="submitBarEl"
-                    class="sticky bottom-0 z-30 -mx-4 bg-card pb-[env(safe-area-inset-bottom,0px)] md:-mx-6" />
             </div>
 
             <!-- One statement pane and one solve pane serve both layouts. Crossing 900 px moves them into the other

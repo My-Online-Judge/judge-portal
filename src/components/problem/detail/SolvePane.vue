@@ -1,5 +1,5 @@
 <template>
-    <div class="flex h-full min-h-0 flex-col bg-card" @keydown="onKeydown">
+    <div class="flex h-full min-h-0 flex-col" @keydown="onKeydown">
         <!-- Ctrl/Cmd+Enter anywhere in the pane submits. Inside the editor Monaco handles the keys itself
              (ProblemSubmit registers the same shortcut there) and stops them before they get here. -->
         <div class="min-h-0 flex-1">

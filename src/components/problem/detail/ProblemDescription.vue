@@ -4,74 +4,60 @@
         <RichContent v-if="problem.description" :html="problem.description" />
 
         <!-- Subject -->
-        <div>
-            <h3 class="mb-2 text-sm font-semibold text-foreground">Subject</h3>
+        <section>
+            <h2 class="mb-4 text-base font-semibold text-foreground">Subject</h2>
             <RichContent :html="problem.subject" />
-        </div>
+        </section>
 
         <!-- Input -->
-        <div>
-            <h3 class="mb-2 text-sm font-semibold text-foreground">Input</h3>
+        <section>
+            <h2 class="mb-4 text-base font-semibold text-foreground">Input</h2>
             <RichContent :html="problem.inputDescription" />
-        </div>
+        </section>
 
         <!-- Output -->
-        <div>
-            <h3 class="mb-2 text-sm font-semibold text-foreground">Output</h3>
+        <section>
+            <h2 class="mb-4 text-base font-semibold text-foreground">Output</h2>
             <RichContent :html="problem.outputDescription" />
-        </div>
+        </section>
 
-        <!-- Sample -->
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-                <h4 class="mb-2 flex items-center gap-2 font-medium text-foreground">
-                    Sample Input
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger as-child>
-                                <button type="button" class="focus:outline-none" aria-label="Copy sample input"
-                                    @click="onCopy(problem.sampleInput)">
-                                    <Copy class="h-3.5 w-3.5 cursor-pointer text-muted-foreground hover:text-foreground" />
-                                </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Click to copy</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                </h4>
-                <pre class="m-0 overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-border bg-muted p-3 font-mono text-sm text-foreground">{{ problem.sampleInput }}</pre>
+        <!-- Sample: two wells, input and output -->
+        <section>
+            <h2 class="mb-4 text-base font-semibold text-foreground">Example</h2>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <figure v-for="s in samples" :key="s.key" class="m-0 min-w-0">
+                    <figcaption class="mb-1 flex min-h-6 items-center justify-between gap-2 text-sm text-muted-foreground">
+                        {{ s.title }}
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger as-child>
+                                    <button type="button" :aria-label="s.copyLabel"
+                                        class="relative inline-flex size-6 cursor-pointer items-center justify-center rounded-sm text-muted-foreground transition-colors motion-reduce:transition-none after:absolute after:-inset-2.5 hover:bg-muted hover:text-foreground"
+                                        @click="onCopy(s.text)">
+                                        <Copy class="size-3.5" aria-hidden="true" />
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Click to copy</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    </figcaption>
+                    <pre class="m-0 overflow-x-auto whitespace-pre-wrap break-words rounded-md bg-muted p-3 font-mono text-sm leading-[1.55] text-foreground">{{ s.text }}</pre>
+                </figure>
             </div>
-            <div>
-                <h4 class="mb-2 flex items-center gap-2 font-medium text-foreground">
-                    Sample Output
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger as-child>
-                                <button type="button" class="focus:outline-none" aria-label="Copy sample output"
-                                    @click="onCopy(problem.sampleOutput)">
-                                    <Copy class="h-3.5 w-3.5 cursor-pointer text-muted-foreground hover:text-foreground" />
-                                </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Click to copy</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                </h4>
-                <pre class="m-0 overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-border bg-muted p-3 font-mono text-sm text-foreground">{{ problem.sampleOutput }}</pre>
-            </div>
-        </div>
+        </section>
 
         <!-- Hint -->
-        <div v-if="problem.hint">
-            <h3 class="mb-2 text-sm font-semibold text-foreground">Hint</h3>
+        <section v-if="problem.hint">
+            <h2 class="mb-4 text-base font-semibold text-foreground">Hint</h2>
             <RichContent :html="problem.hint" />
-        </div>
+        </section>
     </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Copy } from 'lucide-vue-next'
 import {
     Tooltip,
@@ -84,7 +70,12 @@ import type { Problem } from '@/types/problem'
 import { useClipboard } from '@vueuse/core'
 import { useToast } from '@/composables/useToast'
 
-defineProps<{ problem: Problem }>()
+const props = defineProps<{ problem: Problem }>()
+
+const samples = computed(() => [
+    { key: 'in', title: 'Input', text: props.problem.sampleInput, copyLabel: 'Copy sample input' },
+    { key: 'out', title: 'Output', text: props.problem.sampleOutput, copyLabel: 'Copy sample output' },
+])
 
 const { triggerToast } = useToast()
 const { copy } = useClipboard()

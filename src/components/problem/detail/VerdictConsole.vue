@@ -1,20 +1,21 @@
 <template>
-    <div ref="rootEl" class="border-t border-border bg-muted/30 px-4 py-3">
+    <div ref="rootEl" class="max-h-[46%] flex-none overflow-y-auto border-t border-border px-4 py-4">
+        <!-- Up to 46% of the pane: a long ladder scrolls here, and the editor above keeps its room. -->
         <div v-if="!current" class="flex items-center gap-2 text-sm text-muted-foreground">
-            <Terminal class="h-4 w-4 shrink-0" aria-hidden="true" />
+            <Terminal class="size-4 shrink-0" aria-hidden="true" />
             Submit to see your verdict here. Sample tests show their input, expected and your output.
         </div>
         <VerdictTiles v-else-if="terminal" :submission="current" />
-        <div v-else class="space-y-3 text-sm">
-            <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div v-else class="space-y-3">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <VerdictChip size="lg" :status="current.status" />
-                <span class="text-muted-foreground">
+                <span class="text-sm text-ink-2">
                     {{ current.status === SubmissionResult.JUDGING ? 'Running tests' : 'In the queue' }}
                 </span>
-                <span class="tabular ml-auto font-mono text-xs text-muted-foreground">#{{ current.id.substring(0, 8) }}</span>
+                <span class="ml-auto font-mono text-xs text-muted-foreground">#{{ current.id.substring(0, 8) }}</span>
             </div>
             <GhostTiles :state="current.status === SubmissionResult.JUDGING ? 'running' : 'pending'" />
-            <p v-if="current.status === SubmissionResult.JUDGING" class="text-xs text-muted-foreground">
+            <p v-if="current.status === SubmissionResult.JUDGING" class="text-sm text-muted-foreground">
                 Results for every test arrive together when judging finishes.
             </p>
         </div>

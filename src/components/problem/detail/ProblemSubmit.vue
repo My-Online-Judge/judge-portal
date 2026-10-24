@@ -1,9 +1,9 @@
 <template>
     <div class="flex h-full min-h-0 flex-col">
         <!-- Toolbar -->
-        <div class="flex h-[45px] flex-none items-center gap-2 border-b border-border px-2.5">
+        <div class="flex h-11 flex-none items-center gap-2 border-b border-border px-3">
             <Select v-model="selectedLanguage">
-                <SelectTrigger size="sm" class="w-[140px]" aria-label="Language">
+                <SelectTrigger size="sm" class="w-32" aria-label="Language">
                     <SelectValue>
                         {{ selectedLanguage ? selectedLanguage.name : 'Select a language' }}
                     </SelectValue>
@@ -16,7 +16,7 @@
             </Select>
 
             <Select v-model="themeChoice">
-                <SelectTrigger size="sm" class="w-[120px]" aria-label="Editor theme">
+                <SelectTrigger size="sm" class="w-33" aria-label="Editor theme">
                     <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -49,11 +49,12 @@
 
         <!-- Submit bar. On a phone the page pins it to the bottom of the screen, outside this pane. -->
         <Teleport defer :to="submitBarTo ?? 'body'" :disabled="!submitBarTo">
-            <div class="flex flex-none items-center gap-2.5 border-t border-border bg-card py-2 pr-2.5 pl-3.5">
-                <span v-if="disabledReason" id="submit-disabled-reason" class="min-w-0 text-xs text-muted-foreground">{{ disabledReason }}</span>
-                <span v-else class="hidden items-center gap-1 text-xs text-muted-foreground sm:inline-flex" aria-hidden="true">
-                    <kbd v-for="key in ['Ctrl', '↵']" :key="key"
-                        class="rounded-[4px] border border-b-2 border-input bg-card px-[5px] font-mono text-[11px] text-foreground">{{ key }}</kbd>
+            <div class="flex flex-none items-center gap-3 border-t border-border px-3 py-3">
+                <span v-if="disabledReason" id="submit-disabled-reason" class="min-w-0 text-sm text-muted-foreground">{{ disabledReason }}</span>
+                <span v-else class="hidden items-center gap-1 text-sm text-muted-foreground sm:inline-flex" aria-hidden="true">
+                    <kbd class="inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-rule-2 px-1 font-mono text-xs text-ink-2">Ctrl</kbd>
+                    +
+                    <kbd class="inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-rule-2 px-1 font-mono text-xs text-ink-2">↵</kbd>
                     submits
                 </span>
                 <span class="flex-1" />
@@ -64,7 +65,7 @@
                     <Loader2 v-if="isSubmitting" class="animate-spin motion-reduce:animate-none" />
                     <Timer v-else-if="cooldownActive" />
                     <Send v-else />
-                    <span :class="{ 'tabular font-mono': cooldownActive && !isSubmitting }">
+                    <span :class="{ tabular: cooldownActive && !isSubmitting }">
                         {{ isSubmitting ? 'Submitting…' : cooldownActive ? `Submit (${cooldownRemaining}s)` : 'Submit' }}
                     </span>
                 </Button>
