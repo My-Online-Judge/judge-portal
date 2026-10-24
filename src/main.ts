@@ -5,6 +5,7 @@ import { createPinia } from 'pinia'
 // the right face on a LAN without internet. main.css names the families in --font-display, --font-sans and --font-mono.
 import '@fontsource/familjen-grotesk/600.css'
 import '@fontsource/ibm-plex-sans/400.css'
+import '@fontsource/ibm-plex-sans/400-italic.css'
 import '@fontsource/ibm-plex-sans/500.css'
 import '@fontsource/ibm-plex-sans/600.css'
 import '@fontsource/jetbrains-mono/400.css'

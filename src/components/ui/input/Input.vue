@@ -24,9 +24,9 @@ const modelValue = useVModel(props, "modelValue", emits, {
     v-model="modelValue"
     data-slot="input"
     :class="cn(
-      'file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input bg-card hover:border-[color-mix(in_oklch,var(--input)_60%,var(--foreground))] h-9 w-full min-w-0 rounded-md border px-2.5 py-1 text-base transition-[color,box-shadow,border-color] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-60 md:text-sm',
-      'focus-visible:border-ring focus-visible:ring-ring/25 focus-visible:ring-[3px]',
-      'aria-invalid:ring-destructive/20 aria-invalid:border-destructive',
+      'file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-input bg-transparent hover:border-[color-mix(in_oklch,var(--input)_60%,var(--foreground))] h-9 w-full min-w-0 rounded-md border px-2.5 py-1 text-base transition-[color,border-color] duration-[120ms] motion-reduce:transition-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-60 md:text-sm',
+      'focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ring',
+      'aria-invalid:border-destructive aria-invalid:focus-visible:outline-destructive',
       props.class,
     )"
   >
