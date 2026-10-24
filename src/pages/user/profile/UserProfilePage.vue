@@ -72,9 +72,11 @@
                                 </TableCell>
                                 <TableCell class="px-2 sm:px-3">
                                     <RouterLink :to="`/problems/${s.problemSlug}`"
-                                        class="relative rounded-sm font-mono text-sm whitespace-nowrap text-foreground after:absolute after:inset-x-0 after:-inset-y-3 hover:text-link hover:underline" @click.stop>{{ s.problemSlug }}</RouterLink>
+                                        class="relative rounded-sm font-mono text-sm whitespace-nowrap text-foreground after:absolute after:inset-x-0 after:-inset-y-3 hover:text-link hover:underline"
+                                        :class="isOwner && 'max-sm:after:bottom-0'" @click.stop>{{ s.problemSlug }}</RouterLink>
+                                    <!-- The slug's hit target ends at its bottom edge and this button's starts at its top edge, so the two never overlap. -->
                                     <div class="mt-1 flex flex-wrap gap-x-3 text-sm text-ink-2 tabular-nums sm:hidden">
-                                        <button v-if="isOwner" type="button" class="relative rounded-sm whitespace-nowrap after:absolute after:inset-x-0 after:-inset-y-3 hover:text-link hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                        <button v-if="isOwner" type="button" class="relative rounded-sm whitespace-nowrap after:absolute after:inset-x-0 after:top-0 after:-bottom-3 hover:text-link hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                                             :aria-label="`Open submission from ${formatDateTime(s.createdAt)}`" @click.stop="openDetail(s.id)">{{ formatDateTime(s.createdAt) }}</button>
                                         <span v-else class="whitespace-nowrap">{{ formatDateTime(s.createdAt) }}</span>
                                         <span>{{ s.language }}</span>
