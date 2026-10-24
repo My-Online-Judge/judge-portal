@@ -2,7 +2,6 @@
     <Dialog :open="open" @update:open="$emit('update:open', $event)">
         <DialogContent class="sm:max-w-[400px]" @pointer-down-outside="blockWhileLoading" @focus-outside="blockWhileLoading" @escape-key-down="blockWhileLoading" @close="$emit('close')">
             <DialogHeader class="items-center text-center">
-                <span class="strip mb-2.5 origin-center scale-[1.4] self-center" aria-hidden="true"><i class="ok" /><i class="ok" /><i class="ok" /><i class="ok" /><i class="p" /><i class="dim" /></span>
                 <DialogTitle class="text-center">Log in to My Online Judge</DialogTitle>
                 <DialogDescription class="text-center">
                     Track what you've solved and submit from any device.

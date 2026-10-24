@@ -9,14 +9,12 @@
             <DialogOverlay
                 class="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 motion-reduce:animate-none" />
             <DialogContent aria-label="Navigation" :aria-describedby="undefined"
-                class="fixed inset-y-0 left-0 z-50 flex h-full w-[272px] max-w-[85vw] flex-col gap-3.5 border-r border-border bg-card px-2.5 py-3 shadow-[var(--shadow-lg)] outline-none data-[state=open]:animate-in data-[state=open]:slide-in-from-left data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left motion-reduce:animate-none">
+                class="fixed inset-y-0 left-0 z-50 flex h-full w-72 max-w-[85vw] flex-col gap-2 border-r border-border bg-background p-3 shadow-[var(--shadow-overlay)] outline-none data-[state=open]:animate-in data-[state=open]:slide-in-from-left data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left motion-reduce:animate-none">
                 <DialogTitle class="sr-only">Navigation</DialogTitle>
-                <div class="flex items-center gap-2 px-2 pt-1 pb-1.5">
-                    <RouterLink to="/problems"
-                        class="flex items-center gap-[9px] rounded-md text-[15px] font-bold tracking-[-0.03em] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                <div class="flex h-10 items-center gap-2 pl-3">
+                    <RouterLink to="/problems" class="flex min-h-11 items-center rounded-sm"
                         aria-label="My Online Judge, problems" @click="open = false">
-                        <span class="strip" aria-hidden="true"><i class="ok" /><i class="ok" /><i class="ok" /><i class="ok" /><i class="p" /><i class="dim" /></span>
-                        <span>MOJ</span>
+                        <span class="font-display text-lg text-foreground">MOJ</span>
                     </RouterLink>
                     <DialogClose as-child>
                         <Button variant="ghost" size="icon-sm" class="ml-auto" aria-label="Close menu">
@@ -24,10 +22,10 @@
                         </Button>
                     </DialogClose>
                 </div>
-                <nav aria-label="Main" class="flex flex-col gap-px">
+                <nav aria-label="Main" class="flex flex-col">
                     <RouterLink v-for="item in items" :key="item.to" :to="item.to"
-                        class="flex h-10 items-center gap-2.5 rounded-[7px] px-2.5 text-[13.5px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        active-class="!bg-primary-soft !font-semibold !text-info-ink" @click="open = false">
+                        class="relative flex min-h-11 items-center gap-2.5 rounded-sm px-3 text-sm font-medium text-ink-2 transition-colors motion-reduce:transition-none hover:bg-muted hover:text-foreground"
+                        active-class="!text-foreground after:absolute after:inset-y-0 after:left-0 after:w-0.5 after:bg-primary" @click="open = false">
                         <component :is="item.icon" class="size-4 shrink-0" aria-hidden="true" />
                         {{ item.label }}
                     </RouterLink>

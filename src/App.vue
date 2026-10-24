@@ -5,13 +5,12 @@
   <div v-else class="flex min-h-screen flex-col bg-background text-foreground">
     <Header />
 
-    <main class="mx-auto w-full max-w-[84rem] flex-1 px-4 py-8 md:px-6 lg:px-8">
+    <main class="mx-auto w-full max-w-[84rem] flex-1 px-4 py-8 md:px-6 lg:px-10">
       <RouterView />
     </main>
 
-    <footer class="border-t border-border py-8 text-center">
-      <p class="text-sm text-muted-foreground">MyOJ. Practice, submit and get judged in real time.</p>
-      <p class="mt-1 text-xs text-muted-foreground/60">© {{ new Date().getFullYear() }} MyOJ</p>
+    <footer class="border-t border-border py-6 text-sm text-muted-foreground">
+      <p class="mx-auto w-full max-w-[84rem] px-4 md:px-6 lg:px-10">MyOJ. Practice, submit and get judged in real time.</p>
     </footer>
   </div>
 

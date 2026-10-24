@@ -25,11 +25,8 @@
                         aria-label="MOJ admin, dashboard"
                         @click="sidebarOpen = false"
                     >
-                        <span class="strip" aria-hidden="true"><i class="ok" /><i class="ok" /><i class="ok" /><i class="ok" /><i class="p" /><i class="dim" /></span>
-                        <template v-if="!rail">
-                            <span>MOJ</span>
-                            <Badge variant="neutral" class="h-5">Admin</Badge>
-                        </template>
+                        <span class="font-display">MOJ</span>
+                        <Badge v-if="!rail" variant="neutral" class="h-5">Admin</Badge>
                     </RouterLink>
                     <Button
                         variant="ghost"
