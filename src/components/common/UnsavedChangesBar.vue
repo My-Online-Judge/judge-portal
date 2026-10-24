@@ -32,7 +32,7 @@ useEventListener(window, 'keydown', (e: KeyboardEvent) => {
         v-if="dirty"
         role="region"
         aria-label="Unsaved changes"
-        class="unsaved-bar sticky bottom-0 z-20 flex w-full flex-wrap items-center gap-3 border-t border-border bg-popover px-4 py-3 text-sm text-popover-foreground"
+        class="unsaved-bar sticky bottom-4 z-20 mx-auto flex w-full max-w-[620px] flex-wrap items-center gap-3 rounded-lg border border-border bg-popover py-2 pr-2 pl-4 text-sm text-popover-foreground shadow-[var(--shadow-overlay)]"
     >
         <CircleDot class="size-4 shrink-0 text-warning-ink" aria-hidden="true" />
         <span class="min-w-0 flex-1 basis-40">
@@ -57,7 +57,7 @@ useEventListener(window, 'keydown', (e: KeyboardEvent) => {
 
 <style scoped>
 /* Visible by default; the entrance starts from a slight lift and fades in. The bar is removed (v-if) while clean,
-   so nothing is left hidden in the layout. */
+   so nothing is left hidden in the layout. It floats as a pill (bottom-4, centred, 620 px) until the admin redesign. */
 .unsaved-bar {
     transition: opacity 160ms ease-out, transform 160ms ease-out;
 }
