@@ -42,22 +42,22 @@
                                 <TableCell class="py-2 pl-4">
                                     <span :class="['inline-flex items-center gap-2', `v-${verdictMeta(sub.status).tone}`]">
                                         <VerdictChip size="sm" :status="sub.status" />
-                                        <span class="text-[13px] font-medium whitespace-nowrap text-[var(--vi)]">{{ verdictMeta(sub.status).name }}</span>
+                                        <span class="text-sm font-medium whitespace-nowrap text-[var(--vi)]">{{ verdictMeta(sub.status).name }}</span>
                                     </span>
                                 </TableCell>
-                                <TableCell class="tabular py-2 text-[12.5px]">{{ testsOf(sub) }}</TableCell>
-                                <TableCell class="tabular py-2 text-[12.5px]">
+                                <TableCell class="tabular py-2 text-xs">{{ testsOf(sub) }}</TableCell>
+                                <TableCell class="tabular py-2 text-xs">
                                     {{ sub.cpuTime != null ? `${sub.cpuTime} ms` : '-' }}
                                 </TableCell>
-                                <TableCell class="tabular py-2 text-[12.5px]">
+                                <TableCell class="tabular py-2 text-xs">
                                     {{ sub.memory ? `${(sub.memory / (1024 * 1024)).toFixed(1)} MB` : '-' }}
                                 </TableCell>
-                                <TableCell class="py-2 text-[13px]">{{ sub.language?.name ?? '-' }}</TableCell>
-                                <TableCell class="py-2 text-[13px] whitespace-nowrap text-muted-foreground" :title="formatDateTime(sub.createdAt)">
+                                <TableCell class="py-2 text-sm">{{ sub.language?.name ?? '-' }}</TableCell>
+                                <TableCell class="py-2 text-sm whitespace-nowrap text-muted-foreground" :title="formatDateTime(sub.createdAt)">
                                     {{ formatRelativeTime(sub.createdAt) }}
                                 </TableCell>
                                 <TableCell class="py-1.5 pr-4 text-right">
-                                    <Button variant="outline" size="sm" class="h-8 px-2.5 text-[12.5px]" :disabled="loadingId === sub.id"
+                                    <Button variant="outline" size="sm" class="h-8 px-2.5 text-xs" :disabled="loadingId === sub.id"
                                         :data-test="`load-${sub.id}`" @click.stop="loadCode(sub)">
                                         <Loader2 v-if="loadingId === sub.id" class="animate-spin motion-reduce:animate-none" />
                                         Load code

@@ -20,7 +20,7 @@
                         <div class="flex h-11 flex-none items-stretch border-b border-border pr-1.5 pl-1">
                             <TabsList class="h-auto items-stretch gap-0.5 rounded-none bg-transparent p-0">
                                 <TabsTrigger v-for="t in tabs" :key="t.value" :value="t.value"
-                                    :data-test="`console-tab-${t.value}`" class="gap-2 px-3 text-[13.5px]">
+                                    :data-test="`console-tab-${t.value}`" class="gap-2 px-3 text-sm">
                                     {{ t.label }}
                                     <span v-if="t.value === 'result' && resultMeta" :class="['console-badge', `v-${resultMeta.tone}`]">
                                         <span v-if="resultBusy" class="size-1.5 animate-pulse rounded-full bg-current motion-reduce:animate-none" aria-hidden="true" />

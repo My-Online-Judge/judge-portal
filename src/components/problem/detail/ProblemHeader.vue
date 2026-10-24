@@ -1,13 +1,13 @@
 <template>
     <header class="flex flex-col">
-        <h1 v-if="!compact" class="text-[26px] leading-tight font-bold tracking-[-0.015em] text-balance text-foreground">{{ problem.title }}</h1>
+        <h1 v-if="!compact" class="text-2xl leading-tight font-bold tracking-[-0.015em] text-balance text-foreground">{{ problem.title }}</h1>
         <ul :class="[compact ? '' : 'mt-3.5', 'flex flex-wrap items-center gap-2']" aria-label="Difficulty and tags">
-            <li v-if="!compact" :class="['inline-flex h-[26px] items-center rounded-full px-2.5 text-[12.5px] font-semibold', difficultyTone]"
+            <li v-if="!compact" :class="['inline-flex h-[26px] items-center rounded-full px-2.5 text-xs font-semibold', difficultyTone]"
                 data-test="difficulty">
                 {{ getLevelInfo(problem.hardnessLevel).text }}
             </li>
             <li v-for="tag in problem.tags" :key="tag"
-                class="inline-flex h-[26px] items-center rounded-full bg-muted px-2.5 text-[12.5px] font-medium whitespace-nowrap text-muted-foreground">
+                class="inline-flex h-[26px] items-center rounded-full bg-muted px-2.5 text-xs font-medium whitespace-nowrap text-muted-foreground">
                 {{ tag }}
             </li>
         </ul>

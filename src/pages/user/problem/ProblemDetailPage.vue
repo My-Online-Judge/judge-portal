@@ -1,5 +1,5 @@
 <template>
-    <div class="animate-enter">
+    <div>
         <div v-if="needsLogin" class="flex flex-col items-center gap-3 py-20 text-center">
             <p class="text-sm text-muted-foreground">Log in to open this problem.</p>
             <div class="flex flex-wrap justify-center gap-2">
@@ -79,7 +79,7 @@
                         role="tab" :aria-selected="mobileView === v.key"
                         :aria-controls="v.key === 'problem' ? 'problem-view-problem' : 'problem-view-code'"
                         :tabindex="mobileView === v.key ? 0 : -1"
-                        class="inline-flex h-9 items-center justify-center gap-1.5 rounded-[7px] text-[13.5px] font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-selected:bg-card aria-selected:font-semibold aria-selected:text-foreground aria-selected:shadow-[var(--shadow-sm)]"
+                        class="inline-flex h-9 items-center justify-center gap-1.5 rounded-[7px] text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-selected:bg-card aria-selected:font-semibold aria-selected:text-foreground aria-selected:shadow-[var(--shadow-sm)]"
                         @click="mobileView = v.key">
                         {{ v.label }}
                         <span v-if="v.key === 'result' && lastMeta" :class="['console-badge', `v-${lastMeta.tone}`]">{{ lastMeta.code }}</span>
@@ -89,7 +89,7 @@
 
             <!-- In a contest that is not running, submissions are practice: say so above the editor. -->
             <p v-if="contestNote" role="status"
-                class="mb-3 flex items-center gap-2 rounded-lg bg-warning-soft px-3.5 py-2.5 text-[13px] text-warning-ink">
+                class="mb-3 flex items-center gap-2 rounded-lg bg-warning-soft px-3.5 py-2.5 text-sm text-warning-ink">
                 <Info class="size-4 shrink-0" aria-hidden="true" />
                 {{ contestNote }}
             </p>
@@ -127,8 +127,8 @@
                         <button v-if="lastMeta" type="button"
                             class="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-lg text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                             @click="mobileView = 'result'">
-                            <span :class="['console-badge h-5 text-[11px]', `v-${lastMeta.tone}`]">{{ lastMeta.code }}</span>
-                            <span class="truncate text-[13px]">
+                            <span :class="['console-badge h-5 text-xs', `v-${lastMeta.tone}`]">{{ lastMeta.code }}</span>
+                            <span class="truncate text-sm">
                                 <b v-if="lastTests" class="tabular font-semibold">{{ lastTests }}</b>
                                 <span class="text-muted-foreground">{{ lastTests ? ', last submission' : 'Last submission' }}</span>
                             </span>

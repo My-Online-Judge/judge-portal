@@ -1,5 +1,5 @@
 <template>
-    <div class="flex flex-col text-[15px] leading-[1.75]">
+    <div class="flex flex-col text-base leading-[1.75]">
         <RichContent v-if="problem.description" :html="problem.description" />
 
         <!-- The author's one-paragraph restatement of the task ("subject" in the editor). -->
@@ -20,7 +20,7 @@
                 <div v-for="(box, i) in samples" :key="box.key"
                     :class="['min-w-0', i > 0 ? 'border-t border-border sm:border-t-0 sm:border-l' : '']">
                     <div class="flex h-9 items-center justify-between border-b border-border bg-muted/50 pr-1.5 pl-3.5">
-                        <span class="text-[12.5px] font-medium text-muted-foreground">{{ box.title }}</span>
+                        <span class="text-xs font-medium text-muted-foreground">{{ box.title }}</span>
                         <button type="button" :aria-label="copiedKey === box.key ? 'Copied' : `Copy ${box.title.toLowerCase()}`"
                             class="grid size-[30px] place-items-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
                             @click="onCopy(box.key, box.text)">
@@ -28,7 +28,7 @@
                             <Copy v-else class="size-3.5" aria-hidden="true" />
                         </button>
                     </div>
-                    <pre class="m-0 overflow-x-auto px-3.5 py-3 font-mono text-[13.5px] leading-relaxed text-foreground">{{ box.text }}</pre>
+                    <pre class="m-0 overflow-x-auto px-3.5 py-3 font-mono text-sm leading-relaxed text-foreground">{{ box.text }}</pre>
                 </div>
             </div>
         </section>
