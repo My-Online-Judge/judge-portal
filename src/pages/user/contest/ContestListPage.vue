@@ -35,11 +35,12 @@
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                <TableRow v-for="c in sec.items" :key="c.slug">
+                                <!-- The title link covers the row through its ::after, so the whole row opens the contest and the row keeps one link. -->
+                                <TableRow v-for="c in sec.items" :key="c.slug" class="relative">
                                     <TableCell class="whitespace-normal break-words">
                                         <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                                             <RouterLink :to="`${ROUTE_PATH.CONTESTS}/${c.slug}`"
-                                                class="min-w-0 text-base font-medium text-foreground hover:text-primary hover:underline">{{ c.title }}</RouterLink>
+                                                class="min-w-0 text-base font-medium text-foreground after:absolute after:inset-0 hover:text-primary hover:underline">{{ c.title }}</RouterLink>
                                             <Badge v-if="c.status === 'DRAFT'" variant="neutral">Draft</Badge>
                                         </div>
                                         <!-- Under lg: the start, then the length and size. -->
