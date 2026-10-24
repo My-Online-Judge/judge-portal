@@ -9,6 +9,40 @@ export interface SubmissionRequest {
     contestSlug?: string
 }
 
+/**
+ * A run: the code against the sample case and the reader's own cases, judged like a submission but never stored or
+ * counted. `expectedOutput` is absent on a custom case, which is then judged only for errors and limits.
+ */
+export interface RunRequest {
+    sourceCode: string
+    languageIdentifier: string
+    problemSlug: string
+    contestSlug?: string
+    cases: RunCase[]
+}
+
+export interface RunCase {
+    input: string
+    expectedOutput?: string
+}
+
+/** One case's outcome, in the order the cases were sent. `result` uses the SubmissionResult codes. */
+export interface RunCaseResult {
+    result: number
+    output: string | null
+    cpuTime: number | null
+    memory: number | null
+    /** The compiler's or runtime's message, when there is one. */
+    errorMessage?: string | null
+}
+
+export interface RunResponse {
+    /** Set when the whole run stopped before any case (a compile error): the per-case list is then empty. */
+    result?: number | null
+    errorMessage?: string | null
+    cases: RunCaseResult[]
+}
+
 export interface TestCaseResult {
     name: string
     result: number

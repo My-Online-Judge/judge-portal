@@ -1,21 +1,35 @@
 <template>
-    <div class="flex flex-col gap-2.5">
-        <h1 class="text-[20px] leading-tight font-bold tracking-[-0.02em] text-foreground">{{ problem.title }}</h1>
-        <ProblemMetaBar :problem="problem" />
-        <div v-if="problem.tags?.length" class="flex flex-wrap gap-1.5">
-            <span v-for="tag in problem.tags" :key="tag"
-                class="inline-flex h-[22px] items-center rounded-md border border-border bg-card px-2 font-mono text-[11.5px] whitespace-nowrap text-foreground">
+    <header class="flex flex-col">
+        <h1 v-if="!compact" class="text-[26px] leading-tight font-bold tracking-[-0.015em] text-balance text-foreground">{{ problem.title }}</h1>
+        <ul :class="[compact ? '' : 'mt-3.5', 'flex flex-wrap items-center gap-2']" aria-label="Difficulty and tags">
+            <li v-if="!compact" :class="['inline-flex h-[26px] items-center rounded-full px-2.5 text-[12.5px] font-semibold', difficultyTone]"
+                data-test="difficulty">
+                {{ getLevelInfo(problem.hardnessLevel).text }}
+            </li>
+            <li v-for="tag in problem.tags" :key="tag"
+                class="inline-flex h-[26px] items-center rounded-full bg-muted px-2.5 text-[12.5px] font-medium whitespace-nowrap text-muted-foreground">
                 {{ tag }}
-            </span>
-        </div>
-    </div>
+            </li>
+        </ul>
+        <ProblemMetaBar v-if="!compact" :problem="problem" class="mt-4 border-t border-border pt-3" />
+    </header>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import ProblemMetaBar from './ProblemMetaBar.vue'
-import type { Problem } from '@/types/problem'
+import { getLevelInfo, type Problem } from '@/types/problem'
 
-defineProps<{
+const props = defineProps<{
     problem: Problem
+    // On a phone the page's own header carries the title, difficulty and limits: only the tags stay.
+    compact?: boolean
 }>()
+
+const TONES: Record<number, string> = {
+    1: 'bg-success-soft text-success-ink',
+    2: 'bg-warning-soft text-warning-ink',
+    3: 'bg-destructive-soft text-destructive-ink',
+}
+const difficultyTone = computed(() => TONES[props.problem.hardnessLevel] ?? 'bg-muted text-muted-foreground')
 </script>

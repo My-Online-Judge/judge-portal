@@ -1,29 +1,28 @@
 <template>
-    <Card class="border-border py-0 shadow-none">
-        <CardContent class="p-0">
-            <div v-if="!authStore.isAuthenticated" class="flex min-h-60 flex-col items-center justify-center gap-2.5 px-5 py-10 text-center">
-                <span class="grid size-10 place-items-center rounded-xl bg-muted text-muted-foreground">
-                    <LogIn class="size-5" aria-hidden="true" />
-                </span>
-                <h4 class="text-sm font-semibold text-foreground">Log in to see your submissions</h4>
-                <p class="max-w-xs text-sm text-muted-foreground">Your past attempts for this problem appear here.</p>
-                <Button size="sm" @click="isLoginOpen = true">Log in</Button>
-            </div>
+    <div>
+        <div v-if="!authStore.isAuthenticated" class="flex flex-col items-start gap-1 px-4 py-4 text-sm">
+            <p class="font-medium text-foreground">Log in to see your submissions</p>
+            <p class="text-muted-foreground">Each attempt at this problem is listed here with its verdict.</p>
+            <Button size="sm" variant="secondary" class="mt-2" @click="isLoginOpen = true">Log in</Button>
+        </div>
 
-            <div v-else>
-                <ListStateShell
-                    :loading="isLoading"
-                    :error="error ? 'Check your connection and try again.' : null"
-                    :has-data="!!response || displayRows.length > 0"
-                    :empty="displayRows.length === 0"
-                    empty-title="No submissions yet"
-                    empty-hint="Submit from the editor. Each attempt is listed here with its verdict."
-                    @retry="fetchSubmissions"
-                >
-                    <Table>
+        <div v-else>
+            <ListStateShell
+                :loading="isLoading"
+                :error="error ? 'Check your connection and try again.' : null"
+                :has-data="!!response || displayRows.length > 0"
+                :empty="displayRows.length === 0"
+                empty-title="No submissions yet"
+                empty-hint="Each attempt at this problem is listed here with its verdict."
+                @retry="fetchSubmissions"
+            >
+                <div class="overflow-x-auto">
+                    <Table class="min-w-[560px]">
                         <TableHeader>
-                            <TableRow class="border-border bg-muted/30 hover:bg-muted/30">
-                                <TableHead v-for="head in heads" :key="head" class="text-xs font-medium text-muted-foreground">{{ head }}</TableHead>
+                            <TableRow class="border-border hover:bg-transparent">
+                                <TableHead v-for="head in heads" :key="head"
+                                    class="h-9 text-xs font-medium text-muted-foreground first:pl-4 last:pr-4">{{ head }}</TableHead>
+                                <TableHead class="h-9 pr-4"><span class="sr-only">Actions</span></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -31,43 +30,56 @@
                                 v-for="sub in displayRows"
                                 :key="sub.id"
                                 tabindex="0"
-                                role="button"
-                                class="cursor-pointer border-border hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                :aria-label="`Open submission ${sub.id.substring(0, 8)}`"
+                                :class="[
+                                    'cursor-pointer border-border hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                                    sub.id === highlightId ? 'bg-primary-soft/50' : '',
+                                ]"
                                 @click="openDetail(sub.id)"
-                                @keydown.enter="openDetail(sub.id)"
-                                @keydown.space.prevent="openDetail(sub.id)"
+                                @keydown.enter.self="openDetail(sub.id)"
+                                @keydown.space.self.prevent="openDetail(sub.id)"
                             >
-                                <TableCell class="tabular font-mono text-xs text-muted-foreground">#{{ sub.id.substring(0, 8) }}</TableCell>
-                                <TableCell class="text-sm text-muted-foreground">{{ formatDateTime(sub.createdAt) }}</TableCell>
-                                <TableCell>
-                                    <VerdictChip :status="sub.status" />
+                                <TableCell class="py-2 pl-4">
+                                    <span :class="['inline-flex items-center gap-2', `v-${verdictMeta(sub.status).tone}`]">
+                                        <VerdictChip size="sm" :status="sub.status" />
+                                        <span class="text-[13px] font-medium whitespace-nowrap text-[var(--vi)]">{{ verdictMeta(sub.status).name }}</span>
+                                    </span>
                                 </TableCell>
-                                <TableCell class="tabular font-mono text-xs">
+                                <TableCell class="tabular py-2 text-[12.5px]">{{ testsOf(sub) }}</TableCell>
+                                <TableCell class="tabular py-2 text-[12.5px]">
                                     {{ sub.cpuTime != null ? `${sub.cpuTime} ms` : '-' }}
                                 </TableCell>
-                                <TableCell class="tabular font-mono text-xs">
+                                <TableCell class="tabular py-2 text-[12.5px]">
                                     {{ sub.memory ? `${(sub.memory / (1024 * 1024)).toFixed(1)} MB` : '-' }}
                                 </TableCell>
-                                <TableCell class="text-sm text-muted-foreground">{{ sub.language?.name ?? '-' }}</TableCell>
+                                <TableCell class="py-2 text-[13px]">{{ sub.language?.name ?? '-' }}</TableCell>
+                                <TableCell class="py-2 text-[13px] whitespace-nowrap text-muted-foreground" :title="formatDateTime(sub.createdAt)">
+                                    {{ formatRelativeTime(sub.createdAt) }}
+                                </TableCell>
+                                <TableCell class="py-1.5 pr-4 text-right">
+                                    <Button variant="outline" size="sm" class="h-8 px-2.5 text-[12.5px]" :disabled="loadingId === sub.id"
+                                        :data-test="`load-${sub.id}`" @click.stop="loadCode(sub)">
+                                        <Loader2 v-if="loadingId === sub.id" class="animate-spin motion-reduce:animate-none" />
+                                        Load code
+                                    </Button>
+                                </TableCell>
                             </TableRow>
                         </TableBody>
                     </Table>
-                </ListStateShell>
-
-                <div class="px-6 pb-6">
-                    <PaginationFooter :pagination="pagination" @change-page="onPageChange" @update:size="onSizeChange" />
                 </div>
+            </ListStateShell>
+
+            <div class="px-4">
+                <PaginationFooter :pagination="pagination" @change-page="onPageChange" @update:size="onSizeChange" />
             </div>
-        </CardContent>
+        </div>
         <LoginModal v-model:open="isLoginOpen" />
         <SubmissionDetailDialog v-model:open="isDetailOpen" :submission-id="detailId" />
-    </Card>
+    </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { LogIn } from 'lucide-vue-next'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
     Table,
@@ -85,17 +97,30 @@ import { useAuthStore } from '@/stores/auth'
 import submissionService from '@/services/submissionService'
 import { useFetch } from '@/composables/useFetch'
 
-import { formatDateTime } from '@/utils/dateTimeUtils'
+import { formatDateTime, formatRelativeTime } from '@/utils/dateTimeUtils'
+import { Loader2 } from 'lucide-vue-next'
+import { useToast } from '@/composables/useToast'
 import { useSubmissionStream } from '@/composables/useSubmissionStream'
 import type { Submission } from '@/types/submission'
 import { isTerminalStatus } from '@/types/submission'
 import VerdictChip from '@/components/common/VerdictChip.vue'
+import { verdictMeta } from '@/lib/verdict'
 
 const props = defineProps<{
     problemSlug: string
     pendingSubmission?: Submission | null
+    // The submission shown in the Result tab, tinted in the list.
+    highlightId?: string | null
 }>()
-const emit = defineEmits<{ (e: 'consumed'): void }>()
+const emit = defineEmits<{
+    (e: 'consumed'): void
+    // How many submissions this problem has from the reader, once known.
+    (e: 'count', total: number): void
+    // Put this submission's code back in the editor.
+    (e: 'load', submission: Submission): void
+    // The newest row, with its live verdict.
+    (e: 'newest', submission: Submission | null): void
+}>()
 
 const authStore = useAuthStore()
 const isLoginOpen = ref(false)
@@ -108,7 +133,7 @@ const openDetail = (id: string) => {
 }
 const page = ref(0)
 const size = ref(10)
-const heads = ['ID', 'When', 'Verdict', 'Time', 'Memory', 'Language']
+const heads = ['Verdict', 'Tests', 'Time', 'Memory', 'Language', 'Submitted']
 
 const {
     data: response,
@@ -120,7 +145,6 @@ const {
 })
 
 const pagination = computed(() => response.value?.pagination)
-
 const { watch: watchVerdict, stop: stopVerdict, stopAll: stopAllVerdicts } = useSubmissionStream()
 const liveRows = ref<Submission[]>([])
 // Streamed verdicts by submission id, merged over the row they belong to. A row fetched with a final status is
@@ -141,6 +165,46 @@ const displayRows = computed(() => {
     const fetched = (response.value?.data || []).filter((s) => !liveIds.has(s.id))
     return [...liveRows.value, ...fetched].map(withVerdict)
 })
+
+watch(
+    () => [pagination.value?.totalElements, liveRows.value.length] as const,
+    ([total]) => {
+        if (total === undefined) return
+        const unlisted = liveRows.value.filter((r) => !(response.value?.data ?? []).some((s) => s.id === r.id)).length
+        emit('count', total + unlisted)
+    },
+)
+
+watch(
+    () => displayRows.value[0] ?? null,
+    (row) => emit('newest', row),
+)
+
+// "11/13" when the row carries its per-test results.
+const testsOf = (sub: Submission) => {
+    const rows = sub.details
+    if (!rows?.length) return '-'
+    return `${rows.filter((r) => r.result === 0).length}/${rows.length}`
+}
+
+// The list may leave the source out: then the submission is read once for it.
+const { error: errorToast } = useToast()
+const loadingId = ref<string | null>(null)
+const loadCode = async (sub: Submission) => {
+    if (sub.sourceCode) {
+        emit('load', sub)
+        return
+    }
+    loadingId.value = sub.id
+    try {
+        const res = await submissionService.getSubmissionById(sub.id)
+        emit('load', res.data.data)
+    } catch {
+        errorToast("Couldn't load that submission's code")
+    } finally {
+        loadingId.value = null
+    }
+}
 
 const addPendingSubmission = (sub: Submission) => {
     if (!liveRows.value.some((r) => r.id === sub.id)) {
@@ -199,7 +263,6 @@ watch(
             fetchSubmissions()
         } else {
             stopAllVerdicts() // logged out: a watch could only poll a 401
-            isLoginOpen.value = true
         }
     },
     { immediate: true },

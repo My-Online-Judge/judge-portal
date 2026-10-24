@@ -1,11 +1,11 @@
 <template>
-    <div class="flex h-full min-h-0 flex-col">
-        <!-- Toolbar -->
-        <div class="flex h-[45px] flex-none items-center gap-2 border-b border-border px-2.5">
+    <div ref="rootEl" class="flex h-full min-h-0 flex-col bg-card">
+        <!-- Toolbar: language and its compiler on the left; clear, settings and full screen on the right. -->
+        <div class="flex h-11 flex-none items-center gap-2.5 border-b border-border pr-2 pl-2.5">
             <Select v-model="selectedLanguage">
-                <SelectTrigger size="sm" class="w-[140px]" aria-label="Language">
+                <SelectTrigger size="sm" class="h-[30px] w-[132px]" aria-label="Language">
                     <SelectValue>
-                        {{ selectedLanguage ? selectedLanguage.name : 'Select a language' }}
+                        {{ selectedLanguage ? selectedLanguage.name : 'Language' }}
                     </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -14,50 +14,91 @@
                     </SelectItem>
                 </SelectContent>
             </Select>
-
-            <Select v-model="themeChoice">
-                <SelectTrigger size="sm" class="w-[120px]" aria-label="Editor theme">
-                    <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="match">Match app</SelectItem>
-                    <SelectItem value="vs">Light</SelectItem>
-                    <SelectItem value="vs-dark">Dark</SelectItem>
-                </SelectContent>
-            </Select>
+            <span v-if="compilerNote" class="hidden truncate text-[12.5px] text-muted-foreground md:inline"
+                data-test="compiler-note">{{ compilerNote }}</span>
 
             <span class="flex-1" />
 
-            <TooltipProvider>
+            <TooltipProvider :delay-duration="300">
                 <Tooltip>
                     <TooltipTrigger as-child>
-                        <Button variant="ghost" size="icon-sm" aria-label="Reset code" :disabled="!sourceCode"
-                            @click="isResetOpen = true">
+                        <Button variant="ghost" size="icon-sm" class="text-muted-foreground" aria-label="Clear the editor"
+                            :disabled="!sourceCode" @click="isResetOpen = true">
                             <RotateCcw />
                         </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Reset code</TooltipContent>
+                    <TooltipContent>Clear the editor</TooltipContent>
+                </Tooltip>
+
+                <DropdownMenu>
+                    <Tooltip>
+                        <TooltipTrigger as-child>
+                            <DropdownMenuTrigger as-child>
+                                <Button variant="ghost" size="icon-sm" class="text-muted-foreground" aria-label="Editor settings">
+                                    <SlidersHorizontal />
+                                </Button>
+                            </DropdownMenuTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>Editor settings</TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent align="end" class="w-48">
+                        <DropdownMenuLabel class="text-xs font-medium text-muted-foreground">Theme</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup v-model="themeChoice">
+                            <DropdownMenuRadioItem value="match">Same as the site</DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="vs">Light</DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="vs-dark">Dark</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel class="text-xs font-medium text-muted-foreground">Font size</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup v-model="fontSizeChoice">
+                            <DropdownMenuRadioItem v-for="size in FONT_SIZES" :key="size" :value="String(size)">
+                                {{ size }} px
+                            </DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                <Tooltip>
+                    <TooltipTrigger as-child>
+                        <Button variant="ghost" size="icon-sm" class="text-muted-foreground"
+                            :aria-label="isFullscreen ? 'Exit full screen' : 'Full screen'" @click="toggleFullscreen">
+                            <Minimize2 v-if="isFullscreen" />
+                            <Maximize2 v-else />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{{ isFullscreen ? 'Exit full screen' : 'Full screen' }}</TooltipContent>
                 </Tooltip>
             </TooltipProvider>
         </div>
 
+        <!-- Why Submit is off, under the toolbar. -->
+        <p v-if="disabledReason" id="submit-disabled-reason"
+            class="flex-none border-b border-border bg-muted/60 px-3.5 py-2 text-xs text-muted-foreground">
+            {{ disabledReason }}
+        </p>
+
         <!-- Editor fills the remaining height -->
         <div class="min-h-0 flex-1">
             <CodeEditor v-model="sourceCode" :language="editorLanguage" :theme="editorTheme" height="100%"
-                :disabled="isSubmitting" @mount="onEditorMount" />
+                :options="editorOptions" :disabled="isSubmitting" @mount="onEditorMount" />
         </div>
 
-        <!-- Submit bar. On a phone the page pins it to the bottom of the screen, outside this pane. -->
-        <Teleport defer :to="submitBarTo ?? 'body'" :disabled="!submitBarTo">
-            <div class="flex flex-none items-center gap-2.5 border-t border-border bg-card py-2 pr-2.5 pl-3.5">
-                <span v-if="disabledReason" id="submit-disabled-reason" class="min-w-0 text-xs text-muted-foreground">{{ disabledReason }}</span>
-                <span v-else class="hidden items-center gap-1 text-xs text-muted-foreground sm:inline-flex" aria-hidden="true">
-                    <kbd v-for="key in ['Ctrl', '↵']" :key="key"
-                        class="rounded-[4px] border border-b-2 border-input bg-card px-[5px] font-mono text-[11px] text-foreground">{{ key }}</kbd>
-                    submits
-                </span>
-                <span class="flex-1" />
-                <Button v-if="authStore.isAuthenticated" class="min-w-[122px] aria-disabled:opacity-50"
+        <!-- Status bar: where the cursor is, and whether the draft is kept in this browser. -->
+        <div class="flex h-7 flex-none items-center gap-4 border-t border-border px-3.5 text-xs text-muted-foreground">
+            <span class="tabular">Ln {{ cursor.line }}, Col {{ cursor.column }}</span>
+            <span class="hidden sm:inline">Spaces: {{ TAB_SIZE }}</span>
+            <span class="flex-1" />
+            <span v-if="draftSaved" class="inline-flex items-center gap-1.5" data-test="draft-status">
+                <span class="size-1.5 rounded-full bg-[var(--v-ac)]" aria-hidden="true" />
+                Draft saved
+            </span>
+        </div>
+
+        <!-- Submit lives in the page's action bar (beside Run); without one it stays in this pane's toolbar row. -->
+        <Teleport defer :to="actionsTo ?? 'body'" :disabled="!actionsTo">
+            <div :class="actionsTo ? 'contents' : 'flex flex-none justify-end border-t border-border px-2.5 py-2'">
+                <Button v-if="authStore.isAuthenticated" size="sm"
+                    class="order-2 h-9 min-w-[112px] gap-2 px-3.5 aria-disabled:opacity-50"
                     aria-keyshortcuts="Control+Enter Meta+Enter" :aria-disabled="cooldownActive || undefined"
                     :aria-describedby="disabledReason ? 'submit-disabled-reason' : undefined"
                     :disabled="isSubmitting || sourceCode.trim() === '' || !!disabledReason" @click="handleSubmit">
@@ -67,21 +108,32 @@
                     <span :class="{ 'tabular font-mono': cooldownActive && !isSubmitting }">
                         {{ isSubmitting ? 'Submitting…' : cooldownActive ? `Submit (${cooldownRemaining}s)` : 'Submit' }}
                     </span>
+                    <kbd v-if="!isSubmitting && !cooldownActive" aria-hidden="true"
+                        class="-mr-1.5 hidden rounded-[5px] bg-primary-foreground/18 px-1.5 py-0.5 font-mono text-[11px] leading-4 font-medium sm:inline">{{ shortcutLabel }}</kbd>
                 </Button>
-                <Button v-else @click="isLoginOpen = true">Log in to submit</Button>
+                <Button v-else size="sm" class="order-2 h-9 px-3.5" @click="isLoginOpen = true">Log in to submit</Button>
             </div>
         </Teleport>
 
         <ConfirmDialog v-model:open="isResetOpen" title="Clear the editor?"
-            description="Your current code for this problem is removed." confirm-label="Clear code" tone="neutral"
-            @confirm="handleReset" />
+            description="The code in the editor and its draft are removed. Your submissions keep their own copy."
+            confirm-label="Clear" tone="neutral" @confirm="handleReset" />
         <LoginModal v-model:open="isLoginOpen" />
     </div>
 </template>
 
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
-import { Loader2, RotateCcw, Send, Timer } from 'lucide-vue-next'
+import { Loader2, Maximize2, Minimize2, RotateCcw, Send, SlidersHorizontal, Timer } from 'lucide-vue-next'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
     Select,
     SelectContent,
@@ -97,7 +149,8 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import { useAuthStore } from '@/stores/auth'
 import LoginModal from '@/components/auth/LoginModal.vue'
 
-import { ref, watch, computed, defineAsyncComponent, defineComponent, h } from 'vue'
+import { ref, reactive, watch, computed, defineAsyncComponent, defineComponent, h, onBeforeUnmount } from 'vue'
+import { useFullscreen } from '@vueuse/core'
 import { isAxiosError } from 'axios'
 import { useToast, type ToastHandle } from '@/composables/useToast'
 import { useCooldown } from '@/composables/useCooldown'
@@ -108,6 +161,8 @@ import { shouldShowTooFast, submissionToasts } from '@/lib/submissionToasts'
 import submissionService from '@/services/submissionService'
 import type { Submission, SubmissionRequest } from '@/types/submission'
 import { getMonacoLanguage } from '@/utils/editorUtils'
+import { readDraft, writeDraft } from '@/lib/codeDraft'
+import { compilerNoteOf } from '@/lib/compilerNote'
 
 // Monaco (3.7 MB) loads on its own: the page, and the statement beside this pane, render without waiting for it, and
 // the editor area shows a skeleton until it arrives.
@@ -127,8 +182,8 @@ const isLoginOpen = ref(false)
 const props = defineProps<{
     languages?: Language[]
     problemSlug: string
-    // A selector to render the submit bar into instead of below the editor (the page's bar pinned on phones).
-    submitBarTo?: string
+    // A selector for the page's action bar, where Submit sits beside Run; without one Submit stays in this pane.
+    actionsTo?: string
     // The running contest the submission counts for; absent for practice.
     contestSlug?: string
     // Set when this problem cannot be submitted to: the reason shows in the bar and Submit is off.
@@ -150,12 +205,36 @@ const isResetOpen = ref(false)
 // The Monaco editor, once it has mounted.
 let editorInstance: CodeEditorInstance | null = null
 
-// "Match app" follows the site theme; Light and Dark pin the editor to one.
+// "Same as the site" follows the site theme; Light and Dark pin the editor to one.
 const themeChoice = ref<'match' | 'vs' | 'vs-dark'>('match')
 const { isDark } = useTheme()
 const editorTheme = computed(() =>
     themeChoice.value === 'match' ? (isDark.value ? 'vs-dark' : 'vs') : themeChoice.value,
 )
+
+const TAB_SIZE = 4
+const FONT_SIZES = [13, 14, 15, 16] as const
+const fontSizeChoice = ref('14')
+const editorOptions = computed(() => ({
+    minimap: { enabled: false },
+    fontSize: Number(fontSizeChoice.value),
+    scrollBeyondLastLine: false,
+    automaticLayout: true,
+    tabSize: TAB_SIZE,
+}))
+
+// The compiler behind the language, as a short note beside the picker ("g++ -std=c++17 -O2").
+const compilerNote = computed(() => (selectedLanguage.value ? compilerNoteOf(selectedLanguage.value) : ''))
+
+// Full screen takes the whole editor pane, toolbar and status bar included.
+const rootEl = ref<HTMLElement | null>(null)
+const { isFullscreen, toggle: toggleFullscreen } = useFullscreen(rootEl)
+
+// Where the cursor is, for the status bar.
+const cursor = reactive({ line: 1, column: 1 })
+
+// The shortcut as this keyboard writes it, shown inside the Submit button.
+const shortcutLabel = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘ ↵' : 'Ctrl ↵'
 
 // Matches the API's oj.submission.cooldown-seconds (10s); a 429's Retry-After overrides it.
 const COOLDOWN_SECONDS = 10
@@ -166,22 +245,45 @@ const editorLanguage = computed(() => {
     return getMonacoLanguage(selectedLanguage.value)
 })
 
+// --- The draft: the code and its language, kept in this browser per problem ---
+const draftSaved = ref(false)
+const draft = readDraft(props.problemSlug)
+if (draft) {
+    sourceCode.value = draft.code
+    draftSaved.value = true
+}
+
+// The draft's language once the list arrives, else the first one.
 watch(
     () => props.languages,
-    (newVal) => {
-        if (newVal && newVal.length > 0 && !selectedLanguage.value) {
-            const firstLang = newVal[0]
-            if (firstLang) {
-                selectedLanguage.value = firstLang
-            }
-        }
+    (list) => {
+        if (!list?.length || selectedLanguage.value) return
+        selectedLanguage.value = list.find((l) => l.identifier === draft?.languageIdentifier) ?? list[0]
     },
     { immediate: true },
 )
 
+// Saved a moment after typing stops, and on leaving.
+const DRAFT_DELAY_MS = 600
+let draftTimer: ReturnType<typeof setTimeout> | undefined
+const saveDraft = () => {
+    clearTimeout(draftTimer)
+    draftTimer = undefined
+    if (!selectedLanguage.value) return
+    draftSaved.value = writeDraft(props.problemSlug, selectedLanguage.value.identifier, sourceCode.value)
+}
+watch([sourceCode, selectedLanguage], () => {
+    clearTimeout(draftTimer)
+    draftTimer = setTimeout(saveDraft, DRAFT_DELAY_MS)
+})
+onBeforeUnmount(() => {
+    if (draftTimer) saveDraft()
+})
+
 const handleReset = () => {
     isResetOpen.value = false
     sourceCode.value = ''
+    saveDraft()
     triggerToast('Editor cleared', 'success')
     // The Reset button is disabled on an empty editor, so focus goes to the editor instead.
     editorInstance?.focus()
@@ -239,12 +341,12 @@ const handleSubmit = async () => {
         pending.update({
             type: 'info',
             title: 'Submitted',
-            description: 'Judging now. The verdict appears below the editor.',
+            description: 'Judging now. The result shows in the console below the editor.',
             duration: Infinity,
         })
         submissionToasts.set(res.data.data.id, pending)
         beginCooldown(COOLDOWN_SECONDS)
-        sourceCode.value = ''
+        // The code stays in the editor: the next attempt is usually a small fix to this one.
 
         emit('success', res.data.data)
     } catch (error) {
@@ -288,9 +390,26 @@ const requestSubmit = () => {
 // key limits it to this editor, should another Monaco editor (a read-only one) be on the page.
 const onEditorMount = (editor: CodeEditorInstance, monaco: MonacoInstance) => {
     editorInstance = editor
+    editor.onDidChangeCursorPosition((e: { position: { lineNumber: number; column: number } }) => {
+        cursor.line = e.position.lineNumber
+        cursor.column = e.position.column
+    })
     editor.createContextKey('ojSubmitShortcut', true)
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, requestSubmit, 'ojSubmitShortcut')
 }
 
-defineExpose({ submit: requestSubmit })
+// Puts a submission's code back in the editor, in its language when that is still offered.
+const loadCode = (code: string, languageIdentifier?: string) => {
+    sourceCode.value = code
+    const lang = props.languages?.find((l) => l.identifier === languageIdentifier)
+    if (lang) selectedLanguage.value = lang
+    editorInstance?.focus()
+}
+
+defineExpose({
+    submit: requestSubmit,
+    loadCode,
+    // What Run sends: the code as it is now, and its language.
+    source: () => ({ sourceCode: sourceCode.value, languageIdentifier: selectedLanguage.value?.identifier }),
+})
 </script>

@@ -25,75 +25,137 @@
         </div>
 
         <template v-else-if="problem">
-            <!-- Page head: back link, title, meta bar (opens the statistics), tags -->
-            <div class="mb-4 flex flex-col gap-3">
-                <RouterLink :to="backTo"
-                    class="inline-flex items-center gap-1 self-start text-[13px] text-muted-foreground hover:text-foreground">
-                    <ChevronLeft class="size-4" aria-hidden="true" /> {{ backLabel }}
-                </RouterLink>
-                <ProblemHeader :problem="problem" />
-                <!-- In a contest that is not running, submissions are practice: say so above the editor. -->
-                <p v-if="contestNote" role="status"
-                    class="flex items-center gap-2 rounded-lg bg-warning-soft px-3.5 py-2.5 text-[13px] text-warning-ink">
-                    <Info class="size-4 shrink-0" aria-hidden="true" />
-                    {{ contestNote }}
-                </p>
+            <!-- Desktop: the workspace's own bar, the way back and on to the next problem, Run and Submit. -->
+            <div v-if="isDesktop" class="-mt-4 mb-3 flex min-h-9 items-center gap-4">
+                <nav aria-label="Breadcrumb" class="flex min-w-0 items-center gap-1.5 text-sm">
+                    <RouterLink :to="backTo"
+                        class="shrink-0 rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50">
+                        {{ backLabel }}
+                    </RouterLink>
+                    <ChevronRight class="size-3.5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
+                    <span class="truncate font-semibold text-foreground" aria-current="page">{{ crumbTitle }}</span>
+                </nav>
+                <div class="flex shrink-0 gap-1">
+                    <component :is="n.link ? RouterLink : 'span'" v-for="n in neighborLinks" :key="n.key"
+                        v-bind="n.link ? { to: n.link.to } : { 'aria-disabled': 'true' }"
+                        :aria-label="n.link ? `${n.label}: ${n.link.title}` : n.label" :title="n.link?.title"
+                        :class="[
+                            'grid size-[34px] place-items-center rounded-lg border border-border bg-card text-muted-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                            n.link ? 'hover:border-input hover:text-foreground' : 'opacity-40',
+                        ]">
+                        <component :is="n.icon" class="size-4" aria-hidden="true" />
+                    </component>
+                </div>
+                <span class="flex-1" />
+                <!-- Run and Submit render in here (SolvePane and ProblemSubmit). -->
+                <div :id="ACTIONS_ID" class="flex shrink-0 items-center gap-2" />
             </div>
 
-            <!-- 900 px and up: resizable split-pane (statement | solve) -->
-            <div v-if="isDesktop"
-                class="h-[calc(100vh-15rem)] min-h-[560px] overflow-hidden rounded-xl border border-border bg-background">
+            <!-- Phone: a compact head with the title and limits, then the Problem | Code | Result switch. -->
+            <div v-else class="-mt-4 mb-3 flex flex-col gap-3">
+                <div class="flex items-center gap-1">
+                    <RouterLink :to="backTo" :aria-label="`Back to ${backLabel}`"
+                        class="-ml-2.5 grid size-11 shrink-0 place-items-center rounded-lg text-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+                        <ChevronLeft class="size-5" aria-hidden="true" />
+                    </RouterLink>
+                    <div class="min-w-0 flex-1">
+                        <h1 class="truncate text-base leading-tight font-bold text-foreground">{{ problem.title }}</h1>
+                        <p class="meta-strip text-xs text-muted-foreground">
+                            <span :class="difficultyInk">{{ getLevelInfo(problem.hardnessLevel).text }}</span>
+                            <span>{{ limitTime }}</span>
+                            <span>{{ problem.memoryLimit }} MB</span>
+                        </p>
+                    </div>
+                    <ProblemStatsDialog :problem="problem">
+                        <button type="button" aria-label="Problem statistics" aria-haspopup="dialog"
+                            class="-mr-2.5 grid size-11 shrink-0 place-items-center rounded-lg text-muted-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+                            <ChartColumn class="size-[18px]" aria-hidden="true" />
+                        </button>
+                    </ProblemStatsDialog>
+                </div>
+                <div role="tablist" aria-label="View" class="grid grid-cols-3 gap-1 rounded-[10px] bg-muted p-1"
+                    @keydown="onViewKeydown">
+                    <button v-for="v in mobileViews" :id="`problem-view-tab-${v.key}`" :key="v.key" type="button"
+                        role="tab" :aria-selected="mobileView === v.key"
+                        :aria-controls="v.key === 'problem' ? 'problem-view-problem' : 'problem-view-code'"
+                        :tabindex="mobileView === v.key ? 0 : -1"
+                        class="inline-flex h-9 items-center justify-center gap-1.5 rounded-[7px] text-[13.5px] font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-selected:bg-card aria-selected:font-semibold aria-selected:text-foreground aria-selected:shadow-[var(--shadow-sm)]"
+                        @click="mobileView = v.key">
+                        {{ v.label }}
+                        <span v-if="v.key === 'result' && lastMeta" :class="['console-badge', `v-${lastMeta.tone}`]">{{ lastMeta.code }}</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- In a contest that is not running, submissions are practice: say so above the editor. -->
+            <p v-if="contestNote" role="status"
+                class="mb-3 flex items-center gap-2 rounded-lg bg-warning-soft px-3.5 py-2.5 text-[13px] text-warning-ink">
+                <Info class="size-4 shrink-0" aria-hidden="true" />
+                {{ contestNote }}
+            </p>
+
+            <!-- 900 px and up: statement | editor over console, three cards split by draggable gaps -->
+            <div v-if="isDesktop" class="h-[calc(100dvh-7.75rem)] min-h-[560px]">
                 <ResizablePanelGroup direction="horizontal" auto-save-id="problem-detail-split">
-                    <ResizablePanel ref="statementPanel" :default-size="SPLIT_DEFAULT" :min-size="30">
-                        <section id="problem-pane-problem" aria-label="Problem" class="h-full" />
+                    <ResizablePanel ref="statementPanel" :default-size="SPLIT_DEFAULT" :min-size="28">
+                        <section id="problem-pane-problem" aria-label="Problem"
+                            class="h-full overflow-hidden rounded-xl border border-border bg-card" />
                     </ResizablePanel>
-                    <ResizableHandle with-handle aria-label="Resize panes" @dblclick="resetSplit"
+                    <WorkspaceHandle aria-label="Resize panes" @dblclick="resetSplit"
                         @keydown.enter.prevent="resetSplit" />
-                    <ResizablePanel :default-size="100 - SPLIT_DEFAULT" :min-size="30">
+                    <ResizablePanel :default-size="100 - SPLIT_DEFAULT" :min-size="34">
                         <section id="problem-pane-code" aria-label="Code" class="h-full" />
                     </ResizablePanel>
                 </ResizablePanelGroup>
             </div>
 
-            <!-- Narrower: a Problem | Code switch. Both views stay mounted, so the editor, the console and its
-                 verdict stream survive the switch; the submit bar is pinned to the bottom in both. -->
+            <!-- Narrower: one view at a time. Both slots stay mounted, so the editor, the console and its verdict
+                 stream survive the switch. -->
             <div v-else>
-                <div class="overflow-hidden rounded-xl border border-border bg-card">
-                    <div class="border-b border-border px-3 py-2">
-                        <div role="tablist" aria-label="View"
-                            class="flex gap-0.5 rounded-lg border border-border bg-muted p-0.5" @keydown="onViewKeydown">
-                            <button v-for="v in mobileViews" :id="`problem-view-tab-${v.key}`" :key="v.key" type="button"
-                                role="tab" :aria-selected="mobileView === v.key"
-                                :aria-controls="`problem-view-${v.key}`" :tabindex="mobileView === v.key ? 0 : -1"
-                                class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 py-1 text-[12.5px] font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-selected:bg-card aria-selected:text-foreground aria-selected:shadow-[var(--shadow-sm)]"
-                                @click="mobileView = v.key">
-                                <component :is="v.icon" class="size-[15px]" aria-hidden="true" />
-                                {{ v.label }}
-                            </button>
-                        </div>
-                    </div>
-                    <div class="h-[calc(100dvh-10rem)] min-h-[420px]">
-                        <div v-show="mobileView === 'problem'" id="problem-view-problem" role="tabpanel"
-                            aria-labelledby="problem-view-tab-problem" class="h-full" />
-                        <div v-show="mobileView === 'code'" id="problem-view-code" role="tabpanel"
-                            aria-labelledby="problem-view-tab-code" class="h-full" />
-                    </div>
+                <div class="h-[calc(100dvh-13.5rem)] min-h-[420px]">
+                    <div v-show="mobileView === 'problem'" id="problem-view-problem" role="tabpanel"
+                        aria-labelledby="problem-view-tab-problem"
+                        class="h-full overflow-hidden rounded-xl border border-border bg-card" />
+                    <div v-show="mobileView !== 'problem'" id="problem-view-code" role="tabpanel"
+                        :aria-labelledby="`problem-view-tab-${mobileView}`" class="h-full" />
                 </div>
-                <!-- ProblemSubmit renders its submit bar in here. Full width, above the safe area. -->
-                <div :id="SUBMIT_BAR_ID" ref="submitBarEl"
-                    class="sticky bottom-0 z-30 -mx-4 bg-card pb-[env(safe-area-inset-bottom,0px)] md:-mx-6" />
+                <!-- The bar pinned to the bottom: on the statement, the last verdict and the way to the editor;
+                     on the code and its result, Run and Submit. Full width, above the safe area. -->
+                <div ref="submitBarEl"
+                    class="sticky bottom-0 z-30 -mx-4 border-t border-border bg-card pb-[env(safe-area-inset-bottom,0px)] md:-mx-6">
+                    <div v-show="mobileView === 'problem'" class="flex items-center gap-2.5 px-4 py-3 md:px-6">
+                        <button v-if="lastMeta" type="button"
+                            class="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-lg text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                            @click="mobileView = 'result'">
+                            <span :class="['console-badge h-5 text-[11px]', `v-${lastMeta.tone}`]">{{ lastMeta.code }}</span>
+                            <span class="truncate text-[13px]">
+                                <b v-if="lastTests" class="tabular font-semibold">{{ lastTests }}</b>
+                                <span class="text-muted-foreground">{{ lastTests ? ', last submission' : 'Last submission' }}</span>
+                            </span>
+                        </button>
+                        <span v-else class="flex-1" />
+                        <Button class="h-11 gap-2 px-[18px]" @click="mobileView = 'code'">
+                            <CodeXml class="size-4" aria-hidden="true" />
+                            Write code
+                        </Button>
+                    </div>
+                    <div v-show="mobileView !== 'problem'" :id="MOBILE_ACTIONS_ID"
+                        class="flex items-center justify-end gap-2 px-4 py-3 md:px-6" />
+                </div>
             </div>
 
             <!-- One statement pane and one solve pane serve both layouts. Crossing 900 px moves them into the other
-                 layout's slots instead of mounting new ones, so typed code, the console and its stream survive. -->
+                 layout's slots instead of mounting new ones, so typed code, the console and its stream survive.
+                 Another problem gets a fresh solve pane: its own editor, console and submissions. -->
             <Teleport defer :to="isDesktop ? '#problem-pane-problem' : '#problem-view-problem'">
-                <StatementPane :problem="problem" :slug="slug" :pending-submission="pendingSubmission"
-                    @consumed="pendingSubmission = null" />
+                <StatementPane :problem="problem" :compact="!isDesktop" />
             </Teleport>
             <Teleport defer :to="isDesktop ? '#problem-pane-code' : '#problem-view-code'">
-                <SolvePane :slug="slug" :submit-bar-to="isDesktop ? undefined : `#${SUBMIT_BAR_ID}`"
+                <SolvePane :key="slug" :slug="slug" :actions-to="isDesktop ? `#${ACTIONS_ID}` : `#${MOBILE_ACTIONS_ID}`"
+                    :view="isDesktop ? undefined : mobileView === 'result' ? 'result' : 'code'"
+                    :sample-input="problem.sampleInput" :sample-output="problem.sampleOutput"
                     :contest-slug="submitContestSlug" :disabled-reason="disabledReason"
-                    @success="handleSubmissionSuccess" @judged="refreshStats" @contest-not-running="onContestNotRunning" />
+                    @judged="refreshStats" @contest-not-running="onContestNotRunning" @last="lastSubmission = $event" />
             </Teleport>
         </template>
     </div>
@@ -103,10 +165,15 @@
 import { ref, computed, shallowRef, watch, watchEffect, onBeforeUnmount, onMounted, provide } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useElementSize, useMediaQuery } from '@vueuse/core'
-import { ChevronLeft, CodeXml, FileText, Info } from 'lucide-vue-next'
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
-import ProblemHeader from '@/components/problem/detail/ProblemHeader.vue'
+import { ChartColumn, ChevronLeft, ChevronRight, CodeXml, Info } from 'lucide-vue-next'
+import { ResizablePanelGroup, ResizablePanel } from '@/components/ui/resizable'
+import WorkspaceHandle from '@/components/problem/detail/WorkspaceHandle.vue'
 import StatementPane from '@/components/problem/detail/StatementPane.vue'
+import ProblemStatsDialog from '@/components/problem/detail/ProblemStatsDialog.vue'
+import { useProblemNeighbors } from '@/composables/useProblemNeighbors'
+import { verdictMeta } from '@/lib/verdict'
+import { getLevelInfo } from '@/types/problem'
+import type { Submission } from '@/types/submission'
 import { refreshStatsUntilChanged } from '@/lib/problemStats'
 import { SHOW_CONSOLE } from '@/lib/consoleReveal'
 import SolvePane from '@/components/problem/detail/SolvePane.vue'
@@ -120,7 +187,6 @@ import { useAuthStore } from '@/stores/auth'
 import { ensureFreshSession } from '@/api/refreshSession'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import type { ContestDetail } from '@/types/contest'
-import type { Submission } from '@/types/submission'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -136,26 +202,41 @@ const fetchProblem = (signal: AbortSignal) =>
         ? contestService.getProblem(signal, contestSlug.value, label.value)
         : problemService.getProblemBySlug(signal, route.params.slug as string)
 
-const pendingSubmission = ref<Submission | null>(null)
-
 const isDesktop = useMediaQuery('(min-width: 900px)')
 
 // Desktop split. Double-click or Enter on the divider puts it back to the default; reka keeps the arrow keys.
-const SPLIT_DEFAULT = 46
+const SPLIT_DEFAULT = 44
 const statementPanel = ref<{ resize: (size: number) => void } | null>(null)
 const resetSplit = () => statementPanel.value?.resize(SPLIT_DEFAULT)
 
-// Narrow screens: the Problem | Code switch (a tablist; arrows, Home and End move between the two).
-type MobileView = 'problem' | 'code'
+// Narrow screens: the Problem | Code | Result switch (a tablist; arrows, Home and End move between them).
+type MobileView = 'problem' | 'code' | 'result'
 const mobileView = ref<MobileView>('problem')
 const mobileViews = [
-    { key: 'problem' as const, label: 'Problem', icon: FileText },
-    { key: 'code' as const, label: 'Code', icon: CodeXml },
+    { key: 'problem' as const, label: 'Problem' },
+    { key: 'code' as const, label: 'Code' },
+    { key: 'result' as const, label: 'Result' },
 ]
-// The verdict console lives in the Code view; the verdict toast's View switches there before scrolling to it.
+// The console is the Result view; a submit, a run or the verdict toast's View switches there.
 provide(SHOW_CONSOLE, () => {
-    if (!isDesktop.value) mobileView.value = 'code'
+    if (!isDesktop.value) mobileView.value = 'result'
 })
+
+// Desktop's Run and Submit, and the phone's pinned bar for them.
+const ACTIONS_ID = 'problem-actions'
+const MOBILE_ACTIONS_ID = 'problem-actions-mobile'
+
+// The reader's latest submission, for the phone's Result tab and pinned bar.
+const lastSubmission = ref<Submission | null>(null)
+const lastMeta = computed(() => (lastSubmission.value ? verdictMeta(lastSubmission.value.status) : null))
+const lastTests = computed(() => {
+    const rows = lastSubmission.value?.details
+    return rows?.length ? `${rows.filter((r) => r.result === 0).length}/${rows.length}` : ''
+})
+
+const DIFFICULTY_INK: Record<number, string> = { 1: 'text-success-ink', 2: 'text-warning-ink', 3: 'text-destructive-ink' }
+const difficultyInk = computed(() => DIFFICULTY_INK[problem.value?.hardnessLevel ?? 0] ?? '')
+const limitTime = computed(() => `${Number(((problem.value?.timeLimit || 0) / 1000).toFixed(2))} s`)
 const onViewKeydown = (e: KeyboardEvent) => {
     const at = mobileViews.findIndex((v) => v.key === mobileView.value)
     const moves: Record<string, number> = { ArrowLeft: at - 1, ArrowRight: at + 1, Home: 0, End: mobileViews.length - 1 }
@@ -168,7 +249,6 @@ const onViewKeydown = (e: KeyboardEvent) => {
 }
 
 // The pinned submit bar covers the bottom of the screen, so lift the toasts above it while it is shown.
-const SUBMIT_BAR_ID = 'problem-submit-bar'
 const submitBarEl = ref<HTMLElement | null>(null)
 const { height: submitBarHeight } = useElementSize(submitBarEl)
 const rootStyle = document.documentElement.style
@@ -308,11 +388,18 @@ const disabledReason = computed(() =>
 
 const backTo = computed(() => (contestSlug.value ? `${ROUTE_PATH.CONTESTS}/${contestSlug.value}` : ROUTE_PATH.PROBLEM))
 const backLabel = computed(() => (contestSlug.value ? (contest.value?.title ?? 'Contest') : 'Problems'))
+const crumbTitle = computed(() => (contestSlug.value ? `${label.value}. ${problem.value?.title ?? ''}` : (problem.value?.title ?? '')))
+
+// The problems before and after this one, for the arrows beside the breadcrumb.
+const { prev, next } = useProblemNeighbors({ contestSlug, label, slug, contest })
+const neighborLinks = computed(() => [
+    { key: 'prev', label: 'Previous problem', icon: ChevronLeft, link: prev.value },
+    { key: 'next', label: 'Next problem', icon: ChevronRight, link: next.value },
+])
 
 // Navigating problem → problem reuses this component, so setup() does not re-run
 // and the mount-time fetch never fires again. Refetch + reset state on route change.
 watch(routeKey, () => {
-    pendingSubmission.value = null
     mobileView.value = 'problem'
     void loadProblem()
 })
@@ -321,10 +408,6 @@ watch(contestSlug, () => {
     contestStopped.value = false
     void loadContest()
 })
-
-const handleSubmissionSuccess = (submission: Submission) => {
-    pendingSubmission.value = submission
-}
 
 // The statistics (meta-bar chips, stats dialog) come with the problem, fetched once on load. Once a submission has its
 // verdict, fetch them again in the background — no loading state — and replace only those fields.

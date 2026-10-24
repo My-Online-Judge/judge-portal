@@ -3,11 +3,23 @@ import type { AxiosResponse } from 'axios'
 import type { ApiResponse } from '@/types/common'
 import { API_ROUTES } from '@/constants/apiPath'
 import type { UserStats } from '@/types/profile'
-import type { Submission, SubmissionListItem, SubmissionRequest, SubmissionSearchParams } from '@/types/submission'
+import type {
+    RunRequest,
+    RunResponse,
+    Submission,
+    SubmissionListItem,
+    SubmissionRequest,
+    SubmissionSearchParams,
+} from '@/types/submission'
 
 class SubmissionService {
     submit(req: SubmissionRequest): Promise<AxiosResponse<ApiResponse<Submission>>> {
         return axiosClient.post<ApiResponse<Submission>>(API_ROUTES.SUBMISSIONS.ROOT, req)
+    }
+
+    // Judges the code against the given cases and answers when they are done. Nothing is stored and nothing counts.
+    run(req: RunRequest): Promise<AxiosResponse<ApiResponse<RunResponse>>> {
+        return axiosClient.post<ApiResponse<RunResponse>>(API_ROUTES.SUBMISSIONS.RUN, req)
     }
 
     // Every submission, newest first (submission:read_any). Undefined filters are left out.
