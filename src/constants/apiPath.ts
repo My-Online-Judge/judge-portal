@@ -42,6 +42,7 @@ export const API_ROUTES = {
     },
     SUBMISSIONS: {
         ROOT: '/submissions',
+        RUN: '/submissions/run',
         DETAIL: (id: string) => `/submissions/${id}`,
         STREAM: (id: string) => `/submissions/${id}/stream`,
         REJUDGE: (id: string) => `/submissions/${id}/rejudge`,

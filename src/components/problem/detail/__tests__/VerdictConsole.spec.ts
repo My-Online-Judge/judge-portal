@@ -31,7 +31,7 @@ describe('VerdictConsole', () => {
         await flushPromises()
         expect(getById).toHaveBeenCalledTimes(1)
         expect(getById).toHaveBeenCalledWith('abcdef123456')
-        expect(w.text()).toContain('AC')
+        expect(w.text()).toContain('Accepted')
     })
 
     it('emitsJudgedOnTerminalVerdict', async () => {

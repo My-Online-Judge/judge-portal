@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clipForDisplay, defaultSelection, firstDiffLine, passedCount, sortTests, tileLabel } from '../verdictTiles'
+import { clipForDisplay, firstDiffLine, firstFailingOrSample, passedCount, sortTests, tileLabel } from '../verdictTiles'
 import type { TestCaseResult } from '@/types/submission'
 
 const row = (name: string, result = 0, sample = false): TestCaseResult => ({
@@ -22,14 +22,15 @@ describe('verdictTiles', () => {
         const names = sortTests(['10', 'b', '2', 'a', '1'].map((n) => row(n))).map((r) => r.name)
         expect(names).toEqual(['1', '2', '10', 'a', 'b'])
     })
-    it('defaultSelectionPrefersFailingSample', () => {
-        expect(defaultSelection([row('1', 0, true), row('2', -1, true), row('3', -1, false)])).toBe('2')
+    it('firstFailingOrSampleOpensTheFirstFailureHiddenOrNot', () => {
+        expect(firstFailingOrSample([row('1', 0, true), row('3', -1, false), row('2', -1, false)])).toBe('2')
     })
-    it('defaultSelectionFallsBackToFirstSample', () => {
-        expect(defaultSelection([row('3', 0, false), row('2', 0, true), row('1', 0, true)])).toBe('1')
+    it('firstFailingOrSampleFallsBackToTheFirstSample', () => {
+        expect(firstFailingOrSample([row('3', 0, false), row('2', 0, true), row('1', 0, true)])).toBe('1')
     })
-    it('noSampleNoSelection', () => {
-        expect(defaultSelection([row('1', -1, false)])).toBeNull()
+    it('firstFailingOrSampleWithoutSamplesTakesTheFirstTest', () => {
+        expect(firstFailingOrSample([row('2', 0, false), row('1', 0, false)])).toBe('1')
+        expect(firstFailingOrSample([])).toBeNull()
     })
     it('clipsAt16384', () => {
         const r = clipForDisplay('a'.repeat(20000))

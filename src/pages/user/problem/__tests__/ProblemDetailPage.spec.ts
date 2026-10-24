@@ -44,8 +44,16 @@ import { useLoginPrompt } from '@/composables/useLoginPrompt'
 // Stands in for the editor pane: it counts its mounts and holds typed text like Monaco does.
 const SolvePane = defineComponent({
     name: 'SolvePane',
-    props: { slug: String, submitBarTo: String, contestSlug: String, disabledReason: String },
-    emits: ['success', 'judged', 'contest-not-running'],
+    props: {
+        slug: String,
+        actionsTo: String,
+        view: String,
+        sampleInput: String,
+        sampleOutput: String,
+        contestSlug: String,
+        disabledReason: String,
+    },
+    emits: ['judged', 'contest-not-running', 'last'],
     setup() {
         onMounted(() => h.solveMounts++)
         return () => render('textarea', { 'data-testid': 'editor' })
@@ -77,6 +85,8 @@ const stubs = {
     ResizablePanelGroup: Slot,
     ResizablePanel: Slot,
     ResizableHandle: true,
+    WorkspaceHandle: true,
+    ProblemStatsDialog: Slot,
 }
 
 describe('ProblemDetailPage', () => {
@@ -95,6 +105,8 @@ describe('ProblemDetailPage', () => {
                     ResizablePanelGroup: Slot,
                     ResizablePanel: Slot,
                     ResizableHandle: true,
+                    WorkspaceHandle: true,
+                    ProblemStatsDialog: Slot,
                 },
             },
         })
@@ -103,16 +115,18 @@ describe('ProblemDetailPage', () => {
         const editor = document.querySelector<HTMLTextAreaElement>('[data-testid="editor"]')!
         expect(editor).not.toBeNull()
         editor.value = 'int main() {}'
-        expect(wrapper.findComponent(SolvePane).props('submitBarTo')).toBeUndefined()
+        expect(wrapper.findComponent(SolvePane).props('actionsTo')).toBe('#problem-actions')
+        expect(wrapper.findComponent(SolvePane).props('view')).toBeUndefined()
 
-        // Below 900 px: the same pane moves into the Code view and renders its submit bar in the pinned bar.
+        // Below 900 px: the same pane moves into the Code view and renders Run and Submit in the pinned bar.
         h.isDesktop.value = false
         await flushPromises()
         expect(h.solveMounts).toBe(1)
         expect(document.querySelectorAll('[data-testid="editor"]')).toHaveLength(1)
         expect(document.getElementById('problem-view-code')?.contains(editor)).toBe(true)
         expect(editor.value).toBe('int main() {}')
-        expect(wrapper.findComponent(SolvePane).props('submitBarTo')).toBe('#problem-submit-bar')
+        expect(wrapper.findComponent(SolvePane).props('actionsTo')).toBe('#problem-actions-mobile')
+        expect(wrapper.findComponent(SolvePane).props('view')).toBe('code')
 
         // And back.
         h.isDesktop.value = true
