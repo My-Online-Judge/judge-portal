@@ -477,6 +477,14 @@
 .meta-strip > * { padding: 0 12px; border-left: 1px solid var(--rule-2); line-height: 1.25; }
 .meta-strip > *:first-child { padding-left: 0; border-left: 0; }
 
+/* Inline metadata: label and value pairs split by hairlines (the solve screen head). The label is muted, the value 500. */
+.meta-dl { display: flex; flex-wrap: wrap; align-items: baseline; row-gap: 8px; margin: 0; font-size: var(--text-sm); line-height: 1.25rem; font-variant-numeric: tabular-nums; }
+.meta-dl > div { display: flex; gap: 8px; min-width: 0; padding-inline: 16px; border-left: 1px solid var(--rule-2); }
+.meta-dl > div:first-child { padding-left: 0; border-left: 0; }
+.meta-dl dt { color: var(--muted-foreground); white-space: nowrap; }
+.meta-dl dd { margin: 0; min-width: 0; color: var(--foreground); font-weight: 500; overflow-wrap: break-word; }
+@media (max-width: 40rem) { .meta-dl > div { padding-inline: 0 16px; border-left: 0; } }
+
 /* Data tables. In the components layer so utilities can override a cell. */
 @layer components {
   .dt { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }

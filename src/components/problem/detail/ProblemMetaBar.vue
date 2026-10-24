@@ -1,25 +1,33 @@
 <template>
-    <ProblemStatsDialog :problem="problem">
-        <button type="button" aria-haspopup="dialog"
-            class="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1 self-start rounded-md border border-border bg-background px-2.5 py-1.5 font-mono text-xs text-foreground tabular outline-none hover:border-input hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50">
-            <DifficultyBadge :level="problem.hardnessLevel" class="font-sans" />
-            <template v-for="item in items" :key="item.key">
-                <!-- The hairline reads as a comma to a screen reader. -->
-                <span class="h-3 w-px bg-border"><span class="sr-only">, </span></span>
-                <span>
-                    <span v-if="item.label" class="text-muted-foreground">{{ `${item.label} ` }}</span>
-                    <span :class="{ 'text-muted-foreground': item.muted }">{{ item.value }}</span>
-                </span>
-            </template>
-            <ChartPie class="size-3.5 text-muted-foreground" aria-hidden="true" />
-            <span class="sr-only">. Open submission statistics</span>
-        </button>
-    </ProblemStatsDialog>
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <dl class="meta-dl">
+            <div>
+                <dt>Difficulty</dt>
+                <dd><DifficultyBadge :level="problem.hardnessLevel" /></dd>
+            </div>
+            <div v-for="item in items" :key="item.key">
+                <dt>{{ item.label }}</dt>
+                <dd>{{ item.value }}</dd>
+            </div>
+            <!-- Plain text: the problems list does not read a tag from the URL yet, so a link would lead nowhere. -->
+            <div v-if="problem.tags?.length">
+                <dt>Tags</dt>
+                <dd>{{ problem.tags.join(', ') }}</dd>
+            </div>
+        </dl>
+        <ProblemStatsDialog :problem="problem">
+            <Button variant="ghost" size="sm" aria-haspopup="dialog">
+                <ChartPie aria-hidden="true" />
+                Statistics
+            </Button>
+        </ProblemStatsDialog>
+    </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ChartPie } from 'lucide-vue-next'
+import { Button } from '@/components/ui/button'
 import DifficultyBadge from '@/components/common/DifficultyBadge.vue'
 import type { Problem } from '@/types/problem'
 import ProblemStatsDialog from './ProblemStatsDialog.vue'
@@ -33,10 +41,10 @@ const items = computed(() => {
     const total = props.problem.totalSubmission || 0
     const accepted = props.problem.acceptedSubmission || 0
     return [
-        { key: 'time', label: 'Time', value: seconds(props.problem.timeLimit) },
-        { key: 'memory', label: 'Memory', value: `${props.problem.memoryLimit} MB` },
-        { key: 'ac', label: 'AC', value: total ? `${((accepted / total) * 100).toFixed(1)}%` : '-' },
-        { key: 'total', label: '', value: `${total} ${total === 1 ? 'submission' : 'submissions'}`, muted: true },
+        { key: 'time', label: 'Time limit', value: seconds(props.problem.timeLimit) },
+        { key: 'memory', label: 'Memory limit', value: `${props.problem.memoryLimit} MB` },
+        { key: 'ac', label: 'Acceptance', value: total ? `${((accepted / total) * 100).toFixed(1)}%` : '-' },
+        { key: 'total', label: 'Submissions', value: `${total}` },
     ]
 })
 </script>
