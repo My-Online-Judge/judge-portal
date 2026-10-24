@@ -1,11 +1,12 @@
 <template>
     <!-- Not a live region: screen readers read it when asked, not on every tick. -->
-    <span class="tabular font-mono" :title="formatDateTime(target)">{{ text }}</span>
+    <span :class="cn('text-base font-medium tabular-nums', props.class)" :title="formatDateTime(target)">{{ text }}</span>
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, watch, type HTMLAttributes } from 'vue'
 import { useNow } from '@vueuse/core'
+import { cn } from '@/lib/utils'
 import { formatCountdown } from '@/lib/contestTime'
 import { formatDateTime } from '@/utils/dateTimeUtils'
 
@@ -14,6 +15,8 @@ const props = defineProps<{
     target: string
     /** serverOffsetMs of the response the target came from. */
     offsetMs: number
+    /** Merged over the body face at 16 px medium, so a caller can ask for text-sm. */
+    class?: HTMLAttributes['class']
 }>()
 // Once per target, when it is reached: the page reads the contest again to learn its new phase.
 const emit = defineEmits<{ (e: 'elapsed'): void }>()

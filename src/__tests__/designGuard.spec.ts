@@ -125,4 +125,32 @@ describe('design guard', () => {
   it('no placeholder href="#"', () => {
     expectNoHits(vueFiles.flatMap((f) => scan(f, f.text, 0, /href="#"/)), 'Use a real route or a button.')
   })
+
+  it('no arbitrary px font sizes in client templates', () => {
+    const admin = [join('pages', 'admin'), join('components', 'admin')]
+    const hits = vueFiles
+      .filter((f) => !admin.some((a) => f.rel.startsWith(a)))
+      .flatMap((f) => {
+        const t = templateOf(f)
+        return t ? scan(f, t.text, t.offset, /\btext-\[\d+(\.\d+)?px\]/) : []
+      })
+    expectNoHits(hits, 'Use the type scale (text-xs|sm|base|lg), not text-[Npx].')
+  })
+
+  it('no page entrance animation on client pages', () => {
+    const hits = vueFiles
+      .filter((f) => f.rel.startsWith(join('pages', 'user')) || f.rel === join('pages', 'ForbiddenPage.vue'))
+      .flatMap((f) => {
+        const t = templateOf(f)
+        return t ? scan(f, t.text, t.offset, /\banimate-enter\b/) : []
+      })
+    expectNoHits(hits, 'Client pages do not animate in; motion is for state changes only.')
+  })
+
+  it('dark tokens live on :root[data-theme="dark"]', () => {
+    const css = readFileSync(join(SRC, MAIN_CSS), 'utf8')
+    expect(css).toMatch(/:root\[data-theme="dark"\]\s*\{/)
+    expect(css).not.toMatch(/^\.dark\s*\{/m)
+    expect(css.split('\n')[0]).toMatch(/^\/\* Hallmark ·/)
+  })
 })

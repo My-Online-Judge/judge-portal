@@ -1,30 +1,36 @@
 <template>
     <Dialog :open="open" @update:open="$emit('update:open', $event)">
         <DialogContent class="sm:max-w-[400px]" @pointer-down-outside="blockWhileLoading" @focus-outside="blockWhileLoading" @escape-key-down="blockWhileLoading" @close="$emit('close')">
-            <DialogHeader class="items-center text-center">
-                <span class="strip mb-2.5 origin-center scale-[1.4] self-center" aria-hidden="true"><i class="ok" /><i class="ok" /><i class="ok" /><i class="ok" /><i class="p" /><i class="dim" /></span>
-                <DialogTitle class="text-center">Log in to My Online Judge</DialogTitle>
-                <DialogDescription class="text-center">
+            <DialogHeader class="text-left">
+                <DialogTitle class="font-display text-xl">Log in to My Online Judge</DialogTitle>
+                <DialogDescription class="text-base text-ink-2">
                     Track what you've solved and submit from any device.
                 </DialogDescription>
             </DialogHeader>
 
-            <div class="grid gap-3 pt-2">
-                <Button variant="secondary" size="lg" class="w-full" :aria-busy="loading" :disabled="loading" @click="handleGoogleLogin">
+            <div class="flex flex-col gap-2">
+                <!-- The dialog's one action, so its one filled button. Google's mark keeps its own colours, so it sits on a
+                     paper tile that stays legible on the blue. -->
+                <Button size="lg" class="w-full" :aria-busy="loading" :disabled="loading" @click="handleGoogleLogin">
                     <Loader2 v-if="loading" class="animate-spin motion-reduce:animate-none" aria-hidden="true" />
-                    <GoogleMark v-else class="size-[18px]" />
+                    <span v-else class="grid size-6 place-items-center rounded-sm bg-background">
+                        <GoogleMark class="size-4" />
+                    </span>
                     {{ loading ? 'Opening Google…' : 'Continue with Google' }}
                 </Button>
 
-                <div v-if="failed" role="alert" class="flex items-start gap-2 rounded-md bg-destructive-soft px-3 py-2 text-[13px] text-destructive-ink">
-                    <CircleAlert class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                    <span>Couldn't start Google sign-in. Try again.</span>
+                <!-- A line is always reserved, so a failure does not move the dialog. -->
+                <div role="alert" class="flex min-h-5 items-start gap-2 text-sm text-destructive-ink">
+                    <template v-if="failed">
+                        <CircleAlert class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                        <span>Couldn't start Google sign-in. Try again.</span>
+                    </template>
                 </div>
-            </div>
 
-            <p class="text-center text-xs text-muted-foreground">
-                New here? <b class="font-semibold text-foreground">Continue with Google</b> creates your account.
-            </p>
+                <p class="text-sm text-ink-2">
+                    New here? <b class="font-semibold text-foreground">Continue with Google</b> creates your account.
+                </p>
+            </div>
         </DialogContent>
     </Dialog>
 </template>

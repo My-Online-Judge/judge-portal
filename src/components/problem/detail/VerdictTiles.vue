@@ -2,20 +2,20 @@
     <div :class="['flex flex-col gap-4 text-sm', `v-${tone}`]">
         <div class="flex flex-col gap-1.5">
             <div class="flex flex-wrap items-baseline gap-x-3.5 gap-y-1">
-                <h3 class="text-[19px] leading-snug font-bold tracking-[-0.01em] text-[var(--vi)]" data-test="verdict-title">
+                <h3 class="text-lg leading-snug font-bold tracking-[-0.01em] text-[var(--vi)]" data-test="verdict-title">
                     {{ meta.name }}
                 </h3>
                 <span v-if="rows.length" class="text-sm text-muted-foreground">
                     <b class="tabular font-semibold text-foreground" data-test="summary-count">{{ passed }} / {{ rows.length }}</b>
                     tests passed
                 </span>
-                <span class="meta-strip tabular ml-auto text-[12.5px] text-muted-foreground">
+                <span class="meta-strip tabular ml-auto text-xs text-muted-foreground">
                     <span>#{{ submission.id.substring(0, 8) }}</span>
                     <span v-if="submission.language?.name">{{ submission.language.name }}</span>
                     <span v-if="submission.createdAt">{{ formatRelativeTime(submission.createdAt) }}</span>
                 </span>
             </div>
-            <p v-if="rows.length" class="flex flex-wrap gap-x-5 text-[13px] text-muted-foreground">
+            <p v-if="rows.length" class="flex flex-wrap gap-x-5 text-sm text-muted-foreground">
                 <span>Max time <b class="tabular font-semibold text-foreground">{{ formatMs(submission.cpuTime) }}</b></span>
                 <span>Max memory <b class="tabular font-semibold text-foreground">{{ formatMem(submission.memory) }}</b></span>
             </p>

@@ -61,6 +61,16 @@ describe('useTheme', () => {
         expect(t.mode.value).toBe('system')
     })
 
+    it('setModeWritesDataTheme', async () => {
+        const { useTheme } = await load()
+        const t = useTheme()
+        t.setMode('dark')
+        expect(document.documentElement.dataset.theme).toBe('dark')
+        expect(document.documentElement.classList.contains('dark')).toBe(true)
+        t.setMode('light')
+        expect(document.documentElement.dataset.theme).toBe('light')
+    })
+
     it('systemModeFollowsOsChange', async () => {
         const { useTheme } = await load()
         const t = useTheme()

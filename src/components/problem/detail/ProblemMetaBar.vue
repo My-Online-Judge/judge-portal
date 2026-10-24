@@ -1,5 +1,5 @@
 <template>
-    <div class="flex flex-wrap items-center gap-x-[22px] gap-y-1.5 text-[13px]">
+    <div class="flex flex-wrap items-center gap-x-[22px] gap-y-1.5 text-sm">
         <dl class="contents">
             <div v-for="item in items" :key="item.key" class="flex items-baseline gap-1.5">
                 <dt class="text-muted-foreground">{{ item.label }}</dt>

@@ -504,7 +504,7 @@ onBeforeUnmount(() => {
     border: 1px solid var(--border);
     border-radius: 12px;
     box-shadow: var(--shadow-lg);
-    padding: 12px 12px 12px 14px;
+    padding: 12px;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 2px 12px;
@@ -609,7 +609,7 @@ onBeforeUnmount(() => {
 }
 .toast .t-act {
     height: 28px;
-    padding: 0 10px;
+    padding: 0 12px;
     font-size: 12.5px;
 }
 .toast .t-count {
@@ -619,7 +619,7 @@ onBeforeUnmount(() => {
     color: var(--muted-foreground);
     background: var(--muted);
     border-radius: 4px;
-    padding: 0 5px;
+    padding: 0 4px;
     line-height: 18px;
 }
 .toast .t-cd {
@@ -630,8 +630,8 @@ onBeforeUnmount(() => {
 }
 .toast .t-prog {
     position: absolute;
-    left: 14px;
-    right: 14px;
+    left: 12px;
+    right: 12px;
     bottom: 0;
     height: 2px;
     border-radius: 2px;
@@ -663,14 +663,14 @@ onBeforeUnmount(() => {
     position: absolute;
     bottom: 100%;
     left: 0;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     font-size: 11px;
     color: var(--muted-foreground);
     font-family: var(--font-mono);
     opacity: 0;
     transition: opacity 200ms;
     background: var(--popover);
-    padding: 1px 6px;
+    padding: 2px 8px;
     border-radius: 4px;
     border: 1px solid var(--border);
 }

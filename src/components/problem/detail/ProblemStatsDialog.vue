@@ -6,7 +6,7 @@
         <DialogContent class="gap-0 overflow-hidden p-0 sm:max-w-[520px]">
             <DialogHeader class="gap-1 px-5 pt-[18px] pr-12 pb-4 text-left">
                 <DialogTitle class="text-base leading-snug font-semibold">{{ problem.title }}</DialogTitle>
-                <DialogDescription class="text-[13px]">{{ submissionsLabel }}, by verdict</DialogDescription>
+                <DialogDescription class="text-sm">{{ submissionsLabel }}, by verdict</DialogDescription>
             </DialogHeader>
 
             <div class="px-5 pb-5">
@@ -18,11 +18,11 @@
                         <Doughnut :data="chartData" :options="chartOptions" :aria-label="chartLabel" />
                         <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"
                             aria-hidden="true">
-                            <b class="tabular font-mono text-[22px] leading-tight font-semibold tracking-[-0.03em]">{{ acceptedPct }}%</b>
-                            <span class="text-[11.5px] text-muted-foreground">accepted of {{ total }}</span>
+                            <b class="text-xl leading-tight font-semibold tabular-nums">{{ acceptedPct }}%</b>
+                            <span class="text-xs text-muted-foreground tabular-nums">accepted of {{ total }}</span>
                         </div>
                     </div>
-                    <table class="min-w-0 flex-[1_1_200px] border-collapse text-[12.5px]">
+                    <table class="min-w-0 flex-[1_1_200px] border-collapse text-sm">
                         <caption class="sr-only">Submissions by verdict</caption>
                         <thead class="sr-only">
                             <tr>
@@ -42,8 +42,8 @@
                                         {{ row.name }}
                                     </span>
                                 </td>
-                                <td class="tabular px-1.5 py-1 text-right font-mono">{{ row.count }}</td>
-                                <td class="tabular px-1.5 py-1 text-right font-mono text-muted-foreground">{{ row.pct }}%</td>
+                                <td class="px-1.5 py-1 text-right tabular-nums">{{ row.count }}</td>
+                                <td class="px-1.5 py-1 text-right tabular-nums text-muted-foreground">{{ row.pct }}%</td>
                             </tr>
                         </tbody>
                     </table>

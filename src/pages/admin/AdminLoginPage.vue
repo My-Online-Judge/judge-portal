@@ -2,8 +2,7 @@
     <div class="flex min-h-screen items-start justify-center bg-background px-4 py-12 sm:items-center">
         <div class="flex w-full max-w-[400px] flex-col gap-4 rounded-xl border border-border bg-card p-[26px] shadow-[var(--shadow-md)]">
             <div class="flex items-center gap-2.5">
-                <span class="strip" aria-hidden="true"><i class="ok" /><i class="ok" /><i class="ok" /><i class="ok" /><i class="p" /><i class="dim" /></span>
-                <b class="text-[15px] font-bold tracking-[-0.03em]">MOJ</b>
+                <b class="font-display text-[15px]">MOJ</b>
                 <Badge variant="neutral" class="h-5">Admin</Badge>
             </div>
             <div>

@@ -1,30 +1,31 @@
 <template>
-    <div class="mx-auto flex w-full max-w-[60rem] flex-col gap-6 px-4 py-8 md:px-6">
+    <div class="flex flex-col gap-8">
         <Loading v-if="state === 'loading'" />
 
-        <div v-else-if="state === 'notFound'" class="rounded-xl border bg-card p-10 text-center" role="alert">
-            <h1 class="text-lg font-semibold">User not found</h1>
+        <div v-else-if="state === 'notFound'" class="flex flex-col items-center gap-3 py-20 text-center" role="alert">
+            <h1 class="font-display text-2xl text-foreground">User not found</h1>
             <!-- Never echo an email address from the address bar. -->
-            <p v-if="routeHandle" class="mt-1 text-sm text-muted-foreground">No account has the username @{{ routeHandle }}.</p>
-            <p v-else class="mt-1 text-sm text-muted-foreground">This account does not exist.</p>
+            <p v-if="routeHandle" class="text-base text-ink-2">No account has the username @{{ routeHandle }}.</p>
+            <p v-else class="text-base text-ink-2">This account does not exist.</p>
         </div>
 
-        <div v-else-if="state === 'error'" class="rounded-xl border bg-card p-10 text-center" role="alert">
-            <h1 class="text-lg font-semibold">Could not load this profile</h1>
-            <Button variant="outline" size="sm" class="mt-3" @click="load">Retry</Button>
+        <div v-else-if="state === 'error'" class="flex flex-col items-center gap-3 py-20 text-center" role="alert">
+            <h1 class="font-display text-2xl text-foreground">Could not load this profile</h1>
+            <Button variant="outline" size="sm" @click="load">Retry</Button>
         </div>
 
-        <template v-else-if="profile && stats">
+        <!-- A profile reads best at about 60rem: the strip and the table would only stretch on a wide screen. -->
+        <div v-else-if="profile && stats" class="flex max-w-[60rem] flex-col gap-8">
             <header class="flex items-center gap-4">
                 <!-- Initials only: a public page never loads a third-party photo, which would tell its host who looks. -->
                 <Avatar class="size-16">
-                    <AvatarFallback class="bg-primary-soft text-lg font-semibold text-info-ink">{{ initials }}</AvatarFallback>
+                    <AvatarFallback class="bg-primary-soft font-display text-xl text-info-ink">{{ initials }}</AvatarFallback>
                 </Avatar>
                 <div class="min-w-0">
-                    <h1 class="truncate text-xl font-semibold tracking-[-0.02em]">{{ heading }}</h1>
-                    <p class="text-sm text-muted-foreground">
+                    <h1 class="font-display text-2xl break-words text-foreground">{{ heading }}</h1>
+                    <p class="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-base text-ink-2 [&>*+*]:border-l [&>*+*]:border-rule-2 [&>*+*]:pl-4">
                         <!-- No handle only for an unresolved or legacy email-shaped username; Google accounts have a handle since SP14. -->
-                        <span v-if="handle" class="mr-2 font-mono">@{{ handle }}</span>
+                        <span v-if="handle">@{{ handle }}</span>
                         <span>Joined {{ joined }}</span>
                     </p>
                 </div>
@@ -37,52 +38,62 @@
             </StatStrip>
 
             <section aria-labelledby="solved-heading" class="flex flex-col gap-3">
-                <h2 id="solved-heading" class="text-sm font-semibold">Solved problems</h2>
-                <ul v-if="stats.solvedProblems.length" class="flex flex-wrap gap-2">
+                <h2 id="solved-heading" class="text-base font-semibold text-foreground">Solved problems</h2>
+                <ul v-if="stats.solvedProblems.length" class="flex flex-wrap gap-x-5 gap-y-1">
                     <li v-for="slug in stats.solvedProblems" :key="slug">
                         <RouterLink :to="`/problems/${slug}`"
-                            class="inline-flex rounded-md bg-success-soft px-2 py-1 font-mono text-xs text-success-ink hover:underline">{{ slug }}</RouterLink>
+                            class="inline-block rounded-sm py-1.5 font-mono text-sm text-ink-2 transition-colors motion-reduce:transition-none hover:text-link hover:underline">{{ slug }}</RouterLink>
                     </li>
                 </ul>
-                <p v-else class="text-sm text-muted-foreground">No problems solved yet.</p>
+                <p v-else class="text-base text-ink-2">No problems solved yet.</p>
             </section>
 
-            <section aria-labelledby="recent-heading" class="flex flex-col gap-3">
-                <h2 id="recent-heading" class="text-sm font-semibold">Recent submissions</h2>
-                <div v-if="stats.recent.length" class="overflow-x-auto rounded-xl border bg-card">
-                    <table class="dt min-w-[480px]">
-                        <thead>
-                            <tr>
-                                <th class="pl-4">Time</th>
-                                <th>Problem</th>
-                                <th>Language</th>
-                                <th>Verdict</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="s in stats.recent" :key="s.id" :class="isOwner && 'cursor-pointer'" @click="openDetail(s.id)">
-                                <td class="pl-4 font-mono text-xs whitespace-nowrap">
+            <section aria-labelledby="recent-heading" class="flex flex-col gap-2">
+                <h2 id="recent-heading" class="text-base font-semibold text-foreground">Recent submissions</h2>
+                <!-- The rows sit 12 px outside the column (8 px on a phone) so their text lines up with the head. Under sm the
+                     time and the language sit under the slug, so a row is the problem and its verdict and a slug never wraps. -->
+                <div v-if="stats.recent.length" class="-mx-2 sm:-mx-3">
+                    <Table>
+                        <TableHeader>
+                            <TableRow class="hover:bg-transparent">
+                                <TableHead scope="col" class="hidden px-3 sm:table-cell">Time</TableHead>
+                                <TableHead scope="col" class="px-2 sm:px-3">Problem</TableHead>
+                                <TableHead scope="col" class="hidden px-3 sm:table-cell">Language</TableHead>
+                                <TableHead scope="col" class="px-2 sm:px-3">Verdict</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow v-for="s in stats.recent" :key="s.id" :class="isOwner && 'cursor-pointer'" @click="openDetail(s.id)">
+                                <TableCell class="hidden px-3 text-sm text-ink-2 tabular-nums sm:table-cell">
                                     <!-- The owner opens a row from the keyboard through its time. -->
-                                    <button v-if="isOwner" type="button" class="rounded-sm hover:text-link hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                    <button v-if="isOwner" type="button" class="relative rounded-sm whitespace-nowrap after:absolute after:inset-x-0 after:-inset-y-3 hover:text-link hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                                         :aria-label="`Open submission from ${formatDateTime(s.createdAt)}`" @click.stop="openDetail(s.id)">{{ formatDateTime(s.createdAt) }}</button>
                                     <template v-else>{{ formatDateTime(s.createdAt) }}</template>
-                                </td>
-                                <td>
+                                </TableCell>
+                                <TableCell class="px-2 sm:px-3">
                                     <RouterLink :to="`/problems/${s.problemSlug}`"
-                                        class="font-mono text-xs text-foreground hover:text-link hover:underline" @click.stop>{{ s.problemSlug }}</RouterLink>
-                                </td>
-                                <td class="text-[13px] whitespace-nowrap">{{ s.language }}</td>
-                                <td><VerdictChip :status="s.result" size="sm" /></td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                        class="relative rounded-sm font-mono text-sm whitespace-nowrap text-foreground after:absolute after:inset-x-0 after:-inset-y-3 hover:text-link hover:underline"
+                                        :class="isOwner && 'max-sm:after:bottom-0'" @click.stop>{{ s.problemSlug }}</RouterLink>
+                                    <!-- The slug's hit target ends at its bottom edge and this button's starts at its top edge, so the two never overlap. -->
+                                    <div class="mt-1 flex flex-wrap gap-x-3 text-sm text-ink-2 tabular-nums sm:hidden">
+                                        <button v-if="isOwner" type="button" class="relative rounded-sm whitespace-nowrap after:absolute after:inset-x-0 after:top-0 after:-bottom-3 hover:text-link hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                            :aria-label="`Open submission from ${formatDateTime(s.createdAt)}`" @click.stop="openDetail(s.id)">{{ formatDateTime(s.createdAt) }}</button>
+                                        <span v-else class="whitespace-nowrap">{{ formatDateTime(s.createdAt) }}</span>
+                                        <span>{{ s.language }}</span>
+                                    </div>
+                                </TableCell>
+                                <TableCell class="hidden px-3 text-sm text-ink-2 sm:table-cell">{{ s.language }}</TableCell>
+                                <TableCell class="px-2 sm:px-3"><VerdictChip :status="s.result" /></TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
                 </div>
-                <p v-else class="text-sm text-muted-foreground">No submissions yet.</p>
+                <p v-else class="text-base text-ink-2">No submissions yet.</p>
             </section>
 
             <SubmissionDetailDialog v-if="isOwner" :open="detailOpen" :submission-id="detailId"
                 @update:open="(v: boolean) => (detailOpen = v)" />
-        </template>
+        </div>
     </div>
 </template>
 
@@ -92,6 +103,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import { isAxiosError } from 'axios'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import Loading from '@/components/common/Loading.vue'
 import StatCell from '@/components/common/StatCell.vue'
 import StatStrip from '@/components/common/StatStrip.vue'

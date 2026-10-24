@@ -40,7 +40,7 @@ describe('ProblemTable', () => {
         expect(w.find('[role=progressbar]').exists()).toBe(false)
         const heads = w.findAll('th').map((h) => h.text())
         expect(heads).not.toContain('#')
-        expect(heads).toEqual(['Title', 'Difficulty', 'Acceptance', 'Submissions'])
+        expect(heads).toEqual(['Title', 'Tags', 'Difficulty', 'Acceptance', 'Submissions'])
     })
 
     it('difficultyBadgeInRow', () => {
@@ -50,5 +50,17 @@ describe('ProblemTable', () => {
     it('renders no placeholder when a problem has no tags', () => {
         const w = mountTable([make({ tags: [] })])
         expect(w.text()).not.toContain('—')
+    })
+
+    it('rendersTagsAsCommaText', () => {
+        const w = mountTable([make({ tags: ['beginner', 'math'] })])
+        const cell = w.get('[data-col="tags"]')
+        expect(cell.text()).toBe('beginner, math')
+        expect(w.find('.font-mono').exists()).toBe(false)
+    })
+
+    it('keepsTitleLink', () => {
+        const w = mountTable([make({ problemSlug: 'tong-tu-1-den-n', title: 'Tong tu 1 den n' })])
+        expect(w.get('tbody a').attributes('href')).toBe('/problems/tong-tu-1-den-n')
     })
 })

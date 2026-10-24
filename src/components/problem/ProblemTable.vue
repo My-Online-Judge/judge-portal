@@ -1,53 +1,52 @@
 <template>
-    <div>
-        <!-- Table from 640 px up -->
+    <!-- The rows sit 12 px outside the column so their text lines up with the page head; hover and the rules reach the gutter. -->
+    <div class="-mx-3">
+        <!-- Table from 640 px up. Tags join it from xl: the rail takes 304 px from lg, and Title has to keep the rest. -->
         <Table class="hidden sm:table">
             <TableHeader>
-                <TableRow class="border-border bg-muted/30 text-xs font-medium text-muted-foreground hover:bg-muted/30">
-                    <TableHead class="min-w-[200px] pl-4">Title</TableHead>
-                    <TableHead class="w-[140px]">Difficulty</TableHead>
-                    <TableHead class="w-[120px] text-right">Acceptance</TableHead>
-                    <TableHead class="w-[130px] pr-4 text-right">Submissions</TableHead>
+                <TableRow class="hover:bg-transparent">
+                    <TableHead scope="col">Title</TableHead>
+                    <TableHead v-if="showTags" scope="col" class="hidden w-60 xl:table-cell">Tags</TableHead>
+                    <TableHead scope="col" class="w-30">Difficulty</TableHead>
+                    <TableHead scope="col" class="w-30 text-right">Acceptance</TableHead>
+                    <TableHead scope="col" class="w-30 text-right">Submissions</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
-                <TableRow v-for="problem in problems" :key="problem.id"
-                    class="border-border transition-colors hover:bg-muted/40">
-                    <TableCell class="pl-4">
+                <TableRow v-for="problem in problems" :key="problem.id">
+                    <TableCell class="whitespace-normal">
                         <RouterLink :to="'/problems/' + problem.problemSlug"
-                            class="block font-semibold text-foreground transition-colors hover:text-link">
+                            class="text-base font-medium text-foreground hover:text-primary hover:underline">
                             {{ problem.title }}
                         </RouterLink>
-                        <div v-if="showTags && problem.tags?.length" class="mt-1 flex flex-wrap gap-1">
-                            <span v-for="tag in problem.tags" :key="tag" :class="staticTag">{{ tag }}</span>
-                        </div>
+                    </TableCell>
+                    <TableCell v-if="showTags" data-col="tags" class="hidden whitespace-normal text-sm text-muted-foreground xl:table-cell">
+                        {{ tagText(problem) }}
                     </TableCell>
                     <TableCell>
                         <DifficultyBadge :level="problem.hardnessLevel" />
                     </TableCell>
-                    <TableCell class="text-right font-mono text-[13px] tabular-nums">
+                    <TableCell class="text-right text-sm tabular-nums text-ink-2">
                         {{ acceptance(problem) }}
                     </TableCell>
-                    <TableCell class="pr-4 text-right font-mono text-[13px] tabular-nums text-muted-foreground">
+                    <TableCell class="text-right text-sm tabular-nums text-ink-2">
                         {{ problem.totalSubmission || '-' }}
                     </TableCell>
                 </TableRow>
             </TableBody>
         </Table>
 
-        <!-- Two-line list items under 640 px -->
+        <!-- One link per problem under 640 px: title, tags, then difficulty against acceptance -->
         <ul class="m-0 list-none p-0 sm:hidden">
-            <li v-for="problem in problems" :key="problem.id" class="border-b border-border last:border-b-0">
+            <li v-for="problem in problems" :key="problem.id" class="border-b border-border">
                 <RouterLink :to="'/problems/' + problem.problemSlug"
-                    class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-1 px-3 py-[11px]">
-                    <span class="min-w-0 truncate text-[13.5px] font-semibold text-foreground">{{ problem.title }}</span>
+                    class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 py-3 transition-colors hover:bg-muted">
+                    <span class="min-w-0 text-base font-medium text-foreground">{{ problem.title }}</span>
                     <ChevronRight class="size-4 text-muted-foreground" aria-hidden="true" />
-                    <span class="col-span-2 flex items-center gap-2.5 text-xs text-muted-foreground">
+                    <span v-if="showTags && problem.tags?.length" class="col-span-2 text-sm text-muted-foreground">{{ tagText(problem) }}</span>
+                    <span class="col-span-2 flex items-center justify-between gap-3 text-sm text-ink-2">
                         <DifficultyBadge :level="problem.hardnessLevel" />
-                        <span class="font-mono">Acceptance {{ acceptance(problem) }}</span>
-                    </span>
-                    <span v-if="showTags && problem.tags?.length" class="col-span-2 flex flex-wrap gap-1">
-                        <span v-for="tag in problem.tags" :key="tag" :class="staticTag">{{ tag }}</span>
+                        <span class="tabular-nums">Acceptance {{ acceptance(problem) }}</span>
                     </span>
                 </RouterLink>
             </li>
@@ -75,7 +74,8 @@ withDefaults(defineProps<{
     showTags: true,
 })
 
-const staticTag = 'inline-flex h-[22px] items-center whitespace-nowrap rounded-md border border-border bg-card px-2 font-mono text-[11.5px] text-foreground'
+// Tags read as one line of text, "beginner, math", in the body face.
+const tagText = (p: Problem) => (p.tags ?? []).join(', ')
 
 // One decimal, or "-" when nobody has submitted yet.
 const acceptance = (p: Problem) =>

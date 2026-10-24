@@ -16,7 +16,7 @@ const forwardedProps = useForwardProps(delegatedProps)
 
 <template>
     <TabsTrigger v-bind="forwardedProps" :class="cn(
-        '-mb-px inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-t-md border-b-2 border-transparent px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-45 data-[state=active]:border-primary data-[state=active]:text-foreground [&_svg]:size-[15px]',
+        'relative inline-flex h-11 items-center justify-center gap-[7px] whitespace-nowrap px-3 text-sm font-medium text-ink-2 transition-colors duration-[120ms] motion-reduce:transition-none hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-45 data-[state=active]:text-foreground after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-transparent data-[state=active]:after:bg-primary [&_svg]:size-[15px]',
         props.class,
     )">
         <slot />

@@ -1,100 +1,109 @@
 <template>
-    <div class="animate-enter flex flex-col gap-[18px]">
+    <div class="flex flex-col gap-6">
         <Loading v-if="state === 'loading'" />
 
-        <div v-else-if="state === 'notFound'" class="rounded-xl border bg-card p-10 text-center" role="alert">
-            <h1 class="text-lg font-semibold">Contest not found</h1>
-            <p class="mt-1 text-sm text-muted-foreground">It may not be published yet, or the link is wrong.</p>
-            <RouterLink :to="ROUTE_PATH.CONTESTS" class="mt-3 inline-block text-sm font-medium text-link hover:underline">All contests</RouterLink>
+        <div v-else-if="state === 'notFound'" class="flex flex-col items-center gap-3 py-20 text-center" role="alert">
+            <h1 class="font-display text-2xl text-foreground">Contest not found</h1>
+            <p class="text-base text-ink-2">It may not be published yet, or the link is wrong.</p>
+            <RouterLink :to="ROUTE_PATH.CONTESTS" class="text-sm font-medium text-link hover:underline">All contests</RouterLink>
         </div>
 
-        <div v-else-if="state === 'error'" class="rounded-xl border bg-card p-10 text-center" role="alert">
-            <h1 class="text-lg font-semibold">Could not load this contest</h1>
-            <Button variant="outline" size="sm" class="mt-3" @click="load()">Retry</Button>
+        <div v-else-if="state === 'error'" class="flex flex-col items-center gap-3 py-20 text-center" role="alert">
+            <h1 class="font-display text-2xl text-foreground">Could not load this contest</h1>
+            <Button variant="outline" size="sm" @click="load()">Retry</Button>
         </div>
 
         <template v-else-if="contest">
+            <!-- Page head: back link, title, then the contest's facts as an inline list (as on the solve screen) -->
             <div class="flex flex-col gap-3">
                 <RouterLink :to="ROUTE_PATH.CONTESTS"
-                    class="inline-flex items-center gap-1 self-start text-[13px] text-muted-foreground hover:text-foreground">
+                    class="relative inline-flex items-center gap-1 self-start rounded-sm text-sm text-ink-2 transition-colors motion-reduce:transition-none after:absolute after:inset-x-0 after:-inset-y-3 hover:text-primary">
                     <ChevronLeft class="size-4" aria-hidden="true" /> Contests
                 </RouterLink>
-                <PageHeader :title="contest.title">
-                    <template #actions>
-                        <div class="flex min-w-[148px] flex-col items-end gap-0.5 rounded-lg border border-border bg-card px-3.5 py-2">
-                            <template v-if="contest.phase !== 'ENDED'">
-                                <span class="text-xs text-muted-foreground">{{ contest.phase === 'UPCOMING' ? 'Starts in' : 'Ends in' }}</span>
-                                <ContestCountdown :target="contest.phase === 'UPCOMING' ? contest.startsAt : contest.endsAt"
-                                    :offset-ms="offsetMs" class="text-[20px] leading-tight font-semibold" @elapsed="onElapsed()" />
-                            </template>
-                            <span v-else class="text-[15px] leading-[44px] font-semibold text-muted-foreground">Ended</span>
+                <h1 class="font-display text-2xl break-words text-foreground">{{ contest.title }}</h1>
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <dl class="meta-dl">
+                        <div>
+                            <dt>Start</dt>
+                            <dd>{{ formatContestDate(contest.startsAt) }}</dd>
                         </div>
-                    </template>
-                </PageHeader>
-                <div class="flex flex-wrap items-center gap-2.5">
+                        <div>
+                            <dt>End</dt>
+                            <dd>{{ formatContestDate(contest.endsAt) }}</dd>
+                        </div>
+                        <div>
+                            <dt>Duration</dt>
+                            <dd>{{ formatDuration(Date.parse(contest.endsAt) - Date.parse(contest.startsAt)) }}</dd>
+                        </div>
+                        <div>
+                            <dt>Status</dt>
+                            <dd><ContestStatus :phase="contest.phase" /></dd>
+                        </div>
+                        <!-- 16 px against the 14 px of its neighbours: keep the label on the same baseline. -->
+                        <div v-if="contest.phase !== 'ENDED'" class="items-baseline">
+                            <dt>{{ contest.phase === 'UPCOMING' ? 'Starts in' : 'Ends in' }}</dt>
+                            <dd>
+                                <ContestCountdown :target="contest.phase === 'UPCOMING' ? contest.startsAt : contest.endsAt"
+                                    :offset-ms="offsetMs" @elapsed="onElapsed()" />
+                            </dd>
+                        </div>
+                    </dl>
                     <Badge v-if="contest.status === 'DRAFT'" variant="neutral">Draft</Badge>
-                    <Badge v-if="contest.phase === 'RUNNING'" variant="success"><Radio aria-hidden="true" />Live</Badge>
-                    <span class="meta-strip text-[13px] text-muted-foreground">
-                        <span>Starts {{ formatContestDate(contest.startsAt) }}</span>
-                        <span>Ends {{ formatContestDate(contest.endsAt) }}</span>
-                        <span>{{ formatDuration(Date.parse(contest.endsAt) - Date.parse(contest.startsAt)) }}</span>
-                    </span>
                 </div>
-                <p v-if="contest.description" class="max-w-[72ch] text-[13.5px] whitespace-pre-line text-muted-foreground">{{ contest.description }}</p>
+                <p v-if="contest.description" class="max-w-[64ch] text-base whitespace-pre-line text-ink-2">{{ contest.description }}</p>
             </div>
 
-            <Tabs v-model="tab" class="gap-0">
-                <div class="overflow-hidden rounded-xl border border-border bg-card">
-                    <div class="border-b border-border px-3">
-                        <TabsList class="h-auto w-full justify-start gap-0.5 rounded-none bg-transparent p-0">
-                            <TabsTrigger value="problems"><ListChecks aria-hidden="true" />Problems</TabsTrigger>
-                            <TabsTrigger value="scoreboard"><Trophy aria-hidden="true" />Scoreboard</TabsTrigger>
-                        </TabsList>
-                    </div>
-
-                    <TabsContent value="problems" class="mt-0">
-                        <p v-if="contest.problems.length === 0" class="px-5 py-10 text-center text-sm text-muted-foreground">
-                            {{ contest.phase === 'UPCOMING' ? 'Problems appear when the contest starts.' : 'This contest has no problems.' }}
-                        </p>
-                        <div v-else class="overflow-x-auto">
-                            <table class="dt">
-                                <thead>
-                                    <tr>
-                                        <th class="w-20 pl-4">Problem</th>
-                                        <th>Title</th>
-                                        <th v-if="authStore.user" class="w-32">My status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="p in contest.problems" :key="p.label">
-                                        <td class="pl-4 font-mono font-semibold">{{ p.label }}</td>
-                                        <td>
-                                            <RouterLink v-if="contest.phase !== 'UPCOMING'"
-                                                :to="`${ROUTE_PATH.CONTESTS}/${contest.slug}/problems/${p.label}`"
-                                                class="font-semibold text-foreground hover:text-link">{{ p.title }}</RouterLink>
-                                            <span v-else class="font-semibold">{{ p.title }}</span>
-                                        </td>
-                                        <td v-if="authStore.user">
-                                            <span v-if="contest.myProgress[p.label]?.solved" class="inline-flex items-center text-success">
-                                                <Check class="size-4" aria-hidden="true" />
-                                                <span class="sr-only">Solved</span>
-                                            </span>
-                                            <span v-else-if="contest.myProgress[p.label]?.attempts" class="font-mono text-xs text-muted-foreground">
-                                                {{ tries(contest.myProgress[p.label]!.attempts) }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="scoreboard" class="mt-0">
-                        <!-- Mounted only while shown: it polls every 15 s while the contest runs. -->
-                        <ContestScoreboard v-if="tab === 'scoreboard'" :slug="contest.slug" :phase="contest.phase"
-                            :ends-at="contest.endsAt" :offset-ms="offsetMs" />
-                    </TabsContent>
+            <Tabs v-model="tab">
+                <!-- The tab row reaches 12 px into the gutter, as the tables do, so the first label lines up with the head. -->
+                <div class="-mx-3">
+                    <TabsList class="w-full">
+                        <TabsTrigger value="problems"><ListChecks aria-hidden="true" />Problems</TabsTrigger>
+                        <TabsTrigger value="scoreboard"><Trophy aria-hidden="true" />Scoreboard</TabsTrigger>
+                    </TabsList>
                 </div>
+
+                <TabsContent value="problems" class="mt-4">
+                    <p v-if="contest.problems.length === 0" class="py-10 text-center text-base text-ink-2">
+                        {{ contest.phase === 'UPCOMING' ? 'Problems appear when the contest starts.' : 'This contest has no problems.' }}
+                    </p>
+                    <div v-else class="-mx-3">
+                        <Table>
+                            <TableHeader>
+                                <TableRow class="hover:bg-transparent">
+                                    <TableHead scope="col" class="w-20">Problem</TableHead>
+                                    <TableHead scope="col">Title</TableHead>
+                                    <TableHead v-if="authStore.user" scope="col" class="w-24">My status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <TableRow v-for="p in contest.problems" :key="p.label">
+                                    <TableCell class="font-medium">{{ p.label }}</TableCell>
+                                    <TableCell class="whitespace-normal break-words">
+                                        <RouterLink v-if="contest.phase !== 'UPCOMING'"
+                                            :to="`${ROUTE_PATH.CONTESTS}/${contest.slug}/problems/${p.label}`"
+                                            class="text-base font-medium text-foreground hover:text-primary hover:underline">{{ p.title }}</RouterLink>
+                                        <span v-else class="text-base font-medium text-foreground">{{ p.title }}</span>
+                                    </TableCell>
+                                    <TableCell v-if="authStore.user">
+                                        <span v-if="contest.myProgress[p.label]?.solved" class="inline-flex items-center text-success-ink">
+                                            <Check class="size-4" aria-hidden="true" />
+                                            <span class="sr-only">Solved</span>
+                                        </span>
+                                        <span v-else-if="contest.myProgress[p.label]?.attempts" class="text-sm tabular-nums text-ink-2">
+                                            {{ tries(contest.myProgress[p.label]!.attempts) }}
+                                        </span>
+                                    </TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="scoreboard" class="mt-4">
+                    <!-- Mounted only while shown: it polls every 15 s while the contest runs. -->
+                    <ContestScoreboard v-if="tab === 'scoreboard'" :slug="contest.slug" :phase="contest.phase"
+                        :ends-at="contest.endsAt" :offset-ms="offsetMs" />
+                </TabsContent>
             </Tabs>
         </template>
     </div>
@@ -104,13 +113,14 @@
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { isAxiosError } from 'axios'
-import { Check, ChevronLeft, ListChecks, Radio, Trophy } from 'lucide-vue-next'
+import { Check, ChevronLeft, ListChecks, Trophy } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import Loading from '@/components/common/Loading.vue'
-import PageHeader from '@/components/common/PageHeader.vue'
 import ContestCountdown from '@/components/contest/ContestCountdown.vue'
+import ContestStatus from '@/components/contest/ContestStatus.vue'
 import ContestScoreboard from '@/components/contest/ContestScoreboard.vue'
 import contestService from '@/services/contestService'
 import { ensureFreshSession } from '@/api/refreshSession'

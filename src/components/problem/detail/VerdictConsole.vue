@@ -7,7 +7,7 @@
         <VerdictTiles v-else-if="terminal" :submission="current" />
         <div v-else class="flex flex-col gap-3 text-sm">
             <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h3 class="text-[17px] leading-snug font-semibold tracking-[-0.01em] text-foreground">
+                <h3 class="text-base leading-snug font-semibold tracking-[-0.01em] text-foreground">
                     {{ current.status === SubmissionResult.JUDGING ? 'Running tests…' : 'Waiting in the queue…' }}
                 </h3>
                 <span class="tabular ml-auto text-xs text-muted-foreground">#{{ current.id.substring(0, 8) }}</span>

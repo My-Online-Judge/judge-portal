@@ -3,15 +3,15 @@
         data-test="detail-pane">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-muted/60 px-3.5 py-2.5">
             <span class="font-semibold text-foreground">Test {{ row.name }}</span>
-            <span class="text-[12.5px] text-muted-foreground">{{ row.sample ? 'Sample' : 'Hidden' }}</span>
+            <span class="text-xs text-muted-foreground">{{ row.sample ? 'Sample' : 'Hidden' }}</span>
             <span :class="['vpill', `v-${meta.tone}`]">{{ meta.name }}</span>
-            <span class="meta-strip tabular ml-auto text-[12.5px] text-muted-foreground">
+            <span class="meta-strip tabular ml-auto text-xs text-muted-foreground">
                 <span>{{ formatMs(row.cpuTime) }}</span>
                 <span>{{ formatMem(row.memory) }}</span>
             </span>
         </div>
         <!-- A hidden test shows its verdict and limits only: its data never reaches this pane. -->
-        <p v-if="!row.sample" class="flex items-center gap-2 px-3.5 py-3 text-[12.5px] text-muted-foreground"
+        <p v-if="!row.sample" class="flex items-center gap-2 px-3.5 py-3 text-xs text-muted-foreground"
             data-test="hidden-note">
             <Lock class="size-3.5 shrink-0" aria-hidden="true" />
             Input and expected output of hidden tests are not shown.
@@ -37,7 +37,7 @@
                 <p v-else-if="box.text === ''" class="text-xs text-muted-foreground">(no output)</p>
                 <template v-else>
                     <!-- One row per line, so the first differing line can be marked in both outputs. -->
-                    <pre class="max-h-48 overflow-auto rounded-md bg-muted/50 py-2 font-mono text-[12.5px] leading-[1.6] text-foreground"><span
+                    <pre class="max-h-48 overflow-auto rounded-md bg-muted/50 py-2 font-mono text-xs leading-[1.6] text-foreground"><span
                         v-for="(line, n) in lines(box)" :key="n"
                         :class="['block px-2.5', marks(box, n) ? 'bg-[color-mix(in_oklch,var(--v-wa)_14%,transparent)]' : '']"
                         >{{ line === '' ? ' ' : line }}</span></pre>

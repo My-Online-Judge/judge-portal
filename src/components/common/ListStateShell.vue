@@ -11,46 +11,33 @@
 
     <template v-else-if="error && !hasData">
         <slot name="error" :retry="retry">
-            <div class="p-[18px]">
-                <div class="flex min-h-60 flex-col items-center justify-center gap-2.5 px-5 py-10 text-center">
-                    <span class="grid size-10 place-items-center rounded-xl bg-destructive-soft text-destructive-ink">
-                        <CloudOff class="size-5" />
-                    </span>
-                    <h4 class="text-sm font-semibold text-foreground">Couldn't load this list</h4>
-                    <p class="max-w-xs text-sm text-muted-foreground">{{ error }}</p>
-                    <Button variant="secondary" size="sm" @click="retry">
-                        <RotateCw class="size-4" />
-                        Retry
-                    </Button>
-                </div>
+            <div class="flex min-h-60 flex-col items-center justify-center gap-3 px-5 py-10 text-center">
+                <h4 class="text-base font-semibold text-foreground">Couldn't load this list</h4>
+                <p class="max-w-prose text-base text-ink-2">{{ error }}</p>
+                <Button variant="outline" @click="retry">
+                    <RotateCw class="size-4" />
+                    Retry
+                </Button>
             </div>
         </slot>
     </template>
 
     <template v-else-if="hasData && empty">
         <slot name="empty">
-            <div class="p-[18px]">
-                <div class="flex min-h-60 flex-col items-center justify-center gap-2.5 px-5 py-10 text-center">
-                    <template v-if="filtered">
-                        <span class="grid size-10 place-items-center rounded-xl bg-muted text-muted-foreground">
-                            <SearchX class="size-5" />
-                        </span>
-                        <h4 class="text-sm font-semibold text-foreground">
-                            <template v-if="filterSummary">No results match <span class="font-mono">{{ filterSummary }}</span></template>
-                            <template v-else>No results match your filters</template>
-                        </h4>
-                        <p class="max-w-xs text-sm text-muted-foreground">Try a different word, or remove a filter.</p>
-                        <Button variant="secondary" size="sm" @click="emit('clear-filters')">Clear filters</Button>
-                    </template>
-                    <template v-else>
-                        <span class="grid size-10 place-items-center rounded-xl bg-muted text-muted-foreground">
-                            <ListChecks class="size-5" />
-                        </span>
-                        <h4 class="text-sm font-semibold text-foreground">{{ emptyTitle ?? 'Nothing here yet' }}</h4>
-                        <p v-if="emptyHint" class="max-w-xs text-sm text-muted-foreground">{{ emptyHint }}</p>
-                        <slot name="empty-action" />
-                    </template>
-                </div>
+            <div class="flex min-h-60 flex-col items-center justify-center gap-3 px-5 py-10 text-center">
+                <template v-if="filtered">
+                    <h4 class="text-base font-semibold text-foreground">
+                        <template v-if="filterSummary">No results match {{ filterSummary }}</template>
+                        <template v-else>No results match your filters</template>
+                    </h4>
+                    <p class="max-w-prose text-base text-ink-2">Try a different word, or remove a filter.</p>
+                    <Button variant="outline" @click="emit('clear-filters')">Clear filters</Button>
+                </template>
+                <template v-else>
+                    <h4 class="text-base font-semibold text-foreground">{{ emptyTitle ?? 'Nothing here yet' }}</h4>
+                    <p v-if="emptyHint" class="max-w-prose text-base text-ink-2">{{ emptyHint }}</p>
+                    <slot name="empty-action" />
+                </template>
             </div>
         </slot>
     </template>
@@ -65,7 +52,7 @@
                 <TriangleAlert class="size-4" />
                 Couldn't refresh. Showing the last results.
             </span>
-            <Button variant="secondary" size="sm" @click="retry">
+            <Button variant="outline" size="sm" @click="retry">
                 <RotateCw class="size-4" />
                 Retry
             </Button>
@@ -78,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { CloudOff, ListChecks, RotateCw, SearchX, TriangleAlert } from 'lucide-vue-next'
+import { RotateCw, TriangleAlert } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 
 withDefaults(

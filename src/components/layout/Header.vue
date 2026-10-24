@@ -1,20 +1,17 @@
 <template>
-    <header class="sticky top-0 z-50 border-b border-border bg-card">
-        <div class="mx-auto flex h-14 max-w-[84rem] items-center gap-2.5 px-4 md:gap-5 md:px-6 lg:px-8">
+    <header class="sticky top-0 z-50 border-b border-border bg-background">
+        <div class="mx-auto flex h-16 max-w-[84rem] items-center gap-2.5 px-4 md:gap-10 md:px-6 lg:px-10">
             <!-- Below md the nav moves into a left sheet behind this button -->
             <MobileNav :items="navItems" />
 
-            <RouterLink to="/problems" class="flex items-center gap-[9px] text-[15px] font-bold tracking-[-0.03em] text-foreground"
-                aria-label="My Online Judge, problems">
-                <span class="strip" aria-hidden="true"><i class="ok" /><i class="ok" /><i class="ok" /><i class="ok" /><i class="p" /><i class="dim" /></span>
-                <span>MOJ</span>
+            <RouterLink to="/problems" class="flex min-h-11 items-center rounded-sm" aria-label="My Online Judge, problems">
+                <span class="font-display text-lg text-foreground">MOJ</span>
             </RouterLink>
 
-            <nav aria-label="Main" class="hidden self-stretch md:flex md:gap-1">
+            <nav aria-label="Main" class="hidden self-stretch md:flex md:gap-6">
                 <RouterLink v-for="item in navItems" :key="item.to" :to="item.to"
-                    class="-mb-px flex items-center gap-[7px] border-b-2 border-transparent px-2.5 text-[13.5px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-                    active-class="!border-primary !text-foreground">
-                    <component :is="item.icon" class="size-[15px]" aria-hidden="true" />
+                    class="relative flex items-center self-stretch rounded-sm px-1 text-sm font-medium text-ink-2 transition-colors motion-reduce:transition-none hover:text-foreground focus-visible:-outline-offset-2"
+                    active-class="!text-foreground after:absolute after:inset-x-1 after:-bottom-px after:h-0.5 after:bg-primary">
                     {{ item.label }}
                 </RouterLink>
             </nav>
@@ -23,11 +20,11 @@
                 <template v-if="authStore.isAuthenticated && authStore.user">
                     <DropdownMenu>
                         <DropdownMenuTrigger as-child>
-                            <button type="button" class="flex cursor-pointer items-center rounded-[10px] p-[3px] outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:ring-2 data-[state=open]:ring-ring"
+                            <button type="button" class="relative flex cursor-pointer items-center rounded-md p-1 hover:bg-muted data-[state=open]:bg-muted after:absolute after:inset-x-0 after:-inset-y-0.5"
                                 :aria-label="`Account menu for ${authStore.user.name}`">
                                 <Avatar class="size-8">
                                     <AvatarImage v-if="authStore.user.avatar" :src="authStore.user.avatar" :alt="authStore.user.username" />
-                                    <AvatarFallback class="bg-primary-soft text-xs font-semibold text-info-ink">{{ initials }}</AvatarFallback>
+                                    <AvatarFallback class="bg-primary-soft text-info-ink text-xs font-semibold">{{ initials }}</AvatarFallback>
                                 </Avatar>
                             </button>
                         </DropdownMenuTrigger>
@@ -59,7 +56,7 @@
                     </DropdownMenu>
                 </template>
                 <template v-else>
-                    <Button size="sm" @click="openLogin">Log in</Button>
+                    <Button variant="outline" @click="openLogin">Log in</Button>
                 </template>
             </div>
         </div>

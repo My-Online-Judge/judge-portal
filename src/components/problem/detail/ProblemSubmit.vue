@@ -14,7 +14,7 @@
                     </SelectItem>
                 </SelectContent>
             </Select>
-            <span v-if="compilerNote" class="hidden truncate text-[12.5px] text-muted-foreground md:inline"
+            <span v-if="compilerNote" class="hidden truncate text-xs text-muted-foreground md:inline"
                 data-test="compiler-note">{{ compilerNote }}</span>
 
             <span class="flex-1" />
@@ -109,7 +109,7 @@
                         {{ isSubmitting ? 'Submitting…' : cooldownActive ? `Submit (${cooldownRemaining}s)` : 'Submit' }}
                     </span>
                     <kbd v-if="!isSubmitting && !cooldownActive" aria-hidden="true"
-                        class="-mr-1.5 hidden rounded-[5px] bg-primary-foreground/18 px-1.5 py-0.5 font-mono text-[11px] leading-4 font-medium sm:inline">{{ shortcutLabel }}</kbd>
+                        class="-mr-1.5 hidden rounded-[5px] bg-primary-foreground/18 px-1.5 py-0.5 font-mono text-xs leading-4 font-medium sm:inline">{{ shortcutLabel }}</kbd>
                 </Button>
                 <Button v-else size="sm" class="order-2 h-9 px-3.5" @click="isLoginOpen = true">Log in to submit</Button>
             </div>

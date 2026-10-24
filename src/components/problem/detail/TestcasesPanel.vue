@@ -5,7 +5,7 @@
                 <span v-for="(c, i) in cases" :key="c.id" class="relative inline-flex">
                     <button type="button" role="tab" :aria-selected="c.id === selectedId" :data-test="`case-${i + 1}`"
                         :class="[
-                            'inline-flex h-8 items-center gap-1.5 rounded-lg border text-[13px] font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                            'inline-flex h-8 items-center gap-1.5 rounded-lg border text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
                             c.custom ? 'pr-7 pl-3' : 'px-3',
                             c.id === selectedId
                                 ? 'border-foreground bg-foreground text-background'
@@ -27,24 +27,24 @@
                 </span>
             </div>
             <button v-if="cases.length < MAX_CASES" type="button" data-test="add-case"
-                class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-dashed border-input px-3 text-[13px] font-medium text-muted-foreground outline-none hover:border-foreground/40 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-dashed border-input px-3 text-sm font-medium text-muted-foreground outline-none hover:border-foreground/40 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 @click="addCase">
                 <Plus class="size-3.5" aria-hidden="true" />
                 Custom
             </button>
             <span class="flex-1" />
-            <span v-if="running" class="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
+            <span v-if="running" class="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Loader2 class="size-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
                 Running…
             </span>
             <span v-else-if="current && outcomes[current.id]" data-test="case-outcome"
-                :class="['inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--vi)]', `v-${outcomes[current.id]!.tone}`]">
+                :class="['inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--vi)]', `v-${outcomes[current.id]!.tone}`]">
                 <component :is="outcomes[current.id]!.icon" v-if="outcomes[current.id]!.icon" class="size-4" aria-hidden="true" />
                 {{ outcomes[current.id]!.label }}
             </span>
         </div>
 
-        <p v-if="unavailable" role="status" class="rounded-lg bg-muted/70 px-3.5 py-2.5 text-[13px] text-muted-foreground">
+        <p v-if="unavailable" role="status" class="rounded-lg bg-muted/70 px-3.5 py-2.5 text-sm text-muted-foreground">
             Run isn't available on this server yet. Submit to judge your code on every test.
         </p>
         <pre v-else-if="runError" data-test="run-error"
@@ -56,27 +56,27 @@
                 <textarea :id="`case-input-${current.id}`" v-model="current.input" :readonly="!current.custom" rows="5"
                     spellcheck="false" data-test="case-input"
                     :placeholder="current.custom ? 'Type the input for this case' : undefined"
-                    class="block w-full resize-y rounded-lg border border-input bg-card px-3 py-2.5 font-mono text-[13px] leading-relaxed text-foreground outline-none read-only:bg-muted/40 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40" />
+                    class="block w-full resize-y rounded-lg border border-input bg-card px-3 py-2.5 font-mono text-sm leading-relaxed text-foreground outline-none read-only:bg-muted/40 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40" />
             </div>
             <div class="min-w-0">
                 <div class="mb-1.5 text-xs text-muted-foreground">Your output</div>
                 <pre v-if="currentResult" data-test="case-output"
-                    :class="['min-h-[5.5rem] overflow-auto rounded-lg border px-3 py-2.5 font-mono text-[13px] leading-relaxed whitespace-pre-wrap text-foreground', outputTint]">{{ currentResult.output ?? '' }}</pre>
-                <p v-else class="flex min-h-[5.5rem] items-center rounded-lg border border-dashed border-border px-3 text-[13px] text-muted-foreground">
+                    :class="['min-h-[5.5rem] overflow-auto rounded-lg border px-3 py-2.5 font-mono text-sm leading-relaxed whitespace-pre-wrap text-foreground', outputTint]">{{ currentResult.output ?? '' }}</pre>
+                <p v-else class="flex min-h-[5.5rem] items-center rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground">
                     Run your code to see what it prints.
                 </p>
             </div>
             <div class="min-w-0">
                 <div class="mb-1.5 text-xs text-muted-foreground">Expected</div>
                 <pre v-if="current.expected != null"
-                    class="min-h-[5.5rem] overflow-auto rounded-lg border border-border bg-muted/40 px-3 py-2.5 font-mono text-[13px] leading-relaxed whitespace-pre-wrap text-foreground">{{ current.expected }}</pre>
-                <p v-else class="flex min-h-[5.5rem] items-center rounded-lg border border-dashed border-border px-3 text-[13px] text-muted-foreground">
+                    class="min-h-[5.5rem] overflow-auto rounded-lg border border-border bg-muted/40 px-3 py-2.5 font-mono text-sm leading-relaxed whitespace-pre-wrap text-foreground">{{ current.expected }}</pre>
+                <p v-else class="flex min-h-[5.5rem] items-center rounded-lg border border-dashed border-border px-3 text-sm text-muted-foreground">
                     No expected output: a custom case only checks that your code runs.
                 </p>
             </div>
         </div>
 
-        <p class="text-[12.5px] text-muted-foreground">Run checks your code against these cases only. It doesn't count as a submission.</p>
+        <p class="text-xs text-muted-foreground">Run checks your code against these cases only. It doesn't count as a submission.</p>
     </div>
 </template>
 
