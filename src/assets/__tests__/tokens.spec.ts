@@ -19,22 +19,22 @@ function parseBlock(selector: RegExp): Map<string, string> {
 }
 
 const root = parseBlock(/^:root\s*\{/m)
-const dark = parseBlock(/^\.dark\s*\{/m)
+const dark = parseBlock(/^:root\[data-theme="dark"\]\s*\{/m)
 
 describe('design tokens', () => {
   it('rootTokensMatchSpec', () => {
-    expect(root.get('--primary')).toBe('oklch(0.53 0.19 262)')
-    expect(root.get('--muted-foreground')).toBe('oklch(0.5 0.025 258)')
-    expect(root.get('--card')).toBe('oklch(0.997 0.002 255)')
-    expect(root.get('--link')).toBe('oklch(0.5 0.19 262)')
+    expect(root.get('--primary')).toBe('oklch(52% 0.19 258)')
+    expect(root.get('--muted-foreground')).toBe('oklch(50% 0.018 258)')
+    expect(root.get('--card')).toBe('oklch(98.6% 0.005 250)')
+    expect(root.get('--link')).toBe('oklch(52% 0.19 258)')
     expect(root.get('--v-ac')).toBe('oklch(0.72 0.16 150)')
     expect(root.get('--v-wa-ink')).toBe('oklch(0.48 0.18 27)')
-    expect(root.get('--input')).toBe('oklch(0.85 0.012 258)')
+    expect(root.get('--input')).toBe('oklch(64% 0.02 256)')
   })
 
   it('darkTokensMatchSpec', () => {
-    expect(dark.get('--primary')).toBe('oklch(0.62 0.18 262)')
-    expect(dark.get('--link')).toBe('oklch(0.74 0.13 262)')
+    expect(dark.get('--primary')).toBe('oklch(62% 0.16 258)')
+    expect(dark.get('--link')).toBe('oklch(62% 0.16 258)')
     expect(dark.get('--v-tle')).toBe('oklch(0.665 0.13 85)')
     expect(dark.get('--chip-mix')).toBe('20%')
   })

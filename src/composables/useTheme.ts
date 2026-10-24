@@ -27,7 +27,9 @@ const onOsChange = (e: { matches: boolean }) => {
 }
 
 function apply() {
+    // The .dark class stays for anything that reads it; main.css keys the dark tokens on data-theme.
     document.documentElement.classList.toggle('dark', isDark.value)
+    document.documentElement.dataset.theme = isDark.value ? 'dark' : 'light'
 }
 
 function init() {

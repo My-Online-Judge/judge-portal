@@ -125,4 +125,11 @@ describe('design guard', () => {
   it('no placeholder href="#"', () => {
     expectNoHits(vueFiles.flatMap((f) => scan(f, f.text, 0, /href="#"/)), 'Use a real route or a button.')
   })
+
+  it('dark tokens live on :root[data-theme="dark"]', () => {
+    const css = readFileSync(join(SRC, MAIN_CSS), 'utf8')
+    expect(css).toMatch(/:root\[data-theme="dark"\]\s*\{/)
+    expect(css).not.toMatch(/^\.dark\s*\{/m)
+    expect(css.split('\n')[0]).toMatch(/^\/\* Hallmark ·/)
+  })
 })
