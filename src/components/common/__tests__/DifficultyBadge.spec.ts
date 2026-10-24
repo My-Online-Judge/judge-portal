@@ -16,4 +16,15 @@ describe('DifficultyBadge', () => {
     expect(w.text()).toContain('Unknown')
     expect(w.findAll('[data-bar="filled"]')).toHaveLength(0)
   })
+
+  it('rendersTextWithoutGlyph', () => {
+    const w = mount(DifficultyBadge, { props: { level: 2 } })
+    expect(w.text()).toBe('Medium')
+    expect(w.find('svg').exists()).toBe(false)
+    expect(w.classes()).toContain('text-warning-ink')
+    expect(w.classes()).toContain('font-medium')
+    // Text only: no visible element besides the label.
+    const visible = Array.from(w.element.children).filter((c) => !c.hasAttribute('hidden'))
+    expect(visible).toHaveLength(0)
+  })
 })

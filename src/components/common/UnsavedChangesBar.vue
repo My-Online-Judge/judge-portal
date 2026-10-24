@@ -28,47 +28,47 @@ useEventListener(window, 'keydown', (e: KeyboardEvent) => {
 </script>
 
 <template>
-    <Transition name="unsaved">
-        <div
-            v-if="dirty"
-            role="region"
-            aria-label="Unsaved changes"
-            class="sticky bottom-4 z-20 mx-auto flex w-full max-w-[620px] flex-wrap items-center gap-2.5 rounded-xl border border-border bg-popover py-2 pr-2 pl-3.5 text-[13px] text-popover-foreground shadow-[var(--shadow-lg)]"
+    <div
+        v-if="dirty"
+        role="region"
+        aria-label="Unsaved changes"
+        class="unsaved-bar sticky bottom-0 z-20 flex w-full flex-wrap items-center gap-3 border-t border-border bg-popover px-4 py-3 text-sm text-popover-foreground"
+    >
+        <CircleDot class="size-4 shrink-0 text-warning-ink" aria-hidden="true" />
+        <span class="min-w-0 flex-1 basis-40">
+            <b class="font-semibold">Unsaved changes</b>
+            <!-- The space is in the expression: a bare leading space in a template text node is trimmed away. -->
+            <span v-if="summary" class="text-muted-foreground">{{ ' ' + summary }}</span>
+        </span>
+        <Button variant="ghost" size="sm" :disabled="saving" @click="emit('discard')">Discard</Button>
+        <Button
+            size="sm"
+            :disabled="saving"
+            :aria-busy="saving ? 'true' : undefined"
+            aria-keyshortcuts="Control+S Meta+S"
+            @click="emit('save')"
         >
-            <CircleDot class="size-4 shrink-0 text-warning" aria-hidden="true" />
-            <span class="min-w-0 flex-1">
-                <b class="font-semibold">Unsaved changes</b>
-                <span v-if="summary" class="text-muted-foreground"> {{ summary }}</span>
-            </span>
-            <Button variant="ghost" size="sm" :disabled="saving" @click="emit('discard')">Discard</Button>
-            <Button
-                size="sm"
-                :disabled="saving"
-                :aria-busy="saving ? 'true' : undefined"
-                aria-keyshortcuts="Control+S Meta+S"
-                @click="emit('save')"
-            >
-                <Loader2 v-if="saving" class="size-4 animate-spin" aria-hidden="true" />
-                Save changes
-                <kbd aria-hidden="true" class="rounded-[4px] bg-[color-mix(in_oklch,currentColor_14%,transparent)] px-[5px] py-px font-mono text-[11px] opacity-75">{{ shortcut }}</kbd>
-            </Button>
-        </div>
-    </Transition>
+            <Loader2 v-if="saving" class="size-4 animate-spin" aria-hidden="true" />
+            Save changes
+            <kbd aria-hidden="true" class="rounded-sm bg-[color-mix(in_oklch,currentColor_14%,transparent)] px-1.5 py-px font-mono text-xs opacity-75">{{ shortcut }}</kbd>
+        </Button>
+    </div>
 </template>
 
 <style scoped>
-.unsaved-enter-active,
-.unsaved-leave-active {
+/* Visible by default; the entrance starts from a slight lift and fades in. The bar is removed (v-if) while clean,
+   so nothing is left hidden in the layout. */
+.unsaved-bar {
     transition: opacity 160ms ease-out, transform 160ms ease-out;
 }
-.unsaved-enter-from,
-.unsaved-leave-to {
-    opacity: 0;
-    transform: translateY(8px);
+@starting-style {
+    .unsaved-bar {
+        opacity: 0;
+        transform: translateY(8px);
+    }
 }
 @media (prefers-reduced-motion: reduce) {
-    .unsaved-enter-active,
-    .unsaved-leave-active {
+    .unsaved-bar {
         transition: none;
     }
 }

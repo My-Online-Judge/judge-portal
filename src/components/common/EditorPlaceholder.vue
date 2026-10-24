@@ -17,7 +17,7 @@ defineProps<{ error?: unknown; height?: string }>()
     v-else
     data-test="editor-failed"
     role="alert"
-    class="flex w-full items-center justify-center px-4 text-sm text-destructive-ink"
+    class="flex w-full items-center justify-center px-4 text-center text-base text-destructive-ink"
     :style="{ height: height ?? '320px' }"
   >
     Could not load the editor. Check your connection and reopen this window.

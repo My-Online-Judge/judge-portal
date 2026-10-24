@@ -1,18 +1,18 @@
 <template>
-    <div class="flex flex-col items-center justify-center p-8 text-muted-foreground w-full">
+    <div class="flex w-full flex-col items-center justify-center p-8 text-muted-foreground">
         <!-- Spinner Variant -->
         <template v-if="variant === 'spinner'">
-            <Loader2 class="h-10 w-10 animate-spin text-primary mb-3" />
+            <Loader2 class="mb-3 size-6 animate-spin text-primary" />
         </template>
 
         <!-- Progress Bar Variant -->
         <template v-else-if="variant === 'progress'">
-            <div class="w-64 h-1.5 bg-muted rounded-full overflow-hidden mb-3 relative">
-                <div class="absolute top-0 left-0 h-full bg-primary rounded-full animate-indeterminate w-full origin-left"></div>
+            <div class="relative mb-3 h-1 w-64 overflow-hidden rounded-full bg-muted">
+                <div class="animate-indeterminate absolute top-0 left-0 h-full w-full origin-left rounded-full bg-primary"></div>
             </div>
         </template>
 
-        <span v-if="text" class="text-sm font-medium animate-pulse">{{ text }}</span>
+        <span v-if="text" class="text-sm">{{ text }}</span>
     </div>
 </template>
 
@@ -45,5 +45,13 @@ withDefaults(defineProps<{
 
 .animate-indeterminate {
     animation: indeterminate 1.5s infinite linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-indeterminate {
+        animation: none;
+        transform: none;
+        opacity: 0.5;
+    }
 }
 </style>
