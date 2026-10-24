@@ -72,6 +72,7 @@ afterEach(() => {
     wrapper?.unmount()
     wrapper = undefined
     document.body.innerHTML = ''
+    localStorage.clear()
     vi.clearAllMocks()
 })
 
@@ -96,6 +97,25 @@ describe('ProblemSubmit', () => {
         await flushPromises()
         expect(h.submit).toHaveBeenCalledTimes(1)
         expect(h.submit.mock.calls[0]![0]).not.toHaveProperty('contestSlug')
+    })
+
+    it('theCodeStaysInTheEditorAfterASubmit', async () => {
+        const w = await mountSubmit()
+        await typeCode('int main() {}')
+        await submitButton().trigger('click')
+        await flushPromises()
+        expect(w.emitted('success')).toHaveLength(1)
+        // The next attempt is usually a small fix, so the editor is not cleared.
+        expect((w.get('[data-test="editor"]').element as HTMLTextAreaElement).value).toBe('int main() {}')
+    })
+
+    it('theDraftComesBackInItsLanguage', async () => {
+        const py = { id: 'l2', name: 'Python 3', identifier: 'py3' }
+        localStorage.setItem('oj:draft:sum', JSON.stringify({ languageIdentifier: 'py3', code: 'print(1)', savedAt: 1 }))
+        const w = await mountSubmit({ languages: [cpp, py] })
+        expect((w.get('[data-test="editor"]').element as HTMLTextAreaElement).value).toBe('print(1)')
+        expect(w.text()).toContain('Python 3')
+        expect(w.get('[data-test="draft-status"]').text()).toBe('Draft saved')
     })
 
     it('disabledReasonDisablesSubmitAndShowsTheText', async () => {

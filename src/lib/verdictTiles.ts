@@ -19,9 +19,10 @@ export function sortTests(rows: TestCaseResult[]): TestCaseResult[] {
     })
 }
 
-export function defaultSelection(rows: TestCaseResult[]): string | null {
-    const samples = sortTests(rows).filter((r) => r.sample)
-    return (samples.find((r) => r.result !== 0) ?? samples[0])?.name ?? null
+/** The first test that did not pass, hidden or not; when all passed, the first sample (or the first test). */
+export function firstFailingOrSample(rows: TestCaseResult[]): string | null {
+    const sorted = sortTests(rows)
+    return (sorted.find((r) => r.result !== 0) ?? sorted.find((r) => r.sample) ?? sorted[0])?.name ?? null
 }
 
 export const passedCount = (rows: TestCaseResult[]): number => rows.filter((r) => r.result === 0).length

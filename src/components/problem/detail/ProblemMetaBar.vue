@@ -1,34 +1,24 @@
 <template>
-    <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <dl class="meta-dl">
-            <div>
-                <dt>Difficulty</dt>
-                <dd><DifficultyBadge :level="problem.hardnessLevel" /></dd>
-            </div>
-            <div v-for="item in items" :key="item.key">
-                <dt>{{ item.label }}</dt>
-                <dd>{{ item.value }}</dd>
-            </div>
-            <!-- Plain text: the problems list does not read a tag from the URL yet, so a link would lead nowhere. -->
-            <div v-if="problem.tags?.length">
-                <dt>Tags</dt>
-                <dd>{{ problem.tags.join(', ') }}</dd>
+    <div class="flex flex-wrap items-center gap-x-[22px] gap-y-1.5 text-[13px]">
+        <dl class="contents">
+            <div v-for="item in items" :key="item.key" class="flex items-baseline gap-1.5">
+                <dt class="text-muted-foreground">{{ item.label }}</dt>
+                <dd class="tabular font-semibold text-foreground">{{ item.value }}</dd>
             </div>
         </dl>
         <ProblemStatsDialog :problem="problem">
-            <Button variant="ghost" size="sm" aria-haspopup="dialog">
-                <ChartPie aria-hidden="true" />
+            <button type="button" aria-haspopup="dialog"
+                class="-mx-1 inline-flex h-7 items-center gap-1.5 rounded-md px-1 font-medium text-link outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50">
+                <ChartColumn class="size-3.5" aria-hidden="true" />
                 Statistics
-            </Button>
+            </button>
         </ProblemStatsDialog>
     </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ChartPie } from 'lucide-vue-next'
-import { Button } from '@/components/ui/button'
-import DifficultyBadge from '@/components/common/DifficultyBadge.vue'
+import { ChartColumn } from 'lucide-vue-next'
 import type { Problem } from '@/types/problem'
 import ProblemStatsDialog from './ProblemStatsDialog.vue'
 
@@ -41,10 +31,10 @@ const items = computed(() => {
     const total = props.problem.totalSubmission || 0
     const accepted = props.problem.acceptedSubmission || 0
     return [
-        { key: 'time', label: 'Time limit', value: seconds(props.problem.timeLimit) },
-        { key: 'memory', label: 'Memory limit', value: `${props.problem.memoryLimit} MB` },
+        { key: 'time', label: 'Time', value: seconds(props.problem.timeLimit) },
+        { key: 'memory', label: 'Memory', value: `${props.problem.memoryLimit} MB` },
         { key: 'ac', label: 'Acceptance', value: total ? `${((accepted / total) * 100).toFixed(1)}%` : '-' },
-        { key: 'total', label: 'Submissions', value: `${total}` },
+        { key: 'total', label: 'Submissions', value: String(total) },
     ]
 })
 </script>
