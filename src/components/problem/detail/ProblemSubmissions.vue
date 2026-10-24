@@ -18,41 +18,48 @@
                 empty-hint="Submit from the editor. Each attempt is listed here with its verdict."
                 @retry="fetchSubmissions"
             >
-                <Table>
-                    <TableHeader>
-                        <TableRow class="hover:bg-transparent">
-                            <TableHead v-for="head in heads" :key="head" scope="col">{{ head }}</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow
-                            v-for="sub in displayRows"
-                            :key="sub.id"
-                            tabindex="0"
-                            role="button"
-                            class="cursor-pointer focus-visible:-outline-offset-2"
-                            @click="openDetail(sub.id)"
-                            @keydown.enter="openDetail(sub.id)"
-                            @keydown.space.prevent="openDetail(sub.id)"
-                        >
-                            <TableCell class="font-mono text-xs text-muted-foreground">#{{ sub.id.substring(0, 8) }}</TableCell>
-                            <TableCell class="text-sm text-ink-2 tabular-nums">{{ formatDateTime(sub.createdAt) }}</TableCell>
-                            <TableCell>
-                                <VerdictChip :status="sub.status" />
-                            </TableCell>
-                            <TableCell class="text-sm tabular-nums">
-                                {{ sub.cpuTime != null ? `${sub.cpuTime} ms` : '-' }}
-                            </TableCell>
-                            <TableCell class="text-sm tabular-nums">
-                                {{ sub.memory ? `${(sub.memory / (1024 * 1024)).toFixed(1)} MB` : '-' }}
-                            </TableCell>
-                            <TableCell class="text-sm text-ink-2">{{ sub.language?.name ?? '-' }}</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
+                <!-- 8 px cell padding, and the rows reach 8 px into the pane's padding so the first column lines up with
+                     the statement: all six columns fit the default split on a 1440 screen. -->
+                <div class="-mx-2">
+                    <Table>
+                        <TableHeader>
+                            <TableRow class="hover:bg-transparent">
+                                <TableHead v-for="head in heads" :key="head" scope="col" class="px-2">{{ head }}</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow
+                                v-for="sub in displayRows"
+                                :key="sub.id"
+                                tabindex="0"
+                                role="button"
+                                class="cursor-pointer focus-visible:-outline-offset-2"
+                                @click="openDetail(sub.id)"
+                                @keydown.enter="openDetail(sub.id)"
+                                @keydown.space.prevent="openDetail(sub.id)"
+                            >
+                                <TableCell class="px-2 font-mono text-xs text-muted-foreground">#{{ sub.id.substring(0, 8) }}</TableCell>
+                                <TableCell class="px-2 text-sm text-ink-2 tabular-nums">
+                                    <time :datetime="sub.createdAt" :title="formatDateTime(sub.createdAt)">{{ formatWhen(sub.createdAt) }}</time>
+                                </TableCell>
+                                <TableCell class="px-2">
+                                    <VerdictChip :status="sub.status" />
+                                </TableCell>
+                                <TableCell class="px-2 text-sm tabular-nums">
+                                    {{ sub.cpuTime != null ? `${sub.cpuTime} ms` : '-' }}
+                                </TableCell>
+                                <TableCell class="px-2 text-sm tabular-nums">
+                                    {{ sub.memory ? `${(sub.memory / (1024 * 1024)).toFixed(1)} MB` : '-' }}
+                                </TableCell>
+                                <TableCell class="px-2 text-sm text-ink-2">{{ sub.language?.name ?? '-' }}</TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                </div>
             </ListStateShell>
 
-            <PaginationFooter :pagination="pagination" @change-page="onPageChange" @update:size="onSizeChange" />
+            <!-- Its rule spans the same width as the table rows above it. -->
+            <PaginationFooter class="-mx-2 px-2" :pagination="pagination" @change-page="onPageChange" @update:size="onSizeChange" />
         </div>
         <LoginModal v-model:open="isLoginOpen" />
         <SubmissionDetailDialog v-model:open="isDetailOpen" :submission-id="detailId" />
@@ -103,6 +110,9 @@ const openDetail = (id: string) => {
 const page = ref(0)
 const size = ref(10)
 const heads = ['ID', 'When', 'Verdict', 'Time', 'Memory', 'Language']
+// The same fields as formatDateTime with a two-digit year ("24/10/26 13:54:12"), so the six columns fit the default
+// split; the full date is in the title.
+const formatWhen = (iso: string) => formatDateTime(iso).replace(/^(\d{2}\/\d{2}\/)\d{2}(\d{2})/, '$1$2')
 
 const {
     data: response,
