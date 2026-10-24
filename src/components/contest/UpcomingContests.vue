@@ -14,7 +14,7 @@
                     <span class="text-sm tabular-nums text-muted-foreground">
                         {{ item.live ? 'Ends in' : 'Starts in' }}
                         <ContestCountdown :target="item.live ? item.contest.endsAt : item.contest.startsAt" :offset-ms="offsetMs"
-                            class="text-foreground" @elapsed="reload" />
+                            class="text-sm text-foreground" @elapsed="reload" />
                     </span>
                 </RouterLink>
             </li>

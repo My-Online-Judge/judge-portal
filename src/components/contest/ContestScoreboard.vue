@@ -3,58 +3,66 @@
     <ListStateShell :loading="loading && !board" :error="error ? 'Check your connection and try again.' : null"
         :has-data="!!board" :empty="rows.length === 0 && labels.length === 0" :rows="5"
         empty-title="No one is on the scoreboard yet" :empty-hint="emptyHint" @retry="load">
-        <div class="overflow-x-auto">
-            <table class="dt" :style="{ minWidth: `${340 + labels.length * 64}px` }">
+        <template #skeleton>
+            <div class="flex flex-col border-t border-rule-2" aria-busy="true">
+                <div v-for="n in 5" :key="n" class="flex h-12 items-center gap-4 border-b border-border">
+                    <span class="sk w-full" />
+                </div>
+            </div>
+        </template>
+        <!-- The rows sit 12 px outside the column so their text lines up with the page head. -->
+        <div class="-mx-3">
+            <Table>
                 <caption class="sr-only">Scoreboard: solved problems first, then the lowest penalty in minutes</caption>
-                <thead>
-                    <tr>
+                <TableHeader>
+                    <TableRow class="hover:bg-transparent">
                         <!-- Rank and Contestant stay in view while the problem columns scroll (phones, many problems). -->
-                        <th class="sticky left-0 z-[1] w-16 min-w-16 pl-4">Rank</th>
-                        <th class="sticky left-16 z-[1]">Contestant</th>
-                        <th class="num w-20">Solved</th>
-                        <th class="num w-24">Penalty</th>
-                        <th v-for="label in labels" :key="label" class="w-16 text-center font-mono">{{ label }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-if="rows.length === 0">
-                        <td :colspan="4 + labels.length" class="h-auto py-8 text-center text-muted-foreground">
+                        <TableHead scope="col" class="sticky left-0 z-[1] w-16 min-w-16 bg-card">Rank</TableHead>
+                        <TableHead scope="col" class="sticky left-16 z-[1] min-w-32 bg-card">Contestant</TableHead>
+                        <TableHead scope="col" class="w-18 text-right">Solved</TableHead>
+                        <TableHead scope="col" class="w-20 text-right">Penalty</TableHead>
+                        <TableHead v-for="label in labels" :key="label" scope="col" class="w-16 min-w-16 text-center">{{ label }}</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    <TableRow v-if="rows.length === 0" class="hover:bg-transparent">
+                        <TableCell :colspan="4 + labels.length" class="h-auto whitespace-normal py-8 text-center text-ink-2">
                             <template v-if="phase === 'UPCOMING'">{{ emptyHint }}</template>
                             <template v-else>
                                 <span class="block font-medium text-foreground">No one is on the scoreboard yet</span>
-                                <span class="mt-0.5 block text-xs">{{ emptyHint }}</span>
+                                <span class="mt-0.5 block text-sm">{{ emptyHint }}</span>
                             </template>
-                        </td>
-                    </tr>
-                    <tr v-for="row in rows" :key="row.user.id">
-                        <td class="sticky left-0 z-[1] bg-card pl-4 font-mono tabular-nums" data-col="rank">{{ row.rank }}</td>
-                        <td class="sticky left-16 z-[1] bg-card" data-col="user">
+                        </TableCell>
+                    </TableRow>
+                    <TableRow v-for="row in rows" :key="row.user.id" class="group">
+                        <TableCell class="sticky left-0 z-[1] bg-card text-sm tabular-nums transition-colors group-hover:bg-muted motion-reduce:transition-none" data-col="rank">{{ row.rank }}</TableCell>
+                        <TableCell class="sticky left-16 z-[1] whitespace-normal break-words bg-card transition-colors group-hover:bg-muted motion-reduce:transition-none" data-col="user">
                             <!-- The username, else the name (a Google account's username is its email address, which
                                  identity never shows), linked to the profile. -->
                             <RouterLink v-if="publicHandle(row.user.username) || row.user.name" :to="profilePath(row.user)"
-                                class="font-medium text-foreground hover:text-link hover:underline">{{ publicName(row.user) }}</RouterLink>
+                                class="font-medium text-foreground hover:text-primary hover:underline">{{ publicName(row.user) }}</RouterLink>
                             <!-- Identity did not know this user (or was down): the id's start tells rows apart. -->
                             <span v-else class="text-muted-foreground" :title="row.user.id">{{ publicName(row.user) }}</span>
-                        </td>
-                        <td class="num" data-col="solved">{{ row.solved }}</td>
-                        <td class="num" data-col="penalty">{{ row.penalty }}</td>
-                        <td v-for="label in labels" :key="label" :data-label="label"
-                            class="text-center font-mono tabular-nums" :class="cellClass(row.problems[label])">
+                        </TableCell>
+                        <TableCell class="text-right text-sm tabular-nums" data-col="solved">{{ row.solved }}</TableCell>
+                        <TableCell class="text-right text-sm tabular-nums" data-col="penalty">{{ row.penalty }}</TableCell>
+                        <TableCell v-for="label in labels" :key="label" :data-label="label"
+                            class="text-center text-sm tabular-nums" :class="cellClass(row.problems[label])">
                             <template v-if="row.problems[label]?.solved">
                                 <span aria-hidden="true" class="flex flex-col items-center leading-tight">
-                                    <span class="text-[13px] font-semibold">{{ solvedMark(row.problems[label]!) }}</span>
-                                    <span class="text-[11px]">{{ row.problems[label]!.minutes }}</span>
+                                    <span class="text-sm font-semibold">{{ solvedMark(row.problems[label]!) }}</span>
+                                    <span class="text-xs">{{ row.problems[label]!.minutes }}</span>
                                 </span>
                                 <span class="sr-only">{{ solvedText(row.problems[label]!) }}</span>
                             </template>
                             <template v-else-if="row.problems[label]?.attempts">
-                                <span aria-hidden="true" class="text-[13px] font-semibold">-{{ row.problems[label]!.attempts }}</span>
+                                <span aria-hidden="true" class="text-sm font-semibold">-{{ row.problems[label]!.attempts }}</span>
                                 <span class="sr-only">{{ tries(row.problems[label]!.attempts) }}, not solved</span>
                             </template>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                        </TableCell>
+                    </TableRow>
+                </TableBody>
+            </Table>
         </div>
     </ListStateShell>
 </template>
@@ -62,6 +70,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import axios from 'axios'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import ListStateShell from '@/components/common/ListStateShell.vue'
 import contestService from '@/services/contestService'
 import { SCOREBOARD_POLL_MS } from '@/lib/contestTime'
@@ -90,8 +99,9 @@ const solvedMark = (c: ScoreboardCell) => (c.attempts > 1 ? `+${c.attempts - 1}`
 const tries = (n: number) => (n === 1 ? '1 wrong try' : `${n} wrong tries`)
 const solvedText = (c: ScoreboardCell) =>
     `Solved at minute ${c.minutes}` + (c.attempts > 1 ? ` after ${tries(c.attempts - 1)}` : '')
+// Ink colour only: no filled cells.
 const cellClass = (c?: ScoreboardCell) =>
-    c?.solved ? 'bg-success-soft text-success-ink' : c?.attempts ? 'text-destructive-ink' : ''
+    c?.solved ? 'text-success-ink' : c?.attempts ? 'text-destructive-ink' : ''
 
 // Polled: read at mount, then again 15 s after each answer, so a slow answer never overlaps the next read. A hidden tab
 // does not poll: it reads again when shown.
