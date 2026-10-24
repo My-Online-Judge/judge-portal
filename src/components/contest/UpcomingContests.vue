@@ -1,17 +1,17 @@
 <template>
-    <section v-if="items.length" aria-labelledby="upcoming-contests-heading" class="rounded-xl border border-border bg-card p-4">
-        <div class="mb-3 flex items-center justify-between gap-2">
-            <h3 id="upcoming-contests-heading" class="text-[13.5px] font-semibold text-foreground">Upcoming contests</h3>
-            <RouterLink :to="ROUTE_PATH.CONTESTS" class="text-xs font-medium text-link hover:underline">All contests</RouterLink>
+    <section v-if="items.length" aria-labelledby="upcoming-contests-heading">
+        <div class="flex items-baseline justify-between gap-2 pb-2">
+            <h2 id="upcoming-contests-heading" class="text-sm font-medium text-foreground">Upcoming contests</h2>
+            <RouterLink :to="ROUTE_PATH.CONTESTS" class="text-sm text-link hover:underline">All contests</RouterLink>
         </div>
-        <ul class="m-0 flex list-none flex-col divide-y divide-border p-0">
-            <li v-for="item in items" :key="item.contest.slug" class="py-2.5 first:pt-0 last:pb-0">
-                <RouterLink :to="`${ROUTE_PATH.CONTESTS}/${item.contest.slug}`" class="group flex flex-col gap-1 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <span class="flex min-w-0 items-center gap-2">
-                        <span class="min-w-0 truncate text-[13.5px] font-medium text-foreground group-hover:text-link">{{ item.contest.title }}</span>
+        <ul class="m-0 flex list-none flex-col p-0">
+            <li v-for="item in items" :key="item.contest.slug">
+                <RouterLink :to="`${ROUTE_PATH.CONTESTS}/${item.contest.slug}`" class="group flex flex-col gap-0.5 rounded-sm px-2 py-1.5 transition-colors motion-reduce:transition-none hover:bg-muted">
+                    <span class="flex min-w-0 items-start justify-between gap-2">
+                        <span class="min-w-0 text-sm font-medium text-foreground group-hover:text-primary">{{ item.contest.title }}</span>
                         <Badge v-if="item.live" variant="success"><Radio aria-hidden="true" />Live</Badge>
                     </span>
-                    <span class="text-xs text-muted-foreground">
+                    <span class="text-sm tabular-nums text-muted-foreground">
                         {{ item.live ? 'Ends in' : 'Starts in' }}
                         <ContestCountdown :target="item.live ? item.contest.endsAt : item.contest.startsAt" :offset-ms="offsetMs"
                             class="text-foreground" @elapsed="reload" />

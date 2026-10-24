@@ -1,11 +1,11 @@
 <template>
-    <div class="animate-enter flex flex-col gap-[18px]">
+    <div class="flex flex-col gap-6">
         <PageHeader
             title="Problems"
             :description="description" />
 
-        <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_264px]">
-            <div class="order-2 min-w-0 overflow-hidden rounded-xl border border-border bg-card lg:order-none lg:row-span-2">
+        <div class="grid grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,1fr)_264px]">
+            <section aria-label="Problem list" class="order-2 min-w-0 lg:order-none">
                 <SearchBar
                     ref="searchBar"
                     :search="search"
@@ -29,9 +29,9 @@
                     @clear-filters="clearFilters"
                 >
                     <template #skeleton>
-                        <div class="flex flex-col" aria-busy="true">
-                            <div v-for="n in 8" :key="n" class="flex h-[52px] items-center gap-4 border-b border-border px-4 last:border-b-0">
-                                <span class="sk w-full max-w-[260px]" />
+                        <div class="flex flex-col border-t border-rule-2" aria-busy="true">
+                            <div v-for="n in 8" :key="n" class="flex h-13 items-center gap-4 border-b border-border">
+                                <span class="sk w-full max-w-65" />
                                 <span class="sk ml-auto w-16 shrink-0" />
                                 <span class="sk hidden w-12 shrink-0 sm:block" />
                             </div>
@@ -39,17 +39,18 @@
                     </template>
                     <ProblemTable :problems="problems" />
                 </ListStateShell>
-                <div class="px-4">
+                <!-- The last row already carries the rule, so the footer drops its own. Beside the rail the column is
+                     640 px at lg, too narrow for text, pages and size on one line: the controls wrap under the text. -->
+                <div class="[&>div]:mt-0 [&>div]:border-t-0 sm:[&>div]:flex-wrap [&_p]:whitespace-nowrap">
                     <PaginationFooter :pagination="pagination" @change-page="onPageChange" @update:size="onSizeChange" />
                 </div>
-            </div>
+            </section>
 
-            <div class="order-1 min-w-0 lg:order-none">
+            <!-- The rail: a one-line tag row above the table under lg, a column beside it from lg up. -->
+            <aside aria-label="Filters" class="order-1 flex min-w-0 flex-col gap-6 lg:order-none lg:gap-8 lg:border-l lg:border-border lg:pl-6">
                 <TagCloud :selected="tag" @select="onTag" />
-            </div>
-            <div class="order-3 min-w-0 lg:order-none">
                 <UpcomingContests />
-            </div>
+            </aside>
         </div>
     </div>
 </template>

@@ -1,19 +1,22 @@
 <template>
-    <div ref="root" class="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2.5">
-        <div class="relative w-full sm:w-[280px]">
+    <div ref="root" class="flex flex-wrap items-center gap-3 pb-4">
+        <div class="relative w-full sm:w-75">
             <Search class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-            <Input v-model="localSearch" type="search" placeholder="Search by title or slug" aria-label="Search problems" class="pl-8" />
+            <Input v-model="localSearch" type="search" placeholder="Search by title or slug" aria-label="Search problems" class="pl-8 pr-9" />
+            <!-- The key hint gives way to the browser's own clear button once there is something to clear. -->
+            <kbd v-if="!localSearch" aria-hidden="true"
+                class="pointer-events-none absolute right-2 top-1/2 inline-flex h-5 min-w-5 -translate-y-1/2 items-center justify-center rounded-sm border border-rule-2 bg-background px-1 font-mono text-xs text-ink-2">/</kbd>
         </div>
 
-        <div role="group" aria-label="Difficulty" class="inline-flex gap-0.5 rounded-lg border border-border bg-muted p-0.5">
+        <div role="group" aria-label="Difficulty" class="inline-flex gap-0.5 rounded-md border border-rule-2 p-0.5">
             <button v-for="opt in options" :key="opt.value" type="button" :aria-pressed="difficulty === opt.value"
-                class="cursor-pointer rounded-md px-2 py-[3px] text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-[var(--shadow-sm)]"
+                class="relative h-7.5 cursor-pointer rounded-sm px-3 text-base font-medium text-ink-2 sm:text-sm transition-colors motion-reduce:transition-none after:absolute after:inset-x-0 after:-inset-y-1.75 hover:bg-muted aria-pressed:bg-primary-soft aria-pressed:text-info-ink"
                 @click="emit('update:difficulty', opt.value)">
                 {{ opt.label }}
             </button>
         </div>
 
-        <Badge v-if="tag" variant="primary" class="ml-1">
+        <Badge v-if="tag" variant="primary">
             {{ tag }}
             <button type="button" class="cursor-pointer rounded-sm opacity-80 hover:opacity-100" :aria-label="`Remove tag filter ${tag}`"
                 @click="emit('clear-tag')">

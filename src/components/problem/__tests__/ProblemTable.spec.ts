@@ -51,4 +51,16 @@ describe('ProblemTable', () => {
         const w = mountTable([make({ tags: [] })])
         expect(w.text()).not.toContain('—')
     })
+
+    it('rendersTagsAsCommaText', () => {
+        const w = mountTable([make({ tags: ['beginner', 'math'] })])
+        const cell = w.get('[data-col="tags"]')
+        expect(cell.text()).toBe('beginner, math')
+        expect(w.find('.font-mono').exists()).toBe(false)
+    })
+
+    it('keepsTitleLink', () => {
+        const w = mountTable([make({ problemSlug: 'tong-tu-1-den-n', title: 'Tong tu 1 den n' })])
+        expect(w.get('tbody a').attributes('href')).toBe('/problems/tong-tu-1-den-n')
+    })
 })
