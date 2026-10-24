@@ -35,12 +35,14 @@
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                <!-- The title link covers the row through its ::after, so the whole row opens the contest and the row keeps one link. -->
-                                <TableRow v-for="c in sec.items" :key="c.slug" class="relative">
+                                <!-- The whole row opens the contest from a click handler; the title link stays the row's one link
+                                     and its tab stop. A ::after overlay on the link would need the row as its containing block, and
+                                     WebKit ignores position: relative on a tr, so every overlay would resolve against the table wrapper. -->
+                                <TableRow v-for="c in sec.items" :key="c.slug" class="group cursor-pointer" @click="openRow($event, c.slug)">
                                     <TableCell class="whitespace-normal break-words">
                                         <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                                             <RouterLink :to="`${ROUTE_PATH.CONTESTS}/${c.slug}`"
-                                                class="min-w-0 text-base font-medium text-foreground after:absolute after:inset-0 hover:text-primary hover:underline">{{ c.title }}</RouterLink>
+                                                class="min-w-0 text-base font-medium text-foreground group-hover:text-primary group-hover:underline">{{ c.title }}</RouterLink>
                                             <Badge v-if="c.status === 'DRAFT'" variant="neutral">Draft</Badge>
                                         </div>
                                         <!-- Under lg: the start, then the length and size. -->
@@ -73,7 +75,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import PageHeader from '@/components/common/PageHeader.vue'
@@ -88,6 +90,16 @@ import type { ContestSummary } from '@/types/contest'
 
 const { data: list, isLoading, error, execute } = useFetch(contestService.list, { transform: (res) => res.data })
 const load = () => void execute()
+
+const router = useRouter()
+// A click anywhere on a row opens its contest, unless the click means something else: another button or a
+// modifier (the browser's own open-in-tab gestures), the link or a button inside the row, or a text selection.
+const openRow = (e: MouseEvent, slug: string) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+    if ((e.target as Element).closest('a,button')) return
+    if (window.getSelection()?.toString()) return
+    void router.push(`${ROUTE_PATH.CONTESTS}/${slug}`)
+}
 
 const lengthOf = (c: ContestSummary) => formatDuration(Date.parse(c.endsAt) - Date.parse(c.startsAt))
 
