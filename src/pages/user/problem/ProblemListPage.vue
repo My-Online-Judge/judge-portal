@@ -46,10 +46,12 @@
                 </div>
             </section>
 
-            <!-- The rail: a one-line tag row above the table under lg, a column beside it from lg up. -->
-            <aside aria-label="Filters" class="order-1 flex min-w-0 flex-col gap-6 lg:order-none lg:gap-8 lg:border-l lg:border-border lg:pl-6">
-                <TagCloud :selected="tag" @select="onTag" />
-                <UpcomingContests />
+            <!-- The rail, a column beside the table from lg up. Under lg it steps aside (contents): the tag row goes above
+                 the table and the contests below the pager. The contests carry their own order so that, with nothing to
+                 show, no empty grid item is left to add a gap. -->
+            <aside aria-label="Filters" class="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-8 lg:border-l lg:border-border lg:pl-6">
+                <TagCloud :selected="tag" class="order-1 lg:order-none" @select="onTag" />
+                <UpcomingContests class="order-3 min-w-0 lg:order-none" />
             </aside>
         </div>
     </div>

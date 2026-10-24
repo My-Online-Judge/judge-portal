@@ -40,7 +40,7 @@ describe('ProblemTable', () => {
         expect(w.find('[role=progressbar]').exists()).toBe(false)
         const heads = w.findAll('th').map((h) => h.text())
         expect(heads).not.toContain('#')
-        expect(heads).toEqual(['Title', 'Difficulty', 'Acceptance', 'Submissions'])
+        expect(heads).toEqual(['Title', 'Tags', 'Difficulty', 'Acceptance', 'Submissions'])
     })
 
     it('difficultyBadgeInRow', () => {
