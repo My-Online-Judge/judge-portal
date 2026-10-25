@@ -53,6 +53,40 @@
                         </div>
                     </div>
 
+                    <!-- The two kinds of contest (contest enrollment design §4.1), as a radio group: the choice is
+                         part of what a contest is, so it sits with the slug and status. Locked with the start. -->
+                    <fieldset class="flex flex-col gap-2" :disabled="locked" :aria-describedby="locked ? 'contest-locked' : undefined">
+                        <legend class="mb-2 text-sm font-medium leading-none">Registration</legend>
+                        <div class="grid gap-2 sm:grid-cols-2">
+                            <label
+                                v-for="kind in ENROLLMENT_KINDS"
+                                :key="kind.value"
+                                :for="`contest-enrollment-${kind.value.toLowerCase()}`"
+                                :class="[
+                                    'flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 transition-colors',
+                                    form.enrollment === kind.value ? 'border-primary bg-primary-soft/40' : 'border-border hover:bg-muted/60',
+                                    locked ? 'cursor-not-allowed opacity-70' : '',
+                                ]"
+                            >
+                                <input
+                                    :id="`contest-enrollment-${kind.value.toLowerCase()}`"
+                                    v-model="form.enrollment"
+                                    type="radio"
+                                    name="contest-enrollment"
+                                    :value="kind.value"
+                                    :disabled="locked"
+                                    class="mt-0.5 size-4 shrink-0 accent-primary"
+                                />
+                                <span class="flex min-w-0 flex-col gap-0.5">
+                                    <span class="text-sm font-medium text-foreground">{{ kind.title }}</span>
+                                    <!-- Read as one sentence ("Open to everyone — any signed-in…"); shown as a title and a line under it. -->
+                                    <span class="sr-only"> — </span>
+                                    <span class="text-xs text-muted-foreground">{{ kind.hint }}</span>
+                                </span>
+                            </label>
+                        </div>
+                    </fieldset>
+
                     <div class="space-y-1.5">
                         <Label for="contest-title">Title</Label>
                         <Input id="contest-title" v-model="form.title" autocomplete="off" />
@@ -85,7 +119,7 @@
 
                     <p v-if="locked" id="contest-locked" class="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-[13px] text-muted-foreground">
                         <Lock class="size-4 shrink-0" aria-hidden="true" />
-                        Problems and start time are locked once the contest has started
+                        Problems, start time and registration are locked once the contest has started
                     </p>
 
                     <section class="flex flex-col gap-2" aria-labelledby="contest-problems-heading">
@@ -188,8 +222,14 @@ import {
     type ContestOriginal,
 } from '@/lib/contestForm'
 import contestService from '@/services/contestService'
-import type { ContestDetail } from '@/types/contest'
+import type { ContestDetail, ContestEnrollment } from '@/types/contest'
 import type { Problem } from '@/types/problem'
+
+// The labels of the contest enrollment design §5.4, as a title and the rest.
+const ENROLLMENT_KINDS: { value: ContestEnrollment; title: string; hint: string }[] = [
+    { value: 'OPEN', title: 'Open to everyone', hint: 'any signed-in user can solve while it runs' },
+    { value: 'REQUIRED', title: 'Registration required', hint: 'students register first; you can see and manage who is in' },
+]
 
 // `slug` null creates a contest; a slug edits that one, read fresh from the API (the list has no description or problems).
 const props = defineProps<{ open: boolean; slug: string | null }>()

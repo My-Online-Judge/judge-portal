@@ -48,9 +48,12 @@ const detail = (over: Record<string, unknown> = {}) => ({
     ],
     myProgress: {},
     serverTime: '2026-10-21T10:00:00Z',
+    enrollment: 'OPEN',
+    enrolledCount: 0,
+    enrolled: false,
     ...over,
 })
-const LOCKED = 'Problems and start time are locked once the contest has started'
+const LOCKED = 'Problems, start time and registration are locked once the contest has started'
 
 /** The `datetime-local` value for an instant, in the runner's timezone. */
 function localInput(iso: string): string {
@@ -88,6 +91,10 @@ const rows = () =>
             .filter(Boolean)
             .join(' '),
     )
+const radio = (value: 'OPEN' | 'REQUIRED') =>
+    $<HTMLInputElement>(`input[name="contest-enrollment"][value="${value}"]`)!
+const radioLabel = (value: 'OPEN' | 'REQUIRED') =>
+    document.body.querySelector(`label[for="${radio(value).id}"]`)!.textContent!.replace(/\s+/g, ' ').trim()
 async function save() {
     button(wrapper!.props('slug') ? 'Save changes' : 'Create contest')!.click()
     await flushPromises()
@@ -254,6 +261,52 @@ describe('ContestFormDialog', () => {
         await type('#contest-title', 'Spring cup 2026')
         await save()
         expect(h.update.mock.calls[0]![1]).not.toHaveProperty('problemSlugs')
+    })
+
+    it('theKindIsSentOnCreate', async () => {
+        await mountDialog(null)
+        expect(radio('OPEN').checked).toBe(true)
+        expect(radioLabel('OPEN')).toBe('Open to everyone — any signed-in user can solve while it runs')
+        expect(radioLabel('REQUIRED')).toBe('Registration required — students register first; you can see and manage who is in')
+        await type('#contest-slug', 'autumn-cup')
+        await type('#contest-title', 'Autumn cup')
+        await type('#contest-starts', '2026-11-02T09:00')
+        await type('#contest-ends', '2026-11-02T11:30')
+        const picker = wrapper!.findComponent({ name: 'ProblemPickerStub' })
+        picker.vm.$emit('pick', { problemSlug: 'sum', title: 'Tổng hai số' })
+        picker.vm.$emit('update:modelValue', 'sum')
+        await nextTick()
+        button('Add')!.click()
+        await nextTick()
+        radio('REQUIRED').click()
+        await nextTick()
+        await save()
+        expect(h.create).toHaveBeenCalledWith(expect.objectContaining({ slug: 'autumn-cup', enrollment: 'REQUIRED' }))
+    })
+
+    it('changingTheKindOnEditSendsIt', async () => {
+        h.get.mockResolvedValue({ data: { data: detail({ enrollment: 'REQUIRED', enrolledCount: 4 }) } })
+        await mountDialog('spring-cup')
+        expect(radio('REQUIRED').checked).toBe(true)
+        expect(radio('OPEN').disabled).toBe(false)
+        radio('OPEN').click()
+        await nextTick()
+        await save()
+        expect(h.update).toHaveBeenCalledWith('spring-cup', expect.objectContaining({ enrollment: 'OPEN' }))
+    })
+
+    it('theKindIsLockedOnceStarted', async () => {
+        h.get.mockResolvedValue({ data: { data: detail({ status: 'PUBLISHED', phase: 'RUNNING', enrollment: 'REQUIRED' }) } })
+        await mountDialog('spring-cup')
+        expect(document.body.textContent).toContain(LOCKED)
+        expect(radio('REQUIRED').checked).toBe(true)
+        expect(radio('REQUIRED').disabled).toBe(true)
+        expect(radio('OPEN').disabled).toBe(true)
+        expect(radio('OPEN').closest('fieldset')!.getAttribute('aria-describedby')).toBe('contest-locked')
+        await type('#contest-title', 'Spring cup 2026')
+        await save()
+        // Unchanged, so not sent: the server would answer 409 to a kind change after the start.
+        expect(h.update.mock.calls[0]![1]).not.toHaveProperty('enrollment')
     })
 
     it('aFailedLoadOffersARetry', async () => {

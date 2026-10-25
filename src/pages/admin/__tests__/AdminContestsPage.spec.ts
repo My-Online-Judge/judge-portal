@@ -35,15 +35,31 @@ vi.mock('@/components/admin/contest/ContestFormDialog.vue', async () => {
     }
 })
 
+vi.mock('@/components/admin/contest/ParticipantsDialog.vue', async () => {
+    const { defineComponent: define, h: r } = await import('vue')
+    return {
+        default: define({
+            name: 'ParticipantsDialogStub',
+            props: { open: Boolean, slug: { type: String, default: null }, title: { type: String, default: '' } },
+            emits: ['update:open', 'changed'],
+            setup: () => () => r('div', { 'data-test': 'participants-dialog' }),
+        }),
+    }
+})
+
 import { RouterLink } from 'vue-router'
 import AdminContestsPage from '../AdminContestsPage.vue'
 import PaginationFooter from '@/components/common/PaginationFooter.vue'
 import { useAuthStore } from '@/stores/auth'
 
-const contest = (slug: string, title: string, status: string, phase: string, problemCount = 3) => ({
+const contest = (
+    slug: string, title: string, status: string, phase: string, problemCount = 3,
+    enrollment: 'OPEN' | 'REQUIRED' = 'OPEN', enrolledCount = 0,
+) => ({
     slug, title, status, phase, problemCount, startsAt: '2026-10-21T02:00:00Z', endsAt: '2026-10-21T04:00:00Z',
+    enrollment, enrolledCount, enrolled: false,
 })
-const running = contest('spring-cup', 'Spring cup', 'PUBLISHED', 'RUNNING')
+const running = contest('spring-cup', 'Spring cup', 'PUBLISHED', 'RUNNING', 3, 'REQUIRED', 25)
 const draft = contest('autumn-cup', 'Autumn cup', 'DRAFT', 'UPCOMING', 1)
 const past = contest('summer-cup', 'Summer cup', 'PUBLISHED', 'ENDED', 26)
 
@@ -123,7 +139,7 @@ describe('AdminContestsPage', () => {
         // The endpoint needs a valid token, so the session is refreshed first.
         expect(h.ensureFreshSession.mock.invocationCallOrder[0]).toBeLessThan(h.listAll.mock.invocationCallOrder[0]!)
         expect(wrapper!.findAll('thead th').map((th) => th.text())).toEqual(
-            ['Title', 'Status', 'Phase', 'Starts', 'Ends', 'Problems', 'Actions'],
+            ['Title', 'Status', 'Phase', 'Registration', 'Starts', 'Ends', 'Problems', 'Actions'],
         )
         expect(wrapper!.findAll('tbody tr').map((tr) => tr.find('td').text())).toEqual([
             'Spring cupspring-cup', 'Autumn cupautumn-cup', 'Summer cupsummer-cup',
@@ -131,7 +147,7 @@ describe('AdminContestsPage', () => {
         expect(cells('Spring cup').slice(1, 3)).toEqual(['Published', 'Running'])
         expect(cells('Autumn cup').slice(1, 3)).toEqual(['Draft', 'Upcoming'])
         expect(cells('Summer cup').slice(1, 3)).toEqual(['Published', 'Ended'])
-        expect(cells('Summer cup')[5]).toBe('26')
+        expect(cells('Summer cup')[6]).toBe('26')
         // The title opens the contest's public page.
         expect(row('Autumn cup').get('a').attributes('href')).toBe('/contests/autumn-cup')
         expect(button('New contest')).toBeTruthy()
@@ -240,6 +256,30 @@ describe('AdminContestsPage', () => {
         expect(button('New contest')).toBeUndefined()
         await openMenu('Autumn cup')
         expect(menuItems()).toEqual(['Edit'])
+    })
+
+    it('theTableShowsTheRegistrationColumn', async () => {
+        rows = [running, draft, contest('one', 'One cup', 'DRAFT', 'UPCOMING', 2, 'REQUIRED', 1)]
+        await mountPage()
+        expect(wrapper!.findAll('thead th')[3]!.text()).toBe('Registration')
+        expect(cells('Spring cup')[3]).toBe('Required · 25')
+        expect(cells('Autumn cup')[3]).toBe('Open')
+        expect(cells('One cup')[3]).toBe('Required · 1')
+    })
+
+    it('participantsActionOpensTheDialogForRequiredContests', async () => {
+        // An open contest's menu has no Participants (menuItemsFollowThePermissions); a required one's does.
+        await mountPage(['contest:update'])
+        await openMenu('Spring cup')
+        expect(menuItems()).toEqual(['Edit', 'Participants'])
+        menuItem('Participants').click()
+        await flushPromises()
+        const dialog = wrapper!.findComponent({ name: 'ParticipantsDialogStub' })
+        expect(dialog.props()).toEqual({ open: true, slug: 'spring-cup', title: 'Spring cup' })
+        // A removal changes the count in the table: the list is read again.
+        dialog.vm.$emit('changed')
+        await flushPromises()
+        expect(h.listAll).toHaveBeenCalledTimes(2)
     })
 
     it('editOpensTheDialogAndASaveReloads', async () => {

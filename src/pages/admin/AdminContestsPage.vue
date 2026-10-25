@@ -46,6 +46,7 @@
                                 <th class="pl-4">Title</th>
                                 <th>Status</th>
                                 <th>Phase</th>
+                                <th>Registration</th>
                                 <th>Starts</th>
                                 <th>Ends</th>
                                 <th class="num">Problems</th>
@@ -66,6 +67,13 @@
                                     <Badge v-else variant="success">Published</Badge>
                                 </td>
                                 <td :class="c.status === 'DRAFT' ? 'text-muted-foreground' : PHASES[c.phase].class">{{ PHASES[c.phase].label }}</td>
+                                <!-- The kind, and for a required contest how many are in (text, no chip). -->
+                                <td class="whitespace-nowrap">
+                                    <template v-if="c.enrollment === 'REQUIRED'">
+                                        Required <span class="text-muted-foreground">·</span> <span class="tabular-nums">{{ c.enrolledCount }}</span>
+                                    </template>
+                                    <span v-else class="text-muted-foreground">Open</span>
+                                </td>
                                 <td class="whitespace-nowrap text-muted-foreground">{{ formatContestDate(c.startsAt) }}</td>
                                 <td class="whitespace-nowrap text-muted-foreground">{{ formatContestDate(c.endsAt) }}</td>
                                 <td class="num">{{ c.problemCount }}</td>
@@ -83,6 +91,14 @@
         </div>
 
         <ContestFormDialog :open="formOpen" :slug="formSlug" @update:open="(v) => (formOpen = v)" @saved="onSaved" />
+
+        <ParticipantsDialog
+            :open="participantsOpen"
+            :slug="participantsTarget?.slug ?? null"
+            :title="participantsTarget?.title ?? ''"
+            @update:open="(v) => (participantsOpen = v)"
+            @changed="load"
+        />
 
         <ConfirmDialog
             :open="deleteOpen"
@@ -102,7 +118,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { isAxiosError } from 'axios'
 import { watchDebounced } from '@vueuse/core'
-import { Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
+import { Pencil, Plus, Search, Trash2, Users } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -113,6 +129,7 @@ import RowActionsMenu from '@/components/common/RowActionsMenu.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import type { RowAction } from '@/components/common/rowActions'
 import ContestFormDialog from '@/components/admin/contest/ContestFormDialog.vue'
+import ParticipantsDialog from '@/components/admin/contest/ParticipantsDialog.vue'
 import { useFetch } from '@/composables/useFetch'
 import { useToast } from '@/composables/useToast'
 import { ensureFreshSession } from '@/api/refreshSession'
@@ -196,9 +213,20 @@ const onSaved = () => {
     void load()
 }
 
+// --- Participants of a required contest: the same permission as the edit (contest:update) ---
+const participantsOpen = ref(false)
+const participantsTarget = ref<ContestSummary | null>(null)
+const openParticipants = (c: ContestSummary) => {
+    participantsTarget.value = c
+    participantsOpen.value = true
+}
+
 const rowActions = (c: ContestSummary): RowAction[] => {
     const items: RowAction[] = []
     if (canUpdate.value) items.push({ label: 'Edit', icon: Pencil, onSelect: () => openEdit(c) })
+    if (canUpdate.value && c.enrollment === 'REQUIRED') {
+        items.push({ label: 'Participants', icon: Users, onSelect: () => openParticipants(c) })
+    }
     if (canDelete.value) {
         // The server refuses to delete a published contest that has started, so the item says what to do instead.
         const started = c.status === 'PUBLISHED' && c.phase !== 'UPCOMING'
