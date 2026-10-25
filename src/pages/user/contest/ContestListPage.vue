@@ -54,7 +54,7 @@
                                         <!-- The kind, in one quiet line (text, no chip), and whether the viewer is in. -->
                                         <p class="mt-0.5 text-sm text-ink-2" data-test="kind">
                                             <template v-if="c.enrollment === 'REQUIRED'">
-                                                Registration required · {{ registered(c.enrolledCount) }}
+                                                Registration required, {{ registered(c.enrolledCount) }}
                                             </template>
                                             <template v-else>Open to everyone</template>
                                             <span v-if="c.enrolled" class="ml-2 inline-flex items-center gap-1 text-success-ink">

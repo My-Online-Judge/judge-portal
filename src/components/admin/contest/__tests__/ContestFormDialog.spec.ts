@@ -266,8 +266,8 @@ describe('ContestFormDialog', () => {
     it('theKindIsSentOnCreate', async () => {
         await mountDialog(null)
         expect(radio('OPEN').checked).toBe(true)
-        expect(radioLabel('OPEN')).toBe('Open to everyone — any signed-in user can solve while it runs')
-        expect(radioLabel('REQUIRED')).toBe('Registration required — students register first; you can see and manage who is in')
+        expect(radioLabel('OPEN')).toBe('Open to everyone: any signed-in user can solve while it runs')
+        expect(radioLabel('REQUIRED')).toBe('Registration required: students register first; you can see and manage who is in')
         await type('#contest-slug', 'autumn-cup')
         await type('#contest-title', 'Autumn cup')
         await type('#contest-starts', '2026-11-02T09:00')

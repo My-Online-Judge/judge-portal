@@ -262,9 +262,11 @@ describe('AdminContestsPage', () => {
         rows = [running, draft, contest('one', 'One cup', 'DRAFT', 'UPCOMING', 2, 'REQUIRED', 1)]
         await mountPage()
         expect(wrapper!.findAll('thead th')[3]!.text()).toBe('Registration')
-        expect(cells('Spring cup')[3]).toBe('Required · 25')
-        expect(cells('Autumn cup')[3]).toBe('Open')
-        expect(cells('One cup')[3]).toBe('Required · 1')
+        // Two lines: the kind, and how many are in under it.
+        const lines = (title: string) => row(title).findAll('td')[3]!.findAll('span').map((s) => s.text())
+        expect(lines('Spring cup')).toEqual(['Required', '25 registered'])
+        expect(lines('Autumn cup')).toEqual(['Open'])
+        expect(lines('One cup')).toEqual(['Required', '1 registered'])
     })
 
     it('participantsActionOpensTheDialogForRequiredContests', async () => {

@@ -2,7 +2,7 @@
     <Dialog :open="open" @update:open="onOpenChange">
         <DialogContent class="sm:max-w-3xl">
             <DialogHeader>
-                <DialogTitle>Participants · {{ title }}</DialogTitle>
+                <DialogTitle>Participants in {{ title }}</DialogTitle>
                 <DialogDescription>{{ countLine }}</DialogDescription>
             </DialogHeader>
 
@@ -49,7 +49,7 @@
                                     <td class="pl-4 font-medium" :class="r.user.username ? 'text-foreground' : 'font-mono text-muted-foreground'">
                                         {{ handleOf(r) }}
                                     </td>
-                                    <td class="max-w-[260px] truncate" :class="r.user.name ? '' : 'text-muted-foreground'">{{ r.user.name ?? '—' }}</td>
+                                    <td class="max-w-[260px] truncate" :class="r.user.name ? '' : 'text-muted-foreground'">{{ r.user.name ?? '-' }}</td>
                                     <td class="whitespace-nowrap text-muted-foreground">{{ formatContestDate(r.enrolledAt) }}</td>
                                     <td class="act">
                                         <Button type="button" variant="ghost" size="icon-sm" :aria-label="`Remove ${handleOf(r)}`" @click="askToRemove(r)">

@@ -277,8 +277,8 @@ describe('ContestDetailPage', () => {
     it('theHeadShowsTheKindAndTheCount', async () => {
         h.get.mockImplementation(async () => ({ data: { data: detail({ enrollment: 'REQUIRED', enrolledCount: 24 }) } }))
         const w = await mountPage()
-        expect(w.text()).toContain('Required · 24 registered')
-        expect(w.text()).toContain('ICPC · solved, then penalty')
+        expect(w.text()).toContain('Required, 24 registered')
+        expect(w.text()).toContain('ICPC: solved, then penalty')
         expect(w.getComponent(ActionStub).props('primary')).toBe(true)
     })
 
@@ -308,11 +308,11 @@ describe('ContestDetailPage', () => {
             .mockImplementationOnce(async () => ({ data: { data: detail({ enrollment: 'REQUIRED', enrolledCount: 24, enrolled: true, phase: 'UPCOMING', startsAt: at(600_000), problems: [] }) } }))
             .mockImplementationOnce(async () => ({ data: { data: detail({ enrollment: 'REQUIRED', enrolledCount: 23, enrolled: false, phase: 'UPCOMING', startsAt: at(600_000), problems: [] }) } }))
         const w = await mountPage()
-        expect(w.text()).toContain('Required · 24 registered')
+        expect(w.text()).toContain('Required, 24 registered')
         await w.find('[data-test="enrollment-action"]').trigger('click')
         await flushPromises()
         expect(h.get).toHaveBeenCalledTimes(2)
-        expect(w.text()).toContain('Required · 23 registered')
+        expect(w.text()).toContain('Required, 23 registered')
         expect((w.getComponent(ActionStub).props('contest') as { enrolled: boolean }).enrolled).toBe(false)
     })
 

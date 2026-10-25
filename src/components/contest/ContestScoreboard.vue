@@ -78,7 +78,7 @@
                                 :class="row.user.id === viewerId ? 'bg-primary-soft' : 'bg-card group-hover:bg-muted'" data-col="rank">
                                 <span class="inline-flex items-center gap-1">
                                     <Medal v-if="isZero(row) ? false : row.rank <= 3" class="size-4" :class="MEDAL_INK[row.rank]" aria-hidden="true" />
-                                    <span v-if="isZero(row)" :title="'Registered, nothing counted yet'">—</span>
+                                    <span v-if="isZero(row)" :title="'Registered, nothing counted yet'">-</span>
                                     <span v-else>{{ row.rank }}</span>
                                 </span>
                             </TableCell>
@@ -121,7 +121,7 @@
                 <span class="inline-flex items-center gap-1"><Star class="size-3 fill-current text-success-ink" aria-hidden="true" />first to solve</span>
                 <span><span class="font-semibold text-success-ink">+N</span> solved, N wrong tries before, time in minutes</span>
                 <span><span class="font-semibold text-destructive-ink">-N</span> tried, not solved</span>
-                <span>— registered, nothing counted yet</span>
+                <span><span class="font-semibold">-</span> registered, nothing counted yet</span>
             </p>
         </ListStateShell>
     </div>
@@ -201,14 +201,14 @@ const summary = computed(() => {
     }
     const parts = [`${n} ${n === 1 ? 'contestant' : 'contestants'}`, `${solvers} solved at least one`]
     if (earliest) parts.push(`first solve: ${earliest.label} by ${publicName(earliest.row.user)} at ${earliest.minutes}`)
-    return parts.join(' · ')
+    return parts.join('. ') + '.'
 })
 
 const ageSeconds = computed(() => (updatedAt.value === null ? 0 : Math.max(0, Math.floor((now.value - updatedAt.value) / 1000))))
 const statusText = computed(() => {
     if (props.phase === 'UPCOMING') return 'Opens at the start'
     if (props.phase === 'ENDED') return 'Final standings'
-    return `Live · updated ${ageSeconds.value}s ago`
+    return `Live, updated ${ageSeconds.value}s ago`
 })
 const emptyHint = computed(() =>
     props.phase === 'UPCOMING'

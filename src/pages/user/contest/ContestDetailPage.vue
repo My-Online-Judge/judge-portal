@@ -49,7 +49,7 @@
                     </div>
                     <div>
                         <dt>Format</dt>
-                        <dd>ICPC · solved, then penalty</dd>
+                        <dd>ICPC: solved, then penalty</dd>
                     </div>
                     <div>
                         <dt>Registration</dt>
@@ -57,7 +57,7 @@
                     </div>
                     <div>
                         <dt>Problems</dt>
-                        <dd>{{ contest.problems.length || contest.phase === 'UPCOMING' ? problemCountText : '—' }}</dd>
+                        <dd>{{ contest.problems.length || contest.phase === 'UPCOMING' ? problemCountText : '-' }}</dd>
                     </div>
                 </dl>
                 <div class="flex flex-wrap items-center gap-3">
@@ -86,7 +86,7 @@
                             <h2 id="contest-know" class="text-sm font-semibold text-foreground">What you need to know</h2>
                             <ul class="flex max-w-[64ch] flex-col gap-1 text-sm text-ink-2">
                                 <li>{{ kindLine }}</li>
-                                <li>ICPC rules: contestants are ranked by problems solved, then by penalty time — minutes from the start to each accepted solution, plus 20 per wrong try before it.</li>
+                                <li>ICPC rules: contestants are ranked by problems solved, then by penalty time: minutes from the start to each accepted solution, plus 20 per wrong try before it.</li>
                                 <li>{{ timingLine }}</li>
                             </ul>
                         </section>
@@ -184,7 +184,7 @@ const registered = (n: number) => (n === 1 ? '1 registered' : `${n} registered`)
 const registrationText = computed(() => {
     const c = contest.value
     if (!c) return ''
-    return c.enrollment === 'REQUIRED' ? `Required · ${registered(c.enrolledCount)}` : 'Open to everyone'
+    return c.enrollment === 'REQUIRED' ? `Required, ${registered(c.enrolledCount)}` : 'Open to everyone'
 })
 const problemCountText = computed(() => {
     const n = contest.value?.problems.length ?? 0

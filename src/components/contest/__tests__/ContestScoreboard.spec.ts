@@ -329,7 +329,7 @@ describe('ContestScoreboard', () => {
         h.scoreboard.mockResolvedValue({ data: { data: bigBoard } })
         const w = await mountBoard()
         const ranks = w.findAll('tbody tr').map((tr) => tr.get('td[data-col="rank"]').text())
-        expect(ranks).toEqual(['1', '2', '—'])
+        expect(ranks).toEqual(['1', '2', '-'])
     })
 
     it('searchFiltersRows', async () => {
@@ -344,10 +344,10 @@ describe('ContestScoreboard', () => {
         fakeTheClockToo()
         vi.setSystemTime(new Date('2026-10-21T10:00:00Z'))
         const w = await mountBoard()
-        expect(w.get('[data-test="board-status"]').text()).toMatch(/Live · updated 0s ago/)
+        expect(w.get('[data-test="board-status"]').text()).toMatch(/Live, updated 0s ago/)
         vi.advanceTimersByTime(12_000)
         await flushPromises()
-        expect(w.get('[data-test="board-status"]').text()).toMatch(/Live · updated 12s ago/)
+        expect(w.get('[data-test="board-status"]').text()).toMatch(/Live, updated 12s ago/)
     })
 
     it('anEndedBoardSaysFinalStandings', async () => {

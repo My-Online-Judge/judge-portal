@@ -79,8 +79,8 @@
                                 />
                                 <span class="flex min-w-0 flex-col gap-0.5">
                                     <span class="text-sm font-medium text-foreground">{{ kind.title }}</span>
-                                    <!-- Read as one sentence ("Open to everyone — any signed-in…"); shown as a title and a line under it. -->
-                                    <span class="sr-only"> — </span>
+                                    <!-- Read as one sentence ("Open to everyone: any signed-in..."); shown as a title and a line under it. -->
+                                    <span class="sr-only">: </span>
                                     <span class="text-xs text-muted-foreground">{{ kind.hint }}</span>
                                 </span>
                             </label>

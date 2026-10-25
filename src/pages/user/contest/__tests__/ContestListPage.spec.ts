@@ -71,7 +71,7 @@ describe('ContestListPage', () => {
             running: [summary({ slug: 'open-cup', title: 'Open cup', phase: 'RUNNING', enrollment: 'OPEN', enrolledCount: 0, startsAt: at(-600_000) })],
         }))
         const w = await mountPage()
-        expect(w.text()).toContain('Registration required · 24 registered')
+        expect(w.text()).toContain('Registration required, 24 registered')
         expect(w.text()).toContain('Open to everyone')
         expect(w.text()).not.toContain('You are registered')
     })

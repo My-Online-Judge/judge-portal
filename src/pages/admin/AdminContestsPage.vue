@@ -67,10 +67,11 @@
                                     <Badge v-else variant="success">Published</Badge>
                                 </td>
                                 <td :class="c.status === 'DRAFT' ? 'text-muted-foreground' : PHASES[c.phase].class">{{ PHASES[c.phase].label }}</td>
-                                <!-- The kind, and for a required contest how many are in (text, no chip). -->
+                                <!-- The kind, and for a required contest how many are in, under it (text, no chip). -->
                                 <td class="whitespace-nowrap">
                                     <template v-if="c.enrollment === 'REQUIRED'">
-                                        Required <span class="text-muted-foreground">·</span> <span class="tabular-nums">{{ c.enrolledCount }}</span>
+                                        <span class="block">Required</span>
+                                        <span class="block text-xs tabular-nums text-muted-foreground">{{ registered(c.enrolledCount) }}</span>
                                     </template>
                                     <span v-else class="text-muted-foreground">Open</span>
                                 </td>
@@ -146,6 +147,8 @@ const { success: successToast, error: errorToast } = useToast()
 const canCreate = computed(() => authStore.hasPermission('contest:create'))
 const canUpdate = computed(() => authStore.hasPermission('contest:update'))
 const canDelete = computed(() => authStore.hasPermission('contest:delete'))
+
+const registered = (n: number) => (n === 1 ? '1 registered' : `${n} registered`)
 
 const PHASES: Record<ContestPhase, { label: string; class: string }> = {
     RUNNING: { label: 'Running', class: 'font-medium text-success-ink' },

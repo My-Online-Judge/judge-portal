@@ -104,7 +104,7 @@ describe('ParticipantsDialog', () => {
         // The endpoint needs contest:update on a valid token, so the session is made fresh first.
         expect(h.ensureFreshSession.mock.invocationCallOrder[0]).toBeLessThan(h.participants.mock.invocationCallOrder[0]!)
         expect(h.participants).toHaveBeenCalledWith(expect.any(AbortSignal), 'spring-cup', { page: 0, size: 20 })
-        expect(body()).toContain('Participants · Spring cup')
+        expect(body()).toContain('Participants in Spring cup')
         expect(body()).toContain('4 registered')
         expect([...document.body.querySelectorAll('thead th')].map((th) => th.textContent!.trim())).toEqual(
             ['Username', 'Name', 'Registered', 'Remove'],
@@ -112,9 +112,9 @@ describe('ParticipantsDialog', () => {
         expect(tableRows()).toEqual([
             ['alice', 'Alice Nguyễn', formatContestDate(alice.enrolledAt)],
             ['bob', 'Bob, Jr.', formatContestDate(bob.enrolledAt)],
-            ['carol', '—', formatContestDate(carol.enrolledAt)],
+            ['carol', '-', formatContestDate(carol.enrolledAt)],
             // Identity no longer knows the user: the id stands in, so the row can still be removed.
-            ['u-gone', '—', formatContestDate(unknown.enrolledAt)],
+            ['u-gone', '-', formatContestDate(unknown.enrolledAt)],
         ])
 
         vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
@@ -236,6 +236,6 @@ describe('ParticipantsDialog', () => {
         await wrapper!.setProps({ open: true, slug: 'autumn-cup', title: 'Autumn cup' })
         await flushPromises()
         expect(h.participants).toHaveBeenLastCalledWith(expect.any(AbortSignal), 'autumn-cup', { page: 0, size: 20 })
-        expect(body()).toContain('Participants · Autumn cup')
+        expect(body()).toContain('Participants in Autumn cup')
     })
 })
