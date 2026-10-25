@@ -1,7 +1,7 @@
 <template>
     <div class="flex flex-col gap-6">
         <PageHeader title="Contests"
-            description="Timed problem sets, ranked live by problems solved and then by penalty time. Anyone signed in can take part." />
+            description="Timed problem sets, ranked live by problems solved and then by penalty time. Some are open to everyone signed in; others ask you to register first." />
 
         <ListStateShell :loading="isLoading" :error="error ? 'Check your connection and try again.' : null"
             :has-data="!!list" :empty="total === 0" :rows="4" empty-title="No contests yet"
@@ -15,15 +15,20 @@
                 </div>
             </template>
             <div class="flex flex-col gap-8">
+                <!-- Running first, then upcoming, then past (contest enrollment design §5.1). An empty section stays,
+                     with one quiet line, so the page keeps its shape between contests. -->
                 <section v-for="sec in sections" :key="sec.key" :aria-labelledby="`contests-${sec.key}`"
                     class="flex flex-col gap-2">
                     <h2 :id="`contests-${sec.key}`" class="flex items-baseline gap-2 text-base font-semibold text-foreground">
                         {{ sec.title }}
                         <span class="text-sm font-normal tabular-nums text-muted-foreground">{{ sec.items.length }}</span>
                     </h2>
+                    <p v-if="sec.items.length === 0" class="border-t border-rule-2 py-4 text-sm text-ink-2" :data-test="`empty-${sec.key}`">
+                        {{ sec.empty }}
+                    </p>
                     <!-- The rows sit 12 px outside the column so their text lines up with the page head. Start, length
                          and problem count are columns from lg; under it they sit under the title. -->
-                    <div class="-mx-3">
+                    <div v-else class="-mx-3">
                         <Table>
                             <TableHeader>
                                 <TableRow class="hover:bg-transparent">
@@ -32,6 +37,7 @@
                                     <TableHead scope="col" class="hidden w-44 lg:table-cell">Start</TableHead>
                                     <TableHead scope="col" class="hidden w-28 lg:table-cell">Duration</TableHead>
                                     <TableHead scope="col" class="hidden w-24 text-right lg:table-cell">Problems</TableHead>
+                                    <TableHead scope="col" class="w-36 text-right"><span class="sr-only">Action</span></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -45,6 +51,16 @@
                                                 class="min-w-0 text-base font-medium text-foreground group-hover:text-primary group-hover:underline">{{ c.title }}</RouterLink>
                                             <Badge v-if="c.status === 'DRAFT'" variant="neutral">Draft</Badge>
                                         </div>
+                                        <!-- The kind, in one quiet line (text, no chip), and whether the viewer is in. -->
+                                        <p class="mt-0.5 text-sm text-ink-2" data-test="kind">
+                                            <template v-if="c.enrollment === 'REQUIRED'">
+                                                Registration required · {{ registered(c.enrolledCount) }}
+                                            </template>
+                                            <template v-else>Open to everyone</template>
+                                            <span v-if="c.enrolled" class="ml-2 inline-flex items-center gap-1 text-success-ink">
+                                                <Check class="size-3.5" aria-hidden="true" />You are registered
+                                            </span>
+                                        </p>
                                         <!-- Under lg: the start, then the length and size. -->
                                         <div class="mt-1 flex flex-col gap-0.5 text-sm tabular-nums text-ink-2 lg:hidden">
                                             <span>{{ formatContestDate(c.startsAt) }}</span>
@@ -63,6 +79,9 @@
                                     <TableCell class="hidden text-sm tabular-nums text-ink-2 lg:table-cell">{{ formatContestDate(c.startsAt) }}</TableCell>
                                     <TableCell class="hidden text-sm tabular-nums text-ink-2 lg:table-cell">{{ lengthOf(c) }}</TableCell>
                                     <TableCell class="hidden text-right text-sm tabular-nums text-ink-2 lg:table-cell">{{ c.problemCount }}</TableCell>
+                                    <TableCell class="py-2 text-right">
+                                        <EnrollmentAction :contest="c" size="sm" @changed="load" />
+                                    </TableCell>
                                 </TableRow>
                             </TableBody>
                         </Table>
@@ -76,14 +95,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import { Check } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import PageHeader from '@/components/common/PageHeader.vue'
 import ListStateShell from '@/components/common/ListStateShell.vue'
 import ContestCountdown from '@/components/contest/ContestCountdown.vue'
 import ContestStatus from '@/components/contest/ContestStatus.vue'
-import { useFetch } from '@/composables/useFetch'
+import EnrollmentAction from '@/components/contest/EnrollmentAction.vue'
 import contestService from '@/services/contestService'
+import { useFetch } from '@/composables/useFetch'
 import { formatContestDate, formatDuration, serverOffsetMs } from '@/lib/contestTime'
 import { ROUTE_PATH } from '@/constants/routePath'
 import type { ContestSummary } from '@/types/contest'
@@ -102,6 +123,7 @@ const openRow = (e: MouseEvent, slug: string) => {
 }
 
 const lengthOf = (c: ContestSummary) => formatDuration(Date.parse(c.endsAt) - Date.parse(c.startsAt))
+const registered = (n: number) => (n === 1 ? '1 registered' : `${n} registered`)
 
 const offsetMs = ref(0)
 watch(list, (l) => {
@@ -112,10 +134,10 @@ const sections = computed(() => {
     const l = list.value
     if (!l) return []
     return [
-        { key: 'running', title: 'Running', phase: 'RUNNING' as const, items: l.running },
-        { key: 'upcoming', title: 'Upcoming', phase: 'UPCOMING' as const, items: l.upcoming },
-        { key: 'past', title: 'Past', phase: 'ENDED' as const, items: l.past },
-    ].filter((s) => s.items.length > 0)
+        { key: 'running', title: 'Running', phase: 'RUNNING' as const, items: l.running, empty: 'No running contests' },
+        { key: 'upcoming', title: 'Upcoming', phase: 'UPCOMING' as const, items: l.upcoming, empty: 'No upcoming contests' },
+        { key: 'past', title: 'Past', phase: 'ENDED' as const, items: l.past, empty: 'No past contests yet' },
+    ]
 })
 const total = computed(() => sections.value.reduce((n, s) => n + s.items.length, 0))
 </script>
