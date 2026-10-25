@@ -220,6 +220,7 @@ describe('ContestFormDialog', () => {
             endsAt: new Date('2026-11-02T11:30').toISOString(),
             status: 'DRAFT',
             problemSlugs: ['sum'],
+            enrollment: 'OPEN',
         })
         expect(wrapper!.emitted('saved')![0]![0]).toMatchObject({ slug: 'autumn-cup' })
     })
