@@ -1,7 +1,7 @@
 // The admin contest form. Times are edited as datetime-local values (the reader's time zone, to the minute) and sent as
 // ISO instants. The server stores whole seconds and compares an edit's start with the stored one, so a time the user
 // did not touch goes back exactly as the server returned it.
-import type { ContestPayload, ContestStatus } from '@/types/contest'
+import type { ContestEnrollment, ContestPayload, ContestStatus } from '@/types/contest'
 
 export interface ContestForm {
     slug: string
@@ -12,6 +12,7 @@ export interface ContestForm {
     endsLocal: string
     status: ContestStatus
     problemSlugs: string[]
+    enrollment: ContestEnrollment
 }
 
 /** Where an edit started, as the server returned it. */
@@ -19,6 +20,7 @@ export interface ContestOriginal {
     startsAt: string
     endsAt: string
     problemSlugs: string[]
+    enrollment: ContestEnrollment
 }
 
 export const MAX_CONTEST_PROBLEMS = 26
@@ -70,7 +72,9 @@ export function toPayload(form: ContestForm, original?: ContestOriginal): Contes
         endsAt: time(form.endsLocal, original?.endsAt),
         status: form.status,
     }
-    if (!original) return { slug: form.slug, ...payload, problemSlugs: [...form.problemSlugs] }
+    if (!original) return { slug: form.slug, ...payload, problemSlugs: [...form.problemSlugs], enrollment: form.enrollment }
     if (!sameList(form.problemSlugs, original.problemSlugs)) payload.problemSlugs = [...form.problemSlugs]
+    // The kind goes only when it changed: the server locks it once the contest has started.
+    if (form.enrollment !== original.enrollment) payload.enrollment = form.enrollment
     return payload
 }

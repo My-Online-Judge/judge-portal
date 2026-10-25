@@ -9,6 +9,7 @@ const form = (over: Partial<ContestForm> = {}): ContestForm => ({
     endsLocal: '2026-10-20T11:00',
     status: 'DRAFT',
     problemSlugs: ['sum', 'max'],
+    enrollment: 'OPEN',
     ...over,
 })
 
@@ -66,6 +67,7 @@ describe('contestForm', () => {
             endsAt: new Date('2026-10-20T11:00').toISOString(),
             status: 'DRAFT',
             problemSlugs: ['sum', 'max'],
+            enrollment: 'OPEN',
         })
     })
 
@@ -101,5 +103,18 @@ describe('contestForm', () => {
         it('leavesAHiddenListOut', () => {
             expect(toPayload(edited({ problemSlugs: [] }), { ...original, problemSlugs: [] })).not.toHaveProperty('problemSlugs')
         })
+    })
+})
+
+// Registration kind (contest enrollment design §5.4).
+describe('contestForm registration kind', () => {
+    const original = { startsAt: '2026-10-20T02:00:00Z', endsAt: '2026-10-20T04:00:00Z', problemSlugs: ['sum', 'max'], enrollment: 'OPEN' as const }
+    it('toPayloadSendsTheKindOnCreate', () => {
+        expect(toPayload(form({ enrollment: 'REQUIRED' })).enrollment).toBe('REQUIRED')
+        expect(toPayload(form()).enrollment).toBe('OPEN')
+    })
+    it('toPayloadSendsTheKindOnlyWhenChanged', () => {
+        expect(toPayload(form(), original)).not.toHaveProperty('enrollment')
+        expect(toPayload(form({ enrollment: 'REQUIRED' }), original).enrollment).toBe('REQUIRED')
     })
 })

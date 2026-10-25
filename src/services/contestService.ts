@@ -2,7 +2,9 @@ import axiosClient from '@/api/axiosClient'
 import type { AxiosResponse } from 'axios'
 import type { ApiResponse } from '@/types/common'
 import type { Problem } from '@/types/problem'
-import type { ContestDetail, ContestList, ContestPayload, ContestSummary, Scoreboard } from '@/types/contest'
+import type {
+    ContestDetail, ContestList, ContestPayload, ContestSummary, EnrollmentRow, EnrollmentState, Scoreboard,
+} from '@/types/contest'
 import { API_ROUTES } from '@/constants/apiPath'
 
 // The signal comes first so that useFetch can call these directly.
@@ -33,6 +35,28 @@ class ContestService {
     // Public: labels and rows by rank; before the start the labels come with no rows.
     scoreboard(signal: AbortSignal, slug: string): Promise<AxiosResponse<ApiResponse<Scoreboard>>> {
         return axiosClient.get(API_ROUTES.CONTESTS.SCOREBOARD(slug), { signal })
+    }
+
+    // Registration (contest enrollment design §4.3): register / withdraw the signed-in user; both idempotent.
+    enroll(slug: string): Promise<AxiosResponse<ApiResponse<EnrollmentState>>> {
+        return axiosClient.post(API_ROUTES.CONTESTS.ENROLL(slug))
+    }
+
+    withdraw(slug: string): Promise<AxiosResponse<ApiResponse<EnrollmentState>>> {
+        return axiosClient.delete(API_ROUTES.CONTESTS.ENROLL(slug))
+    }
+
+    // The registered users, newest first (contest:update); q matches a username or name.
+    participants(
+        signal: AbortSignal,
+        slug: string,
+        params: { page: number; size: number; q?: string },
+    ): Promise<AxiosResponse<ApiResponse<EnrollmentRow[]>>> {
+        return axiosClient.get(API_ROUTES.CONTESTS.ENROLLMENTS(slug), { signal, params })
+    }
+
+    removeParticipant(slug: string, userId: string): Promise<AxiosResponse<ApiResponse<void>>> {
+        return axiosClient.delete(API_ROUTES.CONTESTS.ENROLLMENT(slug, userId))
     }
 
     // contest:create. A taken slug is a 409.

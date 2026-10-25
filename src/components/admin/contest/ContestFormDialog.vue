@@ -206,6 +206,7 @@ const blank = (): ContestForm => ({
     endsLocal: '',
     status: 'DRAFT',
     problemSlugs: [],
+    enrollment: 'OPEN',
 })
 const form = reactive<ContestForm>(blank())
 // What the form started from, to tell a change from none (the scrim click) and to build an edit's body.
@@ -266,6 +267,7 @@ async function load() {
             endsLocal: isoToLocal(c.endsAt),
             status: c.status,
             problemSlugs: c.problems.map((p) => p.problemSlug),
+            enrollment: c.enrollment,
         })
         loadState.value = 'ready'
     } catch (err) {
@@ -338,6 +340,7 @@ async function submit() {
                 startsAt: original.value.startsAt,
                 endsAt: original.value.endsAt,
                 problemSlugs: original.value.problems.map((p) => p.problemSlug),
+                enrollment: original.value.enrollment,
             }
             res = await contestService.update(props.slug, toPayload(form, from))
         } else {

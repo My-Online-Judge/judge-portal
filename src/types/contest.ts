@@ -5,6 +5,9 @@ export type ContestStatus = 'DRAFT' | 'PUBLISHED'
 /** Where a contest is in time; it runs over the half-open window [startsAt, endsAt). */
 export type ContestPhase = 'UPCOMING' | 'RUNNING' | 'ENDED'
 
+/** Who may take part while it runs: everyone signed in, or only the users who registered first. */
+export type ContestEnrollment = 'OPEN' | 'REQUIRED'
+
 export interface ContestSummary {
     slug: string
     title: string
@@ -13,6 +16,11 @@ export interface ContestSummary {
     status: ContestStatus
     phase: ContestPhase
     problemCount: number
+    enrollment: ContestEnrollment
+    /** How many users registered (0 for an open contest). */
+    enrolledCount: number
+    /** Whether the viewer registered; false when anonymous. */
+    enrolled: boolean
 }
 
 export interface ContestList {
@@ -48,6 +56,21 @@ export interface ContestDetail {
     /** The caller's progress by label, for tried problems only; empty when anonymous or the token lapsed. */
     myProgress: Record<string, ProblemProgress>
     serverTime: string
+    enrollment: ContestEnrollment
+    enrolledCount: number
+    enrolled: boolean
+}
+
+/** The answer to a register or withdraw. */
+export interface EnrollmentState {
+    enrolled: boolean
+    enrolledCount: number
+}
+
+/** One registered user, as the admin's participants list shows them. */
+export interface EnrollmentRow {
+    user: ScoreboardUser
+    enrolledAt: string
 }
 
 export interface ScoreboardCell {
@@ -92,4 +115,6 @@ export interface ContestPayload {
     status: ContestStatus
     /** Required on create. Left out on update, the list stays as it is. */
     problemSlugs?: string[]
+    /** Required on create. Left out on update, the kind stays as it is. */
+    enrollment?: ContestEnrollment
 }

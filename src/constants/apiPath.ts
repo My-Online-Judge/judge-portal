@@ -36,6 +36,10 @@ export const API_ROUTES = {
         DETAIL: (slug: string) => `/contests/${encodeURIComponent(slug)}`,
         PROBLEM: (slug: string, label: string) => `/contests/${encodeURIComponent(slug)}/problems/${encodeURIComponent(label)}`,
         SCOREBOARD: (slug: string) => `/contests/${encodeURIComponent(slug)}/scoreboard`,
+        ENROLL: (slug: string) => `/contests/${encodeURIComponent(slug)}/enroll`,
+        ENROLLMENTS: (slug: string) => `/contests/${encodeURIComponent(slug)}/enrollments`,
+        ENROLLMENT: (slug: string, userId: string) =>
+            `/contests/${encodeURIComponent(slug)}/enrollments/${encodeURIComponent(userId)}`,
     },
     LANGUAGES: {
         ROOT: '/languages',

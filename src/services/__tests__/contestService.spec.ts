@@ -34,3 +34,24 @@ describe('contestService admin calls', () => {
         expect(h.get).toHaveBeenCalledWith('/contests/all', { signal, params: { page: 2, size: 20, q: 'cup' } })
     })
 })
+
+// Registration (contest enrollment design §4.3).
+describe('contestService registration calls', () => {
+    it('enrollPostsTheSlug', () => {
+        contestService.enroll('spring cup')
+        expect(h.post).toHaveBeenCalledWith('/contests/spring%20cup/enroll')
+    })
+    it('withdrawDeletes', () => {
+        contestService.withdraw('spring-cup')
+        expect(h.delete).toHaveBeenCalledWith('/contests/spring-cup/enroll')
+    })
+    it('participantsPassParams', () => {
+        const signal = new AbortController().signal
+        contestService.participants(signal, 'spring-cup', { page: 1, size: 100, q: 'ali' })
+        expect(h.get).toHaveBeenCalledWith('/contests/spring-cup/enrollments', { signal, params: { page: 1, size: 100, q: 'ali' } })
+    })
+    it('removeParticipantDeletesTheUser', () => {
+        contestService.removeParticipant('spring-cup', 'u-1')
+        expect(h.delete).toHaveBeenCalledWith('/contests/spring-cup/enrollments/u-1')
+    })
+})
