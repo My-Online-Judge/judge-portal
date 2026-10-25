@@ -13,7 +13,7 @@ const h = vi.hoisted(() => ({
 
 vi.mock('vue-router', async () => {
     const { reactive } = await import('vue')
-    const route = reactive({ params: { slug: 'spring-cup' } })
+    const route = reactive({ params: { slug: 'spring-cup' }, query: {} as Record<string, string> })
     const RouterLink = defineComponent({
         props: ['to'],
         setup: (p, { slots }) => () => render('a', { href: p.to }, slots.default?.()),
@@ -30,6 +30,13 @@ vi.mock('@/api/refreshSession', async (importOriginal) => ({
 import { RouterLink, useRoute } from 'vue-router'
 import ContestDetailPage from '../ContestDetailPage.vue'
 
+const ActionStub = defineComponent({
+    name: 'EnrollmentAction',
+    props: { contest: Object, primary: Boolean, size: String },
+    emits: ['changed'],
+    setup: (p, { emit }) => () =>
+        render('button', { 'data-test': 'enrollment-action', onClick: () => emit('changed', { enrolled: false, enrolledCount: 23 }) }, 'act'),
+})
 const ScoreboardStub = defineComponent({
     name: 'ContestScoreboard',
     props: ['slug', 'phase', 'endsAt', 'offsetMs'],
@@ -53,6 +60,9 @@ const detail = (over: Record<string, unknown> = {}) => ({
     ],
     myProgress: { A: { solved: true, attempts: 1 }, B: { solved: false, attempts: 2 } },
     serverTime: at(0),
+    enrollment: 'OPEN',
+    enrolledCount: 0,
+    enrolled: false,
     ...over,
 })
 
@@ -63,7 +73,7 @@ async function mountPage(signedIn = true) {
     wrapper = mount(ContestDetailPage, {
         attachTo: document.body,
         // PageHeader resolves RouterLink globally.
-        global: { components: { RouterLink }, stubs: { ContestScoreboard: ScoreboardStub } },
+        global: { components: { RouterLink }, stubs: { ContestScoreboard: ScoreboardStub, EnrollmentAction: ActionStub } },
     })
     await flushPromises()
     return wrapper
@@ -146,7 +156,7 @@ describe('ContestDetailPage', () => {
         const w = await mountPage()
         expect(w.find('[data-test="scoreboard"]').exists()).toBe(false)
         const tab = (name: string) => w.findAll('[role="tab"]').find((t) => t.text() === name)!
-        await tab('Scoreboard').trigger('mousedown', { button: 0 })
+        await tab('Standings').trigger('mousedown', { button: 0 })
         await flushPromises()
         expect(w.getComponent(ScoreboardStub).props('slug')).toBe('spring-cup')
         expect(w.getComponent(ScoreboardStub).props('phase')).toBe('RUNNING')
@@ -235,7 +245,7 @@ describe('ContestDetailPage', () => {
 
         it('theScoreboardKnowsWhenTheContestEnds', async () => {
             const w = await mountPage()
-            const tab = w.findAll('[role="tab"]').find((t) => t.text() === 'Scoreboard')!
+            const tab = w.findAll('[role="tab"]').find((t) => t.text() === 'Standings')!
             await tab.trigger('mousedown', { button: 0 })
             await flushPromises()
             expect(w.getComponent(ScoreboardStub).props('endsAt')).toBe(detail().endsAt)
@@ -259,6 +269,61 @@ describe('ContestDetailPage', () => {
             expect(h.ensureFreshSession).not.toHaveBeenCalled()
         } finally {
             route.params.slug = 'spring-cup'
+        }
+    })
+
+    // ---- registration (contest enrollment design §5.2) -----------------------------------------------------------
+
+    it('theHeadShowsTheKindAndTheCount', async () => {
+        h.get.mockImplementation(async () => ({ data: { data: detail({ enrollment: 'REQUIRED', enrolledCount: 24 }) } }))
+        const w = await mountPage()
+        expect(w.text()).toContain('Required · 24 registered')
+        expect(w.text()).toContain('ICPC · solved, then penalty')
+        expect(w.getComponent(ActionStub).props('primary')).toBe(true)
+    })
+
+    it('anOpenContestSaysSo', async () => {
+        const w = await mountPage()
+        expect(w.text()).toContain('Open to everyone')
+    })
+
+    it('aStrangerOnARunningRequiredContestSeesTheRegisterNoteInsteadOfProblems', async () => {
+        h.get.mockImplementation(async () => ({ data: { data: detail({ enrollment: 'REQUIRED', enrolledCount: 24, problems: [], myProgress: {} }) } }))
+        const w = await mountPage()
+        expect(w.findAll('tbody tr')).toHaveLength(0)
+        expect(w.text()).toContain('Register to see the problems')
+        expect(w.text()).not.toContain('This contest has no problems')
+    })
+
+    it('anEnrolledUserSeesTheProblems', async () => {
+        h.get.mockImplementation(async () => ({ data: { data: detail({ enrollment: 'REQUIRED', enrolledCount: 24, enrolled: true }) } }))
+        const w = await mountPage()
+        expect(w.findAll('tbody tr')).toHaveLength(3)
+        expect(w.text()).not.toContain('Register to see the problems')
+        expect((w.getComponent(ActionStub).props('contest') as { enrolled: boolean }).enrolled).toBe(true)
+    })
+
+    it('withdrawRefreshesTheDetail', async () => {
+        h.get
+            .mockImplementationOnce(async () => ({ data: { data: detail({ enrollment: 'REQUIRED', enrolledCount: 24, enrolled: true, phase: 'UPCOMING', startsAt: at(600_000), problems: [] }) } }))
+            .mockImplementationOnce(async () => ({ data: { data: detail({ enrollment: 'REQUIRED', enrolledCount: 23, enrolled: false, phase: 'UPCOMING', startsAt: at(600_000), problems: [] }) } }))
+        const w = await mountPage()
+        expect(w.text()).toContain('Required · 24 registered')
+        await w.find('[data-test="enrollment-action"]').trigger('click')
+        await flushPromises()
+        expect(h.get).toHaveBeenCalledTimes(2)
+        expect(w.text()).toContain('Required · 23 registered')
+        expect((w.getComponent(ActionStub).props('contest') as { enrolled: boolean }).enrolled).toBe(false)
+    })
+
+    it('theTabQueryOpensStandings', async () => {
+        const route = useRoute() as unknown as { query: Record<string, string> }
+        route.query.tab = 'standings'
+        try {
+            const w = await mountPage()
+            expect(w.find('[data-test="scoreboard"]').exists()).toBe(true)
+        } finally {
+            delete route.query.tab
         }
     })
 })

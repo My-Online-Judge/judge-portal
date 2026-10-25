@@ -14,58 +14,91 @@
         </div>
 
         <template v-else-if="contest">
-            <!-- Page head: back link, title, then the contest's facts as an inline list (as on the solve screen) -->
+            <!-- Page head (contest enrollment design §5.2): back link, title, status + countdown, then the facts as an
+                 inline list, then the one action the viewer has right now. -->
             <div class="flex flex-col gap-3">
                 <RouterLink :to="ROUTE_PATH.CONTESTS"
                     class="relative inline-flex items-center gap-1 self-start rounded-sm text-sm text-ink-2 transition-colors motion-reduce:transition-none after:absolute after:inset-x-0 after:-inset-y-3 hover:text-primary">
                     <ChevronLeft class="size-4" aria-hidden="true" /> Contests
                 </RouterLink>
-                <h1 class="font-display text-2xl break-words text-foreground">{{ contest.title }}</h1>
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-                    <dl class="meta-dl">
-                        <div>
-                            <dt>Start</dt>
-                            <dd>{{ formatContestDate(contest.startsAt) }}</dd>
-                        </div>
-                        <div>
-                            <dt>End</dt>
-                            <dd>{{ formatContestDate(contest.endsAt) }}</dd>
-                        </div>
-                        <div>
-                            <dt>Duration</dt>
-                            <dd>{{ formatDuration(Date.parse(contest.endsAt) - Date.parse(contest.startsAt)) }}</dd>
-                        </div>
-                        <div>
-                            <dt>Status</dt>
-                            <dd><ContestStatus :phase="contest.phase" /></dd>
-                        </div>
-                        <!-- 16 px against the 14 px of its neighbours: keep the label on the same baseline. -->
-                        <div v-if="contest.phase !== 'ENDED'" class="items-baseline">
-                            <dt>{{ contest.phase === 'UPCOMING' ? 'Starts in' : 'Ends in' }}</dt>
-                            <dd>
-                                <ContestCountdown :target="contest.phase === 'UPCOMING' ? contest.startsAt : contest.endsAt"
-                                    :offset-ms="offsetMs" @elapsed="onElapsed()" />
-                            </dd>
-                        </div>
-                    </dl>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <h1 class="font-display text-2xl break-words text-foreground">{{ contest.title }}</h1>
                     <Badge v-if="contest.status === 'DRAFT'" variant="neutral">Draft</Badge>
                 </div>
-                <p v-if="contest.description" class="max-w-[64ch] text-base whitespace-pre-line text-ink-2">{{ contest.description }}</p>
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                    <ContestStatus :phase="contest.phase" />
+                    <!-- 16 px against the 14 px of its neighbours: keep the label on the same baseline. -->
+                    <span v-if="contest.phase !== 'ENDED'" class="inline-flex items-baseline gap-1.5 text-ink-2">
+                        {{ contest.phase === 'UPCOMING' ? 'Starts in' : 'Ends in' }}
+                        <ContestCountdown :target="contest.phase === 'UPCOMING' ? contest.startsAt : contest.endsAt"
+                            :offset-ms="offsetMs" class="text-foreground" @elapsed="onElapsed()" />
+                    </span>
+                </div>
+                <dl class="meta-dl">
+                    <div>
+                        <dt>Start</dt>
+                        <dd>{{ formatContestDate(contest.startsAt) }}</dd>
+                    </div>
+                    <div>
+                        <dt>End</dt>
+                        <dd>{{ formatContestDate(contest.endsAt) }}</dd>
+                    </div>
+                    <div>
+                        <dt>Duration</dt>
+                        <dd>{{ formatDuration(Date.parse(contest.endsAt) - Date.parse(contest.startsAt)) }}</dd>
+                    </div>
+                    <div>
+                        <dt>Format</dt>
+                        <dd>ICPC · solved, then penalty</dd>
+                    </div>
+                    <div>
+                        <dt>Registration</dt>
+                        <dd data-test="registration">{{ registrationText }}</dd>
+                    </div>
+                    <div>
+                        <dt>Problems</dt>
+                        <dd>{{ contest.problems.length || contest.phase === 'UPCOMING' ? problemCountText : '—' }}</dd>
+                    </div>
+                </dl>
+                <div class="flex flex-wrap items-center gap-3">
+                    <EnrollmentAction :contest="contest" primary @changed="onChanged" />
+                    <!-- Registration stays open while a required contest runs: the clock does not wait for late joiners. -->
+                    <span v-if="contest.enrollment === 'REQUIRED' && contest.phase === 'RUNNING' && !contest.enrolled"
+                        class="text-sm text-ink-2">Registration is still open; the clock started at the start time.</span>
+                </div>
             </div>
 
             <Tabs v-model="tab">
                 <!-- The tab row reaches 12 px into the gutter, as the tables do, so the first label lines up with the head. -->
                 <div class="-mx-3">
                     <TabsList class="w-full">
+                        <TabsTrigger value="overview"><Info aria-hidden="true" />Overview</TabsTrigger>
                         <TabsTrigger value="problems"><ListChecks aria-hidden="true" />Problems</TabsTrigger>
-                        <TabsTrigger value="scoreboard"><Trophy aria-hidden="true" />Scoreboard</TabsTrigger>
+                        <TabsTrigger value="standings"><Trophy aria-hidden="true" />Standings</TabsTrigger>
                     </TabsList>
                 </div>
 
+                <TabsContent value="overview" class="mt-4">
+                    <div class="flex flex-col gap-5">
+                        <p v-if="contest.description" class="max-w-[64ch] text-base whitespace-pre-line text-ink-2">{{ contest.description }}</p>
+                        <p v-else class="text-base text-ink-2">The organisers have not written a description.</p>
+                        <section aria-labelledby="contest-know" class="flex flex-col gap-1.5">
+                            <h2 id="contest-know" class="text-sm font-semibold text-foreground">What you need to know</h2>
+                            <ul class="flex max-w-[64ch] flex-col gap-1 text-sm text-ink-2">
+                                <li>{{ kindLine }}</li>
+                                <li>ICPC rules: contestants are ranked by problems solved, then by penalty time — minutes from the start to each accepted solution, plus 20 per wrong try before it.</li>
+                                <li>{{ timingLine }}</li>
+                            </ul>
+                        </section>
+                    </div>
+                </TabsContent>
+
                 <TabsContent value="problems" class="mt-4">
-                    <p v-if="contest.problems.length === 0" class="py-10 text-center text-base text-ink-2">
-                        {{ contest.phase === 'UPCOMING' ? 'Problems appear when the contest starts.' : 'This contest has no problems.' }}
-                    </p>
+                    <!-- Nothing to list: say why (upcoming, not registered, or truly empty), in one centred line. -->
+                    <div v-if="contest.problems.length === 0" class="flex flex-col items-center gap-3 py-10 text-center" data-test="problems-empty">
+                        <p class="text-base text-ink-2">{{ problemsEmptyText }}</p>
+                        <EnrollmentAction v-if="mustRegister" :contest="contest" @changed="onChanged" />
+                    </div>
                     <div v-else class="-mx-3">
                         <Table>
                             <TableHeader>
@@ -99,10 +132,11 @@
                     </div>
                 </TabsContent>
 
-                <TabsContent value="scoreboard" class="mt-4">
+                <TabsContent value="standings" class="mt-4">
                     <!-- Mounted only while shown: it polls every 15 s while the contest runs. -->
-                    <ContestScoreboard v-if="tab === 'scoreboard'" :slug="contest.slug" :phase="contest.phase"
-                        :ends-at="contest.endsAt" :offset-ms="offsetMs" />
+                    <ContestScoreboard v-if="tab === 'standings'" :slug="contest.slug" :phase="contest.phase"
+                        :ends-at="contest.endsAt" :offset-ms="offsetMs" :viewer-id="authStore.user?.id ?? null"
+                        :can-open-problems="contest.problems.length > 0 && contest.phase !== 'UPCOMING'" />
                 </TabsContent>
             </Tabs>
         </template>
@@ -113,7 +147,7 @@
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { isAxiosError } from 'axios'
-import { Check, ChevronLeft, ListChecks, Trophy } from 'lucide-vue-next'
+import { Check, ChevronLeft, Info, ListChecks, Trophy } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -122,6 +156,7 @@ import Loading from '@/components/common/Loading.vue'
 import ContestCountdown from '@/components/contest/ContestCountdown.vue'
 import ContestStatus from '@/components/contest/ContestStatus.vue'
 import ContestScoreboard from '@/components/contest/ContestScoreboard.vue'
+import EnrollmentAction from '@/components/contest/EnrollmentAction.vue'
 import contestService from '@/services/contestService'
 import { ensureFreshSession } from '@/api/refreshSession'
 import { useAuthStore } from '@/stores/auth'
@@ -129,30 +164,66 @@ import { formatContestDate, formatDuration, serverOffsetMs } from '@/lib/contest
 import { ROUTE_PATH } from '@/constants/routePath'
 import type { ContestDetail } from '@/types/contest'
 
-// problem-service refuses this slug for a contest; the path /contests/all is the managers' list.
 const RESERVED_SLUG = 'all'
+type Tab = 'overview' | 'problems' | 'standings'
 
 const route = useRoute()
 const authStore = useAuthStore()
-
 const slug = computed(() => String(route.params.slug ?? ''))
+/** `?tab=standings` (the list's "Standings" link) opens that tab; anything else opens the problems. */
+const initialTab = (): Tab => (route.query?.tab === 'standings' ? 'standings' : 'problems')
+
 const state = ref<'loading' | 'ready' | 'notFound' | 'error'>('loading')
 const contest = shallowRef<ContestDetail | null>(null)
 const offsetMs = ref(0)
-const tab = ref('problems')
+const tab = ref<Tab>(initialTab())
 
 const tries = (n: number) => (n === 1 ? '1 try' : `${n} tries`)
+const registered = (n: number) => (n === 1 ? '1 registered' : `${n} registered`)
+
+const registrationText = computed(() => {
+    const c = contest.value
+    if (!c) return ''
+    return c.enrollment === 'REQUIRED' ? `Required · ${registered(c.enrolledCount)}` : 'Open to everyone'
+})
+const problemCountText = computed(() => {
+    const n = contest.value?.problems.length ?? 0
+    return n === 1 ? '1 problem' : `${n} problems`
+})
+/** A required contest that runs, seen by someone who is not in: the problems stay hidden until they register. */
+const mustRegister = computed(() => {
+    const c = contest.value
+    return !!c && c.enrollment === 'REQUIRED' && c.phase === 'RUNNING' && !c.enrolled
+})
+const problemsEmptyText = computed(() => {
+    const c = contest.value
+    if (!c) return ''
+    if (c.phase === 'UPCOMING') return 'Problems appear when the contest starts.'
+    if (mustRegister.value) return 'Register to see the problems.'
+    return 'This contest has no problems.'
+})
+const kindLine = computed(() => {
+    const c = contest.value
+    if (!c) return ''
+    return c.enrollment === 'REQUIRED'
+        ? 'Registration required: register before or during the contest to see the problems and submit. You can withdraw until it starts.'
+        : 'Open to everyone: any signed-in user can see the problems and submit while it runs.'
+})
+const timingLine = computed(() => {
+    const c = contest.value
+    if (!c) return ''
+    const length = formatDuration(Date.parse(c.endsAt) - Date.parse(c.startsAt))
+    return `It runs for ${length}, from ${formatContestDate(c.startsAt)} to ${formatContestDate(c.endsAt)}. After the end the problems stay open for practice.`
+})
 
 let seq = 0
 let inFlight: AbortController | null = null
-// The signed-in user myProgress was read for; undefined until a load has asked.
 let viewer: string | null | undefined
 
 /** `quiet` keeps the page as it is while reading (a countdown ended, or the user changed). True when the read landed. */
 const load = async ({ quiet = false } = {}): Promise<boolean> => {
     const mine = ++seq
     inFlight?.abort()
-    // The slug "all" is reserved: GET /contests/all is the managers' paged list, never a contest, so do not read it.
     if (slug.value === RESERVED_SLUG) {
         inFlight = null
         state.value = 'notFound'
@@ -162,8 +233,6 @@ const load = async ({ quiet = false } = {}): Promise<boolean> => {
     inFlight = ctl
     if (!quiet || !contest.value) state.value = 'loading'
     try {
-        // Right after a reload the header's /auth/me may still be on its way: wait for it. myProgress rides on the
-        // access cookie, which a public read does not refresh by itself.
         await authStore.ensureLoaded()
         if (mine !== seq) return false
         viewer = authStore.user?.id ?? null
@@ -185,6 +254,9 @@ const load = async ({ quiet = false } = {}): Promise<boolean> => {
         if (inFlight === ctl) inFlight = null
     }
 }
+
+/** A register or withdraw landed: read the contest again (its count, the viewer's flag, the problems it now shows). */
+const onChanged = () => void load({ quiet: true })
 
 // A countdown reached its end: read the contest again for its new phase. A read that fails (a network blip), or a
 // server that does not say so yet, is asked again after 5, 10, 20, 30, 30 and 30 s; the scoreboard stops polling two
@@ -215,7 +287,7 @@ watch(
     slug,
     () => {
         stopElapsedRetry()
-        tab.value = 'problems'
+        tab.value = initialTab()
         contest.value = null
         void load()
     },
