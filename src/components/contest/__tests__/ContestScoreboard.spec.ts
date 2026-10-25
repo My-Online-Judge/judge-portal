@@ -284,4 +284,92 @@ describe('ContestScoreboard', () => {
         expect(w.find('[role="progressbar"]').exists()).toBe(false)
         expect(w.find('[aria-busy="true"]').exists()).toBe(false)
     })
+
+    // ---- the redesign (contest enrollment design §5.3) ------------------------------------------------------------
+
+    const bigBoard = {
+        labels: ['A', 'B', 'C'],
+        rows: [
+            { rank: 1, user: { id: 'a1a1a1a1-0000-0000-0000-000000000000', username: 'alice', name: 'Alice Tran' }, solved: 2, penalty: 85,
+              problems: { A: { solved: true, attempts: 1, minutes: 15 }, C: { solved: true, attempts: 2, minutes: 50 } } },
+            { rank: 2, user: { id: 'b2b2b2b2-0000-0000-0000-000000000000', username: 'bob', name: null }, solved: 1, penalty: 30,
+              problems: { A: { solved: true, attempts: 1, minutes: 30 }, B: { solved: false, attempts: 1, minutes: null } } },
+            { rank: 3, user: { id: 'c3c3c3c3-0000-0000-0000-000000000000', username: 'carol', name: null }, solved: 0, penalty: 0, problems: {} },
+        ],
+    }
+
+    it('firstSolvesAreMarkedOncePerProblem', async () => {
+        h.scoreboard.mockResolvedValue({ data: { data: bigBoard } })
+        const w = await mountBoard()
+        const firsts = w.findAll('td[data-first="true"]').map((td) => `${td.element.closest('tr')!.querySelector('td[data-col="user"] a')!.textContent!.trim()}-${td.attributes('data-label')}`)
+        expect(firsts).toEqual(['alice-A', 'alice-C'])
+    })
+
+    it('theViewersRowIsCurrentAndMyRowScrollsToIt', async () => {
+        h.scoreboard.mockResolvedValue({ data: { data: bigBoard } })
+        const scrolled = vi.fn()
+        Element.prototype.scrollIntoView = scrolled
+        const w = await mountBoard('RUNNING', { viewerId: 'b2b2b2b2-0000-0000-0000-000000000000' })
+        const rows = w.findAll('tbody tr')
+        expect(rows[1]!.attributes('aria-current')).toBe('true')
+        expect(rows[0]!.attributes('aria-current')).toBeUndefined()
+        const mine = w.get('[data-test="my-row"]')
+        expect(mine.attributes('disabled')).toBeUndefined()
+        await mine.trigger('click')
+        expect(scrolled).toHaveBeenCalledOnce()
+    })
+
+    it('myRowIsDisabledWithoutARow', async () => {
+        h.scoreboard.mockResolvedValue({ data: { data: bigBoard } })
+        const w = await mountBoard('RUNNING', { viewerId: 'zzzzzzzz-0000-0000-0000-000000000000' })
+        expect(w.get('[data-test="my-row"]').attributes('disabled')).toBeDefined()
+    })
+
+    it('zeroRowsRenderAfterTheRankedOnes', async () => {
+        h.scoreboard.mockResolvedValue({ data: { data: bigBoard } })
+        const w = await mountBoard()
+        const ranks = w.findAll('tbody tr').map((tr) => tr.get('td[data-col="rank"]').text())
+        expect(ranks).toEqual(['1', '2', '—'])
+    })
+
+    it('searchFiltersRows', async () => {
+        h.scoreboard.mockResolvedValue({ data: { data: bigBoard } })
+        const w = await mountBoard()
+        await w.get('input[aria-label="Find a contestant"]').setValue('ALI')
+        const users = w.findAll('tbody tr').map((tr) => tr.get('td[data-col="user"] a').text())
+        expect(users).toEqual(['alice'])
+    })
+
+    it('theStatusLineShowsTheAge', async () => {
+        fakeTheClockToo()
+        vi.setSystemTime(new Date('2026-10-21T10:00:00Z'))
+        const w = await mountBoard()
+        expect(w.get('[data-test="board-status"]').text()).toMatch(/Live · updated 0s ago/)
+        vi.advanceTimersByTime(12_000)
+        await flushPromises()
+        expect(w.get('[data-test="board-status"]').text()).toMatch(/Live · updated 12s ago/)
+    })
+
+    it('anEndedBoardSaysFinalStandings', async () => {
+        const w = await mountBoard('ENDED', { endsAt: new Date(Date.now() - 10 * 60_000).toISOString() })
+        expect(w.get('[data-test="board-status"]').text()).toContain('Final standings')
+    })
+
+    it('labelsLinkToProblemsOnlyWhenAllowed', async () => {
+        const allowed = await mountBoard('RUNNING', { canOpenProblems: true })
+        expect(allowed.get('thead a[href="/contests/spring-cup/problems/A"]').exists()).toBe(true)
+        allowed.unmount()
+        wrapper = undefined
+        const hidden = await mountBoard('RUNNING', { canOpenProblems: false })
+        expect(hidden.find('thead a').exists()).toBe(false)
+    })
+
+    it('theSummaryLineCountsContestantsAndSolvers', async () => {
+        h.scoreboard.mockResolvedValue({ data: { data: bigBoard } })
+        const w = await mountBoard()
+        const summary = w.get('[data-test="board-summary"]').text()
+        expect(summary).toContain('3 contestants')
+        expect(summary).toContain('2 solved at least one')
+        expect(summary).toContain('first solve: A by alice at 15')
+    })
 })
