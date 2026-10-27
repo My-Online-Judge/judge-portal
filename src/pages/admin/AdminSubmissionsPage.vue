@@ -387,7 +387,8 @@ const reload = () => {
     page.value = 0
     load()
 }
-watchDebounced([fProblem, fUsername], reload, { debounce: 300 })
+// A debounced reload still pending when the page goes would otherwise load after it is gone.
+watchDebounced([fProblem, fUsername], () => !unmounted && reload(), { debounce: 300 })
 watch([fResult, fFrom, fTo], reload)
 
 const onPageChange = (p: number) => {

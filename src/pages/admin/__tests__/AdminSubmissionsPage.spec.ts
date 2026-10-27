@@ -179,6 +179,17 @@ describe('AdminSubmissionsPage', () => {
         )
     })
 
+    it('aFilterTypedJustBeforeLeavingDoesNotLoadAfterwards', async () => {
+        vi.useFakeTimers()
+        await mountPage()
+        await type('input[aria-label="Filter by username"]', 'bob')
+        const before = h.search.mock.calls.length
+        wrapper!.unmount()
+        wrapper = undefined
+        await vi.advanceTimersByTimeAsync(1000)
+        expect(h.search).toHaveBeenCalledTimes(before)
+    })
+
     it('viewOpensTheDialogWithSource', async () => {
         await mountPage()
         await pickMenu('View')
