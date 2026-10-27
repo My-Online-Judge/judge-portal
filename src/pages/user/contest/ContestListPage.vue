@@ -104,6 +104,7 @@ import ContestCountdown from '@/components/contest/ContestCountdown.vue'
 import ContestStatus from '@/components/contest/ContestStatus.vue'
 import EnrollmentAction from '@/components/contest/EnrollmentAction.vue'
 import contestService from '@/services/contestService'
+import { useAuthStore } from '@/stores/auth'
 import { useFetch } from '@/composables/useFetch'
 import { formatContestDate, formatDuration, serverOffsetMs } from '@/lib/contestTime'
 import { ROUTE_PATH } from '@/constants/routePath'
@@ -111,6 +112,10 @@ import type { ContestSummary } from '@/types/contest'
 
 const { data: list, isLoading, error, execute } = useFetch(contestService.list, { transform: (res) => res.data })
 const load = () => void execute()
+
+// "Log in to register" signs the viewer in on this page: the rows then learn whether they are registered.
+const authStore = useAuthStore()
+watch(() => authStore.user?.id ?? null, () => load())
 
 const router = useRouter()
 // A click anywhere on a row opens its contest, unless the click means something else: another button or a

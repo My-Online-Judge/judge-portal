@@ -350,6 +350,12 @@ describe('ContestScoreboard', () => {
         expect(w.get('[data-test="board-status"]').text()).toMatch(/Live, updated 12s ago/)
     })
 
+    it('theStatusLineIsNotALiveRegion', async () => {
+        // It changes every second while the contest runs: a live region would announce every tick.
+        const w = await mountBoard()
+        expect(w.get('[data-test="board-status"]').attributes('aria-live')).toBeUndefined()
+    })
+
     it('anEndedBoardSaysFinalStandings', async () => {
         const w = await mountBoard('ENDED', { endsAt: new Date(Date.now() - 10 * 60_000).toISOString() })
         expect(w.get('[data-test="board-status"]').text()).toContain('Final standings')

@@ -53,6 +53,8 @@ export interface ContestDetail {
     phase: ContestPhase
     /** Empty before the start (and for a draft), except for problem editors. */
     problems: ContestProblemView[]
+    /** How many there are, shown or not. */
+    problemCount: number
     /** The caller's progress by label, for tried problems only; empty when anonymous or the token lapsed. */
     myProgress: Record<string, ProblemProgress>
     serverTime: string

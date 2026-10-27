@@ -58,6 +58,7 @@ const detail = (over: Record<string, unknown> = {}) => ({
         { label: 'B', problemSlug: 'max', title: 'Số lớn nhất' },
         { label: 'C', problemSlug: 'gcd', title: 'Ước chung' },
     ],
+    problemCount: 3,
     myProgress: { A: { solved: true, attempts: 1 }, B: { solved: false, attempts: 2 } },
     serverTime: at(0),
     enrollment: 'OPEN',
@@ -270,6 +271,16 @@ describe('ContestDetailPage', () => {
         } finally {
             route.params.slug = 'spring-cup'
         }
+    })
+
+    it('theHeadCountsTheProblemsEvenWhileHidden', async () => {
+        // Before the start a student gets no list, only the count: the head must not say "0 problems".
+        h.get.mockImplementation(async () => ({
+            data: { data: detail({ phase: 'UPCOMING', startsAt: at(93_784_000), endsAt: at(100_984_000), problems: [], problemCount: 5, myProgress: {} }) },
+        }))
+        const w = await mountPage()
+        expect(w.text()).toContain('5 problems')
+        expect(w.text()).not.toContain('0 problems')
     })
 
     // ---- registration (contest enrollment design §5.2) -----------------------------------------------------------

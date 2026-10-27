@@ -57,7 +57,8 @@
                     </div>
                     <div>
                         <dt>Problems</dt>
-                        <dd>{{ contest.problems.length || contest.phase === 'UPCOMING' ? problemCountText : '-' }}</dd>
+                        <!-- The server's count: the list itself may be hidden (before the start, or until registered). -->
+                        <dd>{{ problemCountText }}</dd>
                     </div>
                 </dl>
                 <div class="flex flex-wrap items-center gap-3">
@@ -187,7 +188,7 @@ const registrationText = computed(() => {
     return c.enrollment === 'REQUIRED' ? `Required, ${registered(c.enrolledCount)}` : 'Open to everyone'
 })
 const problemCountText = computed(() => {
-    const n = contest.value?.problems.length ?? 0
+    const n = contest.value?.problemCount ?? 0
     return n === 1 ? '1 problem' : `${n} problems`
 })
 /** A required contest that runs, seen by someone who is not in: the problems stay hidden until they register. */

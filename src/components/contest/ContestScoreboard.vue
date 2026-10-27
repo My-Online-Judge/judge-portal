@@ -2,7 +2,8 @@
     <div class="flex flex-col gap-3">
         <!-- Toolbar (contest enrollment design §5.3): the board's state and age on the left, finding people on the right. -->
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <p class="inline-flex items-center gap-2 text-sm text-ink-2" data-test="board-status" aria-live="polite">
+            <!-- Not a live region: the age ticks every second while the contest runs. -->
+            <p class="inline-flex items-center gap-2 text-sm text-ink-2" data-test="board-status">
                 <span v-if="phase === 'RUNNING'" aria-hidden="true"
                     class="size-2 rounded-full bg-primary motion-safe:animate-pulse" />
                 <Flag v-else-if="phase === 'ENDED'" class="size-4" aria-hidden="true" />

@@ -30,6 +30,15 @@ describe('toCsv', () => {
     })
 })
 
+describe('toCsv formulas', () => {
+    it('neutralisesSpreadsheetFormulas', () => {
+        // A name is typed by its user: one starting with =, +, - or @ would run as a formula when the file is opened.
+        expect(toCsv([['=HYPERLINK("x")', '@SUM(1)', '+1', '-1', 'a-b']])).toBe(
+            `"'=HYPERLINK(""x"")",'@SUM(1),'+1,'-1,a-b\r\n`,
+        )
+    })
+})
+
 describe('downloadCsv', () => {
     it('savesATextCsvBlobWithAByteOrderMark', async () => {
         downloadCsv('participants-spring-cup.csv', 'username,name\r\nalice,Alice\r\n')
