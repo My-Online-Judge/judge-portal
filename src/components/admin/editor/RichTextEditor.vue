@@ -126,7 +126,7 @@ watch(
     (value) => {
         const instance = editor.value
         if (instance && value !== instance.getHTML()) {
-            instance.commands.setContent(value || '', false)
+            instance.commands.setContent(value || '', { emitUpdate: false })
         }
     },
 )
