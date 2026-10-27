@@ -5,7 +5,7 @@
 
 <script setup lang="ts">
 import { computed, watch, type HTMLAttributes } from 'vue'
-import { useNow } from '@vueuse/core'
+import { useIntervalFn, useNow } from '@vueuse/core'
 import { cn } from '@/lib/utils'
 import { formatCountdown } from '@/lib/contestTime'
 import { formatDateTime } from '@/utils/dateTimeUtils'
@@ -21,7 +21,8 @@ const props = defineProps<{
 // Once per target, when it is reached: the page reads the contest again to learn its new phase.
 const emit = defineEmits<{ (e: 'elapsed'): void }>()
 
-const now = useNow({ interval: 1000 })
+// A tick a second: useNow's own default is every animation frame.
+const now = useNow({ scheduler: (tick) => useIntervalFn(tick, 1000) })
 const remaining = computed(() => Date.parse(props.target) - (now.value.getTime() + props.offsetMs))
 const text = computed(() => formatCountdown(remaining.value))
 
