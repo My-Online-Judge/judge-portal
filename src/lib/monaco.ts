@@ -1,12 +1,14 @@
 // Monaco from npm, bundled into the portal's own "monaco" chunk: no CDN, so the editor also loads on a LAN without
 // internet. Only the languages the judge runs are registered (cpp also registers c).
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js'
-import 'monaco-editor/esm/vs/editor/editor.all.js'
-import 'monaco-editor/esm/vs/basic-languages/cpp/cpp.contribution.js'
-import 'monaco-editor/esm/vs/basic-languages/java/java.contribution.js'
-import 'monaco-editor/esm/vs/basic-languages/python/python.contribution.js'
-import 'monaco-editor/esm/vs/basic-languages/go/go.contribution.js'
-import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker.js?worker'
+// monaco-editor 0.56+ exposes its ESM through an exports map (./* -> ./esm/vs/*.js): the editor API, the editor's
+// features, and one register module per language.
+import * as monaco from 'monaco-editor/editor'
+import 'monaco-editor/features/register.all'
+import 'monaco-editor/languages/definitions/cpp/register'
+import 'monaco-editor/languages/definitions/java/register'
+import 'monaco-editor/languages/definitions/python/register'
+import 'monaco-editor/languages/definitions/go/register'
+import EditorWorker from 'monaco-editor/editor/editor.worker?worker'
 import { loader } from '@guolao/vue-monaco-editor'
 
 self.MonacoEnvironment = { getWorker: () => new EditorWorker() }
