@@ -28,7 +28,7 @@ const STATEMENT_POLICY = {
         'ul', 'ol', 'li', 'a', 'img', 'figure', 'figcaption',
         'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col',
     ],
-    ALLOWED_ATTR: ['href', 'rel', 'title', 'class', 'src', 'alt', 'width', 'height', 'colspan', 'rowspan'],
+    ALLOWED_ATTR: ['href', 'rel', 'title', 'class', 'src', 'alt', 'width', 'height', 'colspan', 'rowspan', 'start'],
     ALLOW_DATA_ATTR: false,
 }
 

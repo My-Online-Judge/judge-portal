@@ -72,6 +72,7 @@ describe('sanitizeHtml', () => {
             '<h2>t</h2>',
             '<ul><li><p>a</p></li></ul>',
             '<ol><li>a</li></ol>',
+            '<ol start="3"><li>c</li></ol>',
             '<blockquote><p>q</p></blockquote>',
             '<pre><code class="language-cpp">int x;</code></pre>',
             '<p><strong>b</strong> <em>i</em> <s>s</s> <u>u</u> <code>c</code> x<sub>1</sub> x<sup>2</sup><br></p>',
