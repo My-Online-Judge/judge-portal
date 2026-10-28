@@ -10,16 +10,7 @@
 </head>
 
 <body>
-  <script>
-    (function () {
-      try {
-        var m = localStorage.getItem('theme');
-        var d = m === 'dark' || ((m !== 'light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        document.documentElement.classList.toggle('dark', d);
-        document.documentElement.dataset.theme = d ? 'dark' : 'light';
-      } catch (e) {}
-    })();
-  </script>
+  <script src="/theme-init.js"></script>
   <div id="app"></div>
   <script type="module" src="/src/main.ts"></script>
 </body>

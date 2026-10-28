@@ -6,12 +6,30 @@ import DOMPurify from 'dompurify'
  * XSS vectors while keeping the formatting tags tiptap emits (headings, lists,
  * links, code, blockquote, …).
  *
+ * An explicit allow-list, not DOMPurify's `html` profile: that profile keeps <style>, <form>, <input>, <button> and
+ * inline `style`, `id` and `name`, so an author could restyle the portal's own page or plant a fake login form
+ * inside a statement. Allowed here: what tiptap's StarterKit (with sub/superscript) emits, images, tables and the
+ * inline tags imported statements use. `target` is not allowed (a link opens in the same tab). Only the author's own
+ * HTML goes through this list; math.ts sanitises the rendered formulas, which need `style`, separately.
+ *
  * The nullish guard returns '' so callers can pass optional fields (hint, etc.)
  * straight through without their own emptiness check.
  */
 export function sanitizeHtml(dirty: string | null | undefined): string {
     if (!dirty) return ''
-    return withNoReferrerImages(() => DOMPurify.sanitize(dirty, { USE_PROFILES: { html: true } }))
+    return withNoReferrerImages(() => DOMPurify.sanitize(dirty, STATEMENT_POLICY))
+}
+
+const STATEMENT_POLICY = {
+    ALLOWED_TAGS: [
+        'p', 'br', 'hr', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'strong', 'b', 'em', 'i', 's', 'strike', 'del', 'ins', 'u', 'mark', 'small', 'sub', 'sup',
+        'code', 'pre', 'kbd', 'samp', 'var', 'blockquote',
+        'ul', 'ol', 'li', 'a', 'img', 'figure', 'figcaption',
+        'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col',
+    ],
+    ALLOWED_ATTR: ['href', 'rel', 'title', 'class', 'src', 'alt', 'width', 'height', 'colspan', 'rowspan'],
+    ALLOW_DATA_ATTR: false,
 }
 
 const HTML_NS = 'http://www.w3.org/1999/xhtml'

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
-import { renderMath } from '../math'
+import { renderMath, sanitizeMathStatement } from '../math'
 
 /**
  * The output without its TeX annotations. The MathML carries each formula's source as the text of an <annotation>,
@@ -131,4 +131,19 @@ describe('renderMath', () => {
         expect(doc.querySelector('a')?.getAttribute('href')).toBe('https://example.com/doc')
         expect(doc.querySelector('.katex-mathml math')).not.toBeNull()
     })
+})
+
+describe('sanitizeMathStatement', () => {
+    it('keeps the inline style KaTeX lays its output out with', () => {
+        const out = sanitizeMathStatement('<span class="katex"><span style="height:0.6833em;vertical-align:-0.15em">x</span></span>')
+        expect(out).toContain('style="height:0.6833em;vertical-align:-0.15em"')
+    })
+
+    it.each(['<form action="https://x"><input name="p"></form>', '<style>p{color:red}</style>', '<button>b</button>',
+        '<textarea>t</textarea>', '<select><option>o</option></select>', '<iframe src="https://x"></iframe>'])(
+        'drops %s even though the html and svg profiles allow it', (dirty) => {
+            const doc = new DOMParser().parseFromString(sanitizeMathStatement(`<p>ok</p>${dirty}`), 'text/html')
+            expect(doc.querySelector('form, input, style, button, textarea, select, option, iframe')).toBeNull()
+            expect(doc.querySelector('p')?.textContent).toBe('ok')
+        })
 })

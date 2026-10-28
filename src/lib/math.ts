@@ -27,6 +27,11 @@ export const KATEX_MATHML_ATTRS: readonly string[] = Object.freeze([
     'separator', 'stretchy', 'voffset', 'width', 'xmlns',
 ])
 
+// What the html and svg profiles keep but a statement never needs: the page-restyling and form elements (the author's own
+// HTML already went through sanitizeHtml's allow-list, so these can only come from a second route in). `style` the
+// attribute stays: KaTeX positions every glyph with it.
+const STATEMENT_FORBIDDEN_TAGS = ['style', 'form', 'input', 'button', 'textarea', 'select', 'option', 'optgroup', 'iframe']
+
 /** Sanitises rendered math: KaTeX's HTML and SVG, plus exactly the MathML it emits. */
 export function sanitizeMathOutput(html: string): string {
     return DOMPurify.sanitize(html, {
@@ -67,7 +72,7 @@ export function sanitizeMathStatement(html: string): string {
             USE_PROFILES: { html: true, svg: true },
             ADD_TAGS: [...KATEX_MATHML_TAGS],
             ADD_ATTR: [...KATEX_MATHML_ATTRS],
-            FORBID_TAGS: ['annotation-xml', 'maction', 'mglyph'],
+            FORBID_TAGS: [...STATEMENT_FORBIDDEN_TAGS, 'annotation-xml', 'maction', 'mglyph'],
         }))
     } finally {
         DOMPurify.removeHook('uponSanitizeAttribute', dropForeignAttrs)
