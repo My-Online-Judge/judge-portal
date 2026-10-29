@@ -18,6 +18,10 @@ RUN npm run build-only && rm -rf dist/.vite
 # Production stage
 FROM nginx:stable-alpine AS production-stage
 
+# The base image can lag Alpine's fixes: CI's Trivy gate fails on a CRITICAL that has one (brotli-libs 1.2.0-r1, CVE-2026-111497, fixed in
+# 1.2.1-r0). Upgrading the one package keeps the gate honest without pinning; a no-op once the base image has it.
+RUN apk upgrade --no-cache brotli-libs
+
 COPY --from=build-stage /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/nginx.conf
 
