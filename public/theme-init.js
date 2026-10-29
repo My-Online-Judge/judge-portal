@@ -6,5 +6,5 @@
     var d = m === 'dark' || ((m !== 'light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.classList.toggle('dark', d);
     document.documentElement.dataset.theme = d ? 'dark' : 'light';
-  } catch (e) {}
+  } catch (_e) {}
 })();
