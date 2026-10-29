@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  IMAGE: ghcr.io/my-online-judge/judge-portal
+  IMAGE: docker.io/thanhtuanle/judge-portal
 
 jobs:
   test-and-lint:
@@ -52,7 +52,6 @@ jobs:
     name: Image
     permissions:
       contents: read
-      packages: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -79,9 +78,8 @@ jobs:
       - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: docker push "$IMAGE:${{ github.sha }}" && docker push "$IMAGE:main"
