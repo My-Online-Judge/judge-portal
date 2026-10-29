@@ -1,5 +1,6 @@
 # Build stage
-FROM node:22-alpine AS build-stage
+# The built site is plain files, the same on every CPU: it is built natively on the CI host (BUILDPLATFORM); only the nginx stage is per platform.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build-stage
 
 WORKDIR /app
 
