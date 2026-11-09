@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/assets/main.css"
+        ],
+        "createdAt": "2026-11-08T03:51:57.005Z",
+        "reason": "User confirmed: 3px blockquote hairline in .rich-content and the documented destructive left rule on .dt tr.row-warn (DESIGN.md Tables) are intentional"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/components/admin/editor/RichTextEditor.vue"
+        ],
+        "createdAt": "2026-11-08T03:51:57.018Z",
+        "reason": "User confirmed: editor blockquote mirrors .rich-content's 3px hairline so authoring matches reading"
+      }
+    ]
+  }
+}
