@@ -20,8 +20,16 @@
                 <p class="text-sm font-semibold text-foreground">This problem is not available</p>
                 <p class="text-sm text-muted-foreground">The contest may not have started yet, or the link is wrong.</p>
             </template>
-            <p v-else class="text-destructive">Couldn't load this problem. Please try again.</p>
-            <RouterLink v-if="contestSlug" :to="backTo" class="text-sm font-medium text-link hover:underline">Back to the contest</RouterLink>
+            <template v-else>
+                <p class="text-sm font-semibold text-foreground">Couldn't load this problem</p>
+                <p class="text-sm text-muted-foreground">The judge did not answer. Try again, or go back to the list.</p>
+            </template>
+            <div class="flex flex-wrap justify-center gap-2">
+                <Button v-if="!unavailable" size="sm" data-test="retry" @click="retry">Try again</Button>
+                <Button variant="secondary" size="sm" as-child>
+                    <RouterLink :to="backTo">{{ contestSlug ? 'Back to the contest' : 'Back to problems' }}</RouterLink>
+                </Button>
+            </div>
         </div>
 
         <template v-else-if="problem">
@@ -98,8 +106,13 @@
             <div v-if="isDesktop" class="h-[calc(100dvh-7.75rem)] min-h-[560px]">
                 <ResizablePanelGroup direction="horizontal" auto-save-id="problem-detail-split">
                     <ResizablePanel ref="statementPanel" :default-size="SPLIT_DEFAULT" :min-size="28">
-                        <section id="problem-pane-problem" aria-label="Problem"
-                            class="h-full overflow-hidden rounded-xl border border-border bg-card" />
+                        <!-- While this page's submission is judged the statement recedes a step: the verdict is the
+                             loudest object (PRODUCT.md). -->
+                        <section id="problem-pane-problem" aria-label="Problem" :data-judging="judging || undefined"
+                            :class="[
+                                'h-full overflow-hidden rounded-xl border border-border bg-card transition-opacity duration-[220ms] ease-[var(--ease-out)] motion-reduce:transition-none',
+                                judging ? 'opacity-70' : '',
+                            ]" />
                     </ResizablePanel>
                     <WorkspaceHandle aria-label="Resize panes" @dblclick="resetSplit"
                         @keydown.enter.prevent="resetSplit" />
@@ -155,7 +168,8 @@
                     :view="isDesktop ? undefined : mobileView === 'result' ? 'result' : 'code'"
                     :sample-input="problem.sampleInput" :sample-output="problem.sampleOutput"
                     :contest-slug="submitContestSlug" :disabled-reason="disabledReason"
-                    @judged="refreshStats" @contest-not-running="onContestNotRunning" @last="lastSubmission = $event" />
+                    @judged="refreshStats" @contest-not-running="onContestNotRunning" @last="lastSubmission = $event"
+                    @judging="judging = $event" />
             </Teleport>
         </template>
     </div>
@@ -228,6 +242,8 @@ const MOBILE_ACTIONS_ID = 'problem-actions-mobile'
 
 // The reader's latest submission, for the phone's Result tab and pinned bar.
 const lastSubmission = ref<Submission | null>(null)
+// This page's own submission is being judged (SolvePane says so): the statement recedes meanwhile.
+const judging = ref(false)
 const lastMeta = computed(() => (lastSubmission.value ? verdictMeta(lastSubmission.value.status) : null))
 const lastTests = computed(() => {
     const rows = lastSubmission.value?.details
@@ -357,6 +373,12 @@ const onContestNotRunning = async () => {
     contestStopped.value = true
     const landed = await loadContest()
     if (landed && contest.value?.status === 'PUBLISHED' && contest.value.phase === 'RUNNING') contestStopped.value = false
+}
+
+// Try again reads whatever failed: the problem, the contest, or both.
+const retry = () => {
+    if (error.value) void loadProblem()
+    if (contestError.value) void loadContest()
 }
 
 const isNotFound = (err: unknown) => (err as { response?: { status?: number } } | null)?.response?.status === 404

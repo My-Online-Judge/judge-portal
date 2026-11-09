@@ -466,10 +466,14 @@
 .tile .tn { line-height: 1; }
 .tile.v-pending { box-shadow: none; border: 1px dashed color-mix(in oklch, var(--vc) 55%, transparent); background: transparent; cursor: default; }
 .tile.running { --vc: var(--v-judging); --vi: var(--v-judging-ink); cursor: default; animation: tilepulse 1s ease-in-out infinite; }
+/* A tile the judge has reported while the rest still run: its verdict's tint, no control yet (the verdict opens them). */
+.tile.live { cursor: default; }
 @keyframes tilepulse { 50% { background: color-mix(in oklch, var(--vc) 24%, var(--card)); } }
 
-/* A small count or verdict code beside a tab's label. */
+/* A small count or verdict code beside a tab's label. A plain count is neutral (the well tone): verdict colours are
+   for verdicts only (the Stamp Rule). */
 .console-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--radius-sm); background: color-mix(in oklch, var(--vc) 14%, var(--card)); color: var(--vi); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 600; line-height: 1; }
+.console-badge.neutral { background: var(--muted); color: var(--muted-foreground); }
 
 /* A verdict named in a soft pill (test detail header). */
 .vpill { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: color-mix(in oklch, var(--vc) 14%, var(--card)); color: var(--vi); font-size: var(--text-xs); font-weight: 600; white-space: nowrap; }

@@ -1,6 +1,6 @@
 <template>
-    <div ref="rootEl" class="flex h-full min-h-0 flex-col bg-card">
-        <!-- Toolbar: language and its compiler on the left; clear, settings and full screen on the right. -->
+    <div class="flex h-full min-h-0 flex-col bg-card">
+        <!-- Toolbar: language and its compiler on the left; clear, settings and focus mode on the right. -->
         <div class="flex h-11 flex-none items-center gap-2.5 border-b border-border pr-2 pl-2.5">
             <Select v-model="selectedLanguage">
                 <SelectTrigger size="sm" class="h-[30px] w-[132px]" aria-label="Language">
@@ -58,15 +58,18 @@
                     </DropdownMenuContent>
                 </DropdownMenu>
 
+                <!-- Focus mode belongs to the whole workspace (SolvePane): editor, console, Run and Submit fill the
+                     window, and dialogs, menus and toasts stay visible, which the browser's Fullscreen API would hide. -->
                 <Tooltip>
                     <TooltipTrigger as-child>
-                        <Button variant="ghost" size="icon-sm" class="text-muted-foreground"
-                            :aria-label="isFullscreen ? 'Exit full screen' : 'Full screen'" @click="toggleFullscreen">
-                            <Minimize2 v-if="isFullscreen" />
+                        <Button variant="ghost" size="icon-sm" class="text-muted-foreground" data-test="focus-toggle"
+                            :aria-label="focused ? 'Exit focus mode' : 'Focus mode'" :aria-pressed="focused"
+                            aria-keyshortcuts="Escape" @click="emit('toggle-focus')">
+                            <Minimize2 v-if="focused" />
                             <Maximize2 v-else />
                         </Button>
                     </TooltipTrigger>
-                    <TooltipContent>{{ isFullscreen ? 'Exit full screen' : 'Full screen' }}</TooltipContent>
+                    <TooltipContent>{{ focused ? 'Exit focus mode (Esc)' : 'Focus mode' }}</TooltipContent>
                 </Tooltip>
             </TooltipProvider>
         </div>
@@ -89,7 +92,7 @@
             <span class="hidden sm:inline">Spaces: {{ TAB_SIZE }}</span>
             <span class="flex-1" />
             <span v-if="draftSaved" class="inline-flex items-center gap-1.5" data-test="draft-status">
-                <span class="size-1.5 rounded-full bg-[var(--v-ac)]" aria-hidden="true" />
+                <span class="size-1.5 rounded-full bg-success" aria-hidden="true" />
                 Draft saved
             </span>
         </div>
@@ -150,7 +153,6 @@ import { useAuthStore } from '@/stores/auth'
 import LoginModal from '@/components/auth/LoginModal.vue'
 
 import { ref, reactive, watch, computed, defineAsyncComponent, defineComponent, h, onBeforeUnmount } from 'vue'
-import { useFullscreen } from '@vueuse/core'
 import { isAxiosError } from 'axios'
 import { useToast, type ToastHandle } from '@/composables/useToast'
 import { useCooldown } from '@/composables/useCooldown'
@@ -188,12 +190,16 @@ const props = defineProps<{
     contestSlug?: string
     // Set when this problem cannot be submitted to: the reason shows in the bar and Submit is off.
     disabledReason?: string
+    // The workspace is in focus mode (SolvePane owns it); the toolbar button shows the way out.
+    focused?: boolean
 }>()
 
 const emit = defineEmits<{
     (e: 'success', submission: Submission): void
     // The contest stopped running while the page was open: the page reads it again and switches to practice.
     (e: 'contest-not-running'): void
+    // The focus-mode button: the pane enters or leaves focus mode.
+    (e: 'toggle-focus'): void
 }>()
 
 const { toasts, triggerToast, loading, error: errorToast, countdown } = useToast()
@@ -225,10 +231,6 @@ const editorOptions = computed(() => ({
 
 // The compiler behind the language, as a short note beside the picker ("g++ -std=c++17 -O2").
 const compilerNote = computed(() => (selectedLanguage.value ? compilerNoteOf(selectedLanguage.value) : ''))
-
-// Full screen takes the whole editor pane, toolbar and status bar included.
-const rootEl = ref<HTMLElement | null>(null)
-const { isFullscreen, toggle: toggleFullscreen } = useFullscreen(rootEl)
 
 // Where the cursor is, for the status bar.
 const cursor = reactive({ line: 1, column: 1 })

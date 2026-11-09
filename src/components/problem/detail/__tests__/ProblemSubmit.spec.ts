@@ -146,4 +146,16 @@ describe('ProblemSubmit', () => {
         // The code stays, so a practice submit is one click away.
         expect((w.get('[data-test="editor"]').element as HTMLTextAreaElement).value).toBe('int main() {}')
     })
+
+    it('theFocusButtonAsksThePaneAndNamesTheWayOut', async () => {
+        const w = await mountSubmit()
+        const button = w.get('[data-test="focus-toggle"]')
+        expect(button.attributes('aria-label')).toBe('Focus mode')
+        await button.trigger('click')
+        expect(w.emitted('toggle-focus')).toHaveLength(1)
+
+        await w.setProps({ focused: true })
+        expect(w.get('[data-test="focus-toggle"]').attributes('aria-label')).toBe('Exit focus mode')
+        expect(w.get('[data-test="focus-toggle"]').attributes('aria-pressed')).toBe('true')
+    })
 })

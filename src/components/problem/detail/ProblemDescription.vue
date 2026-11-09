@@ -4,8 +4,8 @@
 
         <!-- The author's one-paragraph restatement of the task ("subject" in the editor). -->
         <section v-if="problem.subject" aria-labelledby="problem-summary"
-            :class="['rounded-[10px] bg-primary-soft/70 px-4 py-3.5 text-sm leading-relaxed', problem.description ? 'mt-5' : '']">
-            <h2 id="problem-summary" class="mb-1 text-xs font-semibold text-info-ink">Summary</h2>
+            :class="['rounded-lg bg-muted px-4 py-3.5 text-sm leading-relaxed', problem.description ? 'mt-5' : '']">
+            <h2 id="problem-summary" class="mb-1 text-xs font-semibold text-muted-foreground">Summary</h2>
             <RichContent :html="problem.subject" />
         </section>
 
@@ -16,7 +16,7 @@
 
         <section aria-labelledby="problem-examples" class="mt-7">
             <h2 id="problem-examples" class="mb-3 text-base font-semibold text-foreground">Examples</h2>
-            <div class="grid grid-cols-1 overflow-hidden rounded-[10px] border border-border sm:grid-cols-2">
+            <div class="grid grid-cols-1 overflow-hidden rounded-lg border border-border sm:grid-cols-2">
                 <div v-for="(box, i) in samples" :key="box.key"
                     :class="['min-w-0', i > 0 ? 'border-t border-border sm:border-t-0 sm:border-l' : '']">
                     <div class="flex h-9 items-center justify-between border-b border-border bg-muted/50 pr-1.5 pl-3.5">
@@ -34,7 +34,7 @@
         </section>
 
         <!-- Folded by default: a hint is a spoiler the reader asks for. -->
-        <details v-if="problem.hint" class="group mt-7 rounded-[10px] border border-border">
+        <details v-if="problem.hint" class="group mt-7 rounded-lg border border-border">
             <summary
                 class="flex h-10 cursor-pointer list-none items-center gap-2 rounded-lg px-3.5 text-sm font-medium text-foreground outline-none select-none hover:bg-accent/60 focus-visible:ring-[3px] focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
                 <ChevronRight class="size-4 text-muted-foreground transition-transform group-open:rotate-90 motion-reduce:transition-none"

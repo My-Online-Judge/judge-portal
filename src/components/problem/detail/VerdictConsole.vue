@@ -5,36 +5,61 @@
             <p class="text-muted-foreground">Submit your code and the verdict for each test shows here.</p>
         </div>
         <VerdictTiles v-else-if="terminal" :submission="current" />
+        <div v-else-if="stalled" class="flex flex-col gap-3 text-sm" data-test="stalled">
+            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h3 class="text-lg leading-snug font-semibold tracking-[-0.01em] text-foreground">No verdict yet</h3>
+                <span class="tabular ml-auto font-mono text-xs text-muted-foreground">#{{ current.id.substring(0, 8) }}</span>
+            </div>
+            <p class="text-muted-foreground">
+                The judge has not answered for a while. The verdict lands in Submissions when it does.
+            </p>
+            <div class="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" class="bg-card" data-test="check-submissions" @click="emit('check-submissions')">
+                    Check Submissions
+                </Button>
+                <Button size="sm" variant="ghost" data-test="refresh" @click="refresh">Refresh</Button>
+            </div>
+        </div>
         <div v-else class="flex flex-col gap-3 text-sm">
             <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h3 class="text-base leading-snug font-semibold tracking-[-0.01em] text-foreground">
-                    {{ current.status === SubmissionResult.JUDGING ? 'Running tests…' : 'Waiting in the queue…' }}
+                <h3 class="text-lg leading-snug font-semibold tracking-[-0.01em] text-foreground" data-test="live-title">
+                    {{ running ? 'Running tests…' : 'Waiting in the queue…' }}
                 </h3>
-                <span class="tabular ml-auto text-xs text-muted-foreground">#{{ current.id.substring(0, 8) }}</span>
+                <span v-if="judged.size" class="text-sm text-muted-foreground" data-test="live-count">
+                    <b class="tabular font-semibold text-foreground">{{ judged.size }}<template v-if="ladderCount"> / {{ ladderCount }}</template></b>
+                    judged
+                </span>
+                <span class="tabular ml-auto font-mono text-xs text-muted-foreground">#{{ current.id.substring(0, 8) }}</span>
             </div>
-            <GhostTiles :state="current.status === SubmissionResult.JUDGING ? 'running' : 'pending'" />
-            <p v-if="current.status === SubmissionResult.JUDGING" class="text-xs text-muted-foreground">
-                Every test's result arrives together when judging finishes.
-            </p>
+            <GhostTiles :state="running ? 'running' : 'pending'" :count="ladderCount ?? undefined" :judged="judged" />
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onBeforeUnmount, inject } from 'vue'
+import { Button } from '@/components/ui/button'
 import { isTerminalStatus, SubmissionResult, type Submission } from '@/types/submission'
 import VerdictTiles from './VerdictTiles.vue'
 import GhostTiles from './GhostTiles.vue'
 import submissionService from '@/services/submissionService'
 import type { ToastHandle } from '@/composables/useToast'
-import { useSubmissionStream } from '@/composables/useSubmissionStream'
+import { useSubmissionStream, type SubmissionProgress } from '@/composables/useSubmissionStream'
 import { submissionToasts, releaseSubmissionToast } from '@/lib/submissionToasts'
 import { verdictToastPatch } from '@/lib/verdictToast'
 import { SHOW_CONSOLE, revealConsole } from '@/lib/consoleReveal'
 
-const props = defineProps<{ submission?: Submission | null }>()
-// Fired once a watched submission has its final verdict, so the page can refresh the problem's statistics.
-const emit = defineEmits<{ (e: 'judged', submission: Submission): void }>()
+const props = defineProps<{
+    submission?: Submission | null
+    // How many tests the ladder should show before the judge says: the last verdict's count, when known.
+    expectedCount?: number | null
+}>()
+const emit = defineEmits<{
+    // Fired once a watched submission has its final verdict, so the page can refresh the problem's statistics.
+    (e: 'judged', submission: Submission): void
+    // The stream gave up and the reader asked for the Submissions tab.
+    (e: 'check-submissions'): void
+}>()
 
 const current = ref<Submission | null>(props.submission ?? null)
 const rootEl = ref<HTMLElement | null>(null)
@@ -48,6 +73,32 @@ const { watch: watchVerdict } = useSubmissionStream()
 // A fresh submission arrives from the Submit action with status PENDING. Show it
 // optimistically, then subscribe to the stream and swap in the final verdict.
 const terminal = computed(() => !!current.value && isTerminalStatus(current.value.status))
+
+// --- The live ladder: what the judge has reported about the current submission so far ---
+const started = ref(false)
+const judged = ref(new Map<string, number>())
+const total = ref<number | null>(null)
+// The stream and its polling fallback both ended without a verdict.
+const stalled = ref(false)
+const running = computed(() => started.value || judged.value.size > 0 || current.value?.status === SubmissionResult.JUDGING)
+// The judge's own count first, else the last verdict's, else the ladder's default (GhostTiles). Never fewer than judged.
+const ladderCount = computed(() => {
+    const known = total.value ?? props.expectedCount ?? null
+    if (known === null) return judged.value.size > 12 ? judged.value.size : null
+    return Math.max(known, judged.value.size)
+})
+const resetLadder = () => {
+    started.value = false
+    judged.value = new Map()
+    total.value = null
+    stalled.value = false
+}
+const onProgress = (p: SubmissionProgress) => {
+    const next = new Map(judged.value)
+    next.set(p.testCase, p.result)
+    judged.value = next
+    if (typeof p.total === 'number' && p.total > 0) total.value = p.total
+}
 
 // The stream payload may omit per-test details; fetch the full submission once in that case.
 async function ensureDetails(verdict: Submission): Promise<Submission> {
@@ -81,27 +132,51 @@ function settle(verdict: Submission) {
     void ensureDetails(verdict).then((full) => announceVerdict(handle, full))
 }
 
+function follow(sub: Submission) {
+    watched.add(sub.id)
+    watchVerdict(
+        sub.id,
+        (verdict) => {
+            if (current.value?.id !== sub.id) return
+            current.value = verdict
+            if (isTerminalStatus(verdict.status)) {
+                emit('judged', verdict)
+                settle(verdict)
+            }
+        },
+        () => {
+            releaseSubmissionToast(sub.id)
+            if (current.value?.id === sub.id) stalled.value = true
+        },
+        {
+            priority: true,
+            onStarted: () => {
+                if (current.value?.id === sub.id) started.value = true
+            },
+            onProgress: (p) => {
+                if (current.value?.id === sub.id) onProgress(p)
+            },
+        },
+    )
+}
+
+// Refresh after a give-up: watch the same submission again (the stream, then polling, as the first time).
+const refresh = () => {
+    if (!current.value) return
+    stalled.value = false
+    follow(current.value)
+}
+
 watch(
     () => props.submission,
     (sub) => {
         if (!sub) return
         current.value = sub
+        resetLadder()
         if (isTerminalStatus(sub.status)) {
             settle(sub)
         } else {
-            watched.add(sub.id)
-            watchVerdict(
-                sub.id,
-                (verdict) => {
-                    current.value = verdict
-                    if (isTerminalStatus(verdict.status)) {
-                        emit('judged', verdict)
-                        settle(verdict)
-                    }
-                },
-                () => releaseSubmissionToast(sub.id),
-                { priority: true },
-            )
+            follow(sub)
         }
     },
     { immediate: true },

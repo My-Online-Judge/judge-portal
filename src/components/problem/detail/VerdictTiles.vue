@@ -2,7 +2,7 @@
     <div :class="['flex flex-col gap-4 text-sm', `v-${tone}`]">
         <div class="flex flex-col gap-1.5">
             <div class="flex flex-wrap items-baseline gap-x-3.5 gap-y-1">
-                <h3 class="text-lg leading-snug font-bold tracking-[-0.01em] text-[var(--vi)]" data-test="verdict-title">
+                <h3 class="text-xl leading-tight font-bold tracking-[-0.015em] text-[var(--vi)]" data-test="verdict-title">
                     {{ meta.name }}
                 </h3>
                 <span v-if="rows.length" class="text-sm text-muted-foreground">
@@ -10,7 +10,7 @@
                     tests passed
                 </span>
                 <span class="meta-strip tabular ml-auto text-xs text-muted-foreground">
-                    <span>#{{ submission.id.substring(0, 8) }}</span>
+                    <span class="font-mono">#{{ submission.id.substring(0, 8) }}</span>
                     <span v-if="submission.language?.name">{{ submission.language.name }}</span>
                     <span v-if="submission.createdAt">{{ formatRelativeTime(submission.createdAt) }}</span>
                 </span>

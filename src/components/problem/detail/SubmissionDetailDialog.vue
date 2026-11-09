@@ -2,12 +2,12 @@
     <Dialog :open="open" @update:open="emit('update:open', $event)">
         <DialogContent class="sm:max-w-2xl">
             <DialogHeader>
-                <DialogTitle>Submission #{{ submissionId?.substring(0, 8) }}</DialogTitle>
+                <DialogTitle>Submission <span class="font-mono">#{{ submissionId?.substring(0, 8) }}</span></DialogTitle>
                 <DialogDescription class="sr-only">Verdict and per-test results for this submission.</DialogDescription>
             </DialogHeader>
             <ListStateShell
                 :loading="isLoading"
-                :error="error ? 'error' : null"
+                :error="error ? LOAD_ERROR : null"
                 :has-data="!!submission"
                 :empty="false"
                 @retry="load"
@@ -41,6 +41,8 @@
 </template>
 
 <script setup lang="ts">
+// What the dialog says when the submission could not be read (the shell shows it with Retry).
+const LOAD_ERROR = "Couldn't load this submission. Check your connection and try again."
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import ListStateShell from '@/components/common/ListStateShell.vue'

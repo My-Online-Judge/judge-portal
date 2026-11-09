@@ -36,7 +36,8 @@ describe('VerdictConsole', () => {
 
     it('emitsJudgedOnTerminalVerdict', async () => {
         const w = mount(VerdictConsole, { props: { submission: pending } })
-        expect(watchVerdict).toHaveBeenCalledWith('abcdef123456', expect.any(Function), expect.any(Function), { priority: true })
+        expect(watchVerdict).toHaveBeenCalledWith('abcdef123456', expect.any(Function), expect.any(Function),
+            expect.objectContaining({ priority: true, onStarted: expect.any(Function), onProgress: expect.any(Function) }))
         watchVerdict.mock.calls[0][1](full)
         await flushPromises()
         expect(w.emitted('judged')).toHaveLength(1)
@@ -81,5 +82,82 @@ describe('VerdictConsole', () => {
         const patch = update.mock.calls.at(-1)![0]
         expect(patch).toMatchObject({ type: 'verdict', verdictStatus: 0 })
         expect(patch).toHaveProperty('action', undefined)
+    })
+
+    // --- the live ladder ---
+
+    const opts = (call = 0) => watchVerdict.mock.calls[call][3] as { onStarted: () => void; onProgress: (p: unknown) => void }
+    const tiles = (w: ReturnType<typeof mount>) => w.findAll('.tile')
+
+    it('theLadderWaitsThenRunsThenFillsTestByTest', async () => {
+        const w = mount(VerdictConsole, { props: { submission: pending } })
+        expect(w.get('[data-test="live-title"]').text()).toBe('Waiting in the queue…')
+        expect(tiles(w)).toHaveLength(12)
+        expect(tiles(w).every((t) => t.classes('v-pending'))).toBe(true)
+        expect(w.find('[data-test="live-count"]').exists()).toBe(false)
+
+        opts().onStarted()
+        await flushPromises()
+        expect(w.get('[data-test="live-title"]').text()).toBe('Running tests…')
+        expect(tiles(w).every((t) => t.classes('running'))).toBe(true)
+
+        opts().onProgress({ testCase: '2', result: 0, total: 5 })
+        opts().onProgress({ testCase: '1', result: -1, total: 5 })
+        opts().onProgress({ testCase: '2', result: 0, total: 5 }) // a failover reports a test again: counted once
+        await flushPromises()
+        const all = tiles(w)
+        expect(all).toHaveLength(5) // the judge's own count
+        expect(all[0].classes()).toEqual(expect.arrayContaining(['tile', 'live', 'v-wa']))
+        expect(all[1].classes()).toEqual(expect.arrayContaining(['tile', 'live', 'v-ac', 'pass']))
+        expect(all[2].classes('running')).toBe(true)
+        expect(w.get('[data-test="live-count"]').text().replace(/\s+/g, ' ')).toBe('2 / 5 judged')
+        expect(w.find('.ghost-tiles').exists()).toBe(false) // the sweep stops once a test is in
+
+        watchVerdict.mock.calls[0][1]({ ...full, details: [] })
+        await flushPromises()
+        expect(w.text()).toContain('Accepted')
+    })
+
+    it('theLadderTakesTheLastVerdictsCountUntilTheJudgeSaysOtherwise', async () => {
+        const w = mount(VerdictConsole, { props: { submission: pending, expectedCount: 7 } })
+        expect(tiles(w)).toHaveLength(7)
+        opts().onProgress({ testCase: '9', result: 0 }) // beyond the hint, no total: the ladder grows to fit
+        await flushPromises()
+        expect(tiles(w)).toHaveLength(8)
+        expect(tiles(w).at(-1)!.text()).toBe('9')
+    })
+
+    it('aNewSubmissionStartsAFreshLadder', async () => {
+        const w = mount(VerdictConsole, { props: { submission: pending } })
+        opts().onStarted()
+        opts().onProgress({ testCase: '1', result: 0, total: 3 })
+        await flushPromises()
+        expect(tiles(w)).toHaveLength(3)
+        await w.setProps({ submission: { ...pending, id: 'ffffffff0000' } })
+        expect(w.get('[data-test="live-title"]').text()).toBe('Waiting in the queue…')
+        expect(tiles(w)).toHaveLength(12)
+        // Late events of the first submission change nothing.
+        opts(0).onProgress({ testCase: '2', result: 0, total: 3 })
+        await flushPromises()
+        expect(tiles(w)).toHaveLength(12)
+    })
+
+    it('aStreamThatGivesUpOffersSubmissionsAndARefresh', async () => {
+        const w = mount(VerdictConsole, { props: { submission: pending } })
+        watchVerdict.mock.calls[0][2]() // onGiveUp
+        await flushPromises()
+        expect(w.get('[data-test="stalled"]').text()).toContain('No verdict yet')
+        await w.get('[data-test="check-submissions"]').trigger('click')
+        expect(w.emitted('check-submissions')).toHaveLength(1)
+
+        await w.get('[data-test="refresh"]').trigger('click')
+        expect(watchVerdict).toHaveBeenCalledTimes(2)
+        expect(watchVerdict.mock.calls[1][0]).toBe('abcdef123456')
+        expect(w.find('[data-test="stalled"]').exists()).toBe(false)
+        expect(w.get('[data-test="live-title"]').text()).toBe('Waiting in the queue…')
+
+        watchVerdict.mock.calls[1][1]({ ...full, details: [] })
+        await flushPromises()
+        expect(w.text()).toContain('Accepted')
     })
 })

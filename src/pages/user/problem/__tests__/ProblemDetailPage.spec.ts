@@ -53,7 +53,7 @@ const SolvePane = defineComponent({
         contestSlug: String,
         disabledReason: String,
     },
-    emits: ['judged', 'contest-not-running', 'last'],
+    emits: ['judged', 'contest-not-running', 'last', 'judging'],
     setup() {
         onMounted(() => h.solveMounts++)
         return () => render('textarea', { 'data-testid': 'editor' })
@@ -241,7 +241,8 @@ describe('ProblemDetailPage', () => {
             h.getContestProblem.mockRejectedValue({ isAxiosError: true, response: { status: 404 } })
             const w = await mountContestPage()
             expect(w.text()).toContain('This problem is not available')
-            expect(w.text()).not.toContain('Please try again')
+            expect(w.text()).not.toContain("Couldn't load this problem")
+            expect(w.find('[data-test="retry"]').exists()).toBe(false)
         })
 
         it('aContestThatIsNotThereIsNotAvailableEither', async () => {
@@ -251,12 +252,33 @@ describe('ProblemDetailPage', () => {
             expect(w.text()).toContain('This problem is not available')
         })
 
-        it('aNetworkFailureStillSaysTryAgain', async () => {
+        it('aNetworkFailureOffersTryAgainWhichReadsTheProblemAgain', async () => {
             h.getContest.mockResolvedValue({ data: { data: contest('RUNNING') } })
-            h.getContestProblem.mockRejectedValue(new Error('Network Error'))
+            h.getContestProblem.mockRejectedValueOnce(new Error('Network Error'))
             const w = await mountContestPage()
-            expect(w.text()).toContain("Couldn't load this problem. Please try again.")
+            expect(w.text()).toContain("Couldn't load this problem")
             expect(w.text()).not.toContain('This problem is not available')
+            expect(h.getContestProblem).toHaveBeenCalledTimes(1)
+
+            h.getContestProblem.mockResolvedValue({ data: { data: problem } })
+            await w.get('[data-test="retry"]').trigger('click')
+            await flushPromises()
+            expect(h.getContestProblem).toHaveBeenCalledTimes(2)
+            expect(h.getContest).toHaveBeenCalledTimes(1) // the contest read had landed: not read again
+            expect(w.findComponent(SolvePane).exists()).toBe(true)
+        })
+
+        it('aContestReadThatFailedIsReadAgainByTryAgain', async () => {
+            h.getContest.mockRejectedValueOnce(new Error('Network Error'))
+            h.getContestProblem.mockResolvedValue({ data: { data: problem } })
+            const w = await mountContestPage()
+            expect(w.text()).toContain("Couldn't load this problem")
+
+            h.getContest.mockResolvedValue({ data: { data: contest('RUNNING') } })
+            await w.get('[data-test="retry"]').trigger('click')
+            await flushPromises()
+            expect(h.getContest).toHaveBeenCalledTimes(2)
+            expect(w.findComponent(SolvePane).exists()).toBe(true)
         })
 
         it('leavingAbortsTheContestRead', async () => {

@@ -1,14 +1,16 @@
 <template>
     <!-- Ctrl/Cmd+Enter anywhere in the pane submits. Inside the editor Monaco handles the keys itself
          (ProblemSubmit registers the same shortcut there) and stops them before they get here. -->
-    <div class="h-full min-h-0" @keydown="onKeydown">
+    <div :class="focused ? 'fixed inset-0 z-40 bg-background p-3 md:p-4' : 'h-full min-h-0'" :data-focused="focused || undefined"
+        @keydown="onKeydown">
         <ResizablePanelGroup direction="vertical" auto-save-id="problem-solve-split">
             <ResizablePanel :default-size="EDITOR_SPLIT" :min-size="25"
                 :class="view === 'result' ? '!hidden' : view === 'code' ? '!flex-[1_1_0%]' : ''">
                 <section aria-label="Editor" class="h-full overflow-hidden rounded-xl border border-border bg-card">
                     <ProblemSubmit ref="submitRef" :languages="languages || undefined" :problem-slug="slug"
-                        :actions-to="actionsTo" :contest-slug="contestSlug" :disabled-reason="disabledReason"
-                        @success="onSubmit" @contest-not-running="emit('contest-not-running')" />
+                        :actions-to="actionsTarget" :contest-slug="contestSlug" :disabled-reason="disabledReason"
+                        :focused="focused" @success="onSubmit" @contest-not-running="emit('contest-not-running')"
+                        @toggle-focus="focused = !focused" />
                 </section>
             </ResizablePanel>
             <WorkspaceHandle aria-label="Resize console" :class="view ? '!hidden' : ''" />
@@ -27,11 +29,13 @@
                                         <template v-else>{{ resultMeta.code }}</template>
                                         <span class="sr-only">, {{ resultMeta.name }}</span>
                                     </span>
-                                    <span v-if="t.value === 'submissions' && submissionCount" class="console-badge v-se"
+                                    <span v-if="t.value === 'submissions' && submissionCount" class="console-badge neutral"
                                         data-test="submission-count">{{ submissionCount }}</span>
                                 </TabsTrigger>
                             </TabsList>
                             <span class="flex-1" />
+                            <!-- In focus mode the page's action bar is covered: Run and Submit move in here. -->
+                            <div v-if="focused" :id="FOCUS_ACTIONS_ID" class="flex items-center gap-2 self-center" />
                             <Button variant="ghost" size="icon-sm" class="self-center text-muted-foreground"
                                 :class="view ? 'hidden' : ''"
                                 :aria-label="consoleCollapsed ? 'Expand the console' : 'Collapse the console'"
@@ -47,7 +51,8 @@
                             </TabsContent>
                             <!-- The verdict console stays mounted on the other tabs: it holds the verdict stream. -->
                             <TabsContent value="result" force-mount class="mt-0 data-[state=inactive]:hidden">
-                                <VerdictConsole :submission="latest" @judged="onJudged" />
+                                <VerdictConsole :submission="latest" :expected-count="ladderHint" @judged="onJudged"
+                                    @check-submissions="showTab('submissions')" />
                             </TabsContent>
                             <!-- Kept mounted for the count on its tab, its page and its live rows. -->
                             <TabsContent value="submissions" force-mount class="mt-0 data-[state=inactive]:hidden">
@@ -62,7 +67,7 @@
         </ResizablePanelGroup>
 
         <!-- Run sits before Submit in the page's action bar. -->
-        <Teleport defer :to="actionsTo ?? 'body'" :disabled="!actionsTo">
+        <Teleport defer :to="actionsTarget ?? 'body'" :disabled="!actionsTarget">
             <Button v-if="authStore.isAuthenticated" variant="outline" size="sm"
                 class="order-1 h-9 gap-2 bg-card px-3.5" data-test="run" :disabled="running || !!disabledReason"
                 @click="run">
@@ -75,8 +80,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, inject, provide, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, inject, provide, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useEventListener } from '@vueuse/core'
 import { ChevronDown, ChevronUp, Loader2, Play } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { ResizablePanelGroup, ResizablePanel } from '@/components/ui/resizable'
@@ -93,7 +99,7 @@ import { SHOW_CONSOLE } from '@/lib/consoleReveal'
 import { verdictMeta } from '@/lib/verdict'
 import { isTerminalStatus, type Submission } from '@/types/submission'
 
-defineProps<{
+const props = defineProps<{
     slug: string
     // The page's action bar: Run and Submit render there. Without one they stay in this pane.
     actionsTo?: string
@@ -111,13 +117,33 @@ const emit = defineEmits<{
     (e: 'contest-not-running'): void
     // The reader's latest submission with its current status: this page's, else the newest in the list.
     (e: 'last', submission: Submission | null): void
+    // Whether this page's own submission is being judged right now (the statement recedes meanwhile).
+    (e: 'judging', busy: boolean): void
 }>()
 
 const authStore = useAuthStore()
 
-// Editor share of the pane's height; the console takes the rest, or only its tab bar when collapsed.
+// Editor share of the pane's height; the console takes the rest, or only its tab bar when collapsed. A submit hands
+// the console the larger share, so the ladder is in view while the judge works; the handle puts it back.
 const EDITOR_SPLIT = 60
 const COLLAPSED_SIZE = 6
+const CONSOLE_WHILE_JUDGING = 55
+
+// --- Focus mode: the whole workspace (editor, console, Run and Submit) fills the window; Escape leaves ---
+// An in-page layer, not the Fullscreen API: that one hid everything portaled to body (the language menu, the clear
+// confirm, the login dialog, every toast) and the action bar's Run and Submit with them.
+const FOCUS_ACTIONS_ID = 'solve-focus-actions'
+const focused = ref(false)
+const actionsTarget = computed(() => (focused.value ? `#${FOCUS_ACTIONS_ID}` : props.actionsTo))
+useEventListener(document, 'keydown', (e: KeyboardEvent) => {
+    if (e.key !== 'Escape' || !focused.value || e.defaultPrevented) return
+    // Escape closes an open menu, list or dialog first; the next one leaves focus mode.
+    if ((e.target as HTMLElement | null)?.closest?.('[role="dialog"], [role="listbox"], [role="menu"]')) return
+    focused.value = false
+})
+// The page under the layer must not scroll along with the editor.
+watch(focused, (f) => document.documentElement.classList.toggle('overflow-hidden', f))
+onBeforeUnmount(() => document.documentElement.classList.remove('overflow-hidden'))
 
 // This pane owns language loading: it fetches on mount. The store caches, so the call is idempotent.
 const languageStore = useLanguageStore()
@@ -140,7 +166,7 @@ const tabs: { value: ConsoleTab; label: string }[] = [
     { value: 'submissions', label: 'Submissions' },
 ]
 
-const consolePanel = ref<{ collapse: () => void; expand: () => void } | null>(null)
+const consolePanel = ref<{ collapse: () => void; expand: () => void; resize?: (size: number) => void; getSize?: () => number } | null>(null)
 const consoleCollapsed = ref(false)
 const toggleConsole = () => (consoleCollapsed.value ? consolePanel.value?.expand() : consolePanel.value?.collapse())
 
@@ -163,6 +189,9 @@ const onSubmit = (submission: Submission) => {
     latestStatus.value = submission.status
     // A new submission brings its result forward; the code stays in the editor.
     showTab('result')
+    // Split layout only (a phone shows one part at a time): the console grows, never shrinks, for the ladder.
+    const panel = consolePanel.value
+    if (!props.view && panel?.resize && (panel.getSize?.() ?? 0) < CONSOLE_WHILE_JUDGING) panel.resize(CONSOLE_WHILE_JUDGING)
 }
 const onJudged = (verdict: Submission) => {
     latestStatus.value = verdict.status
@@ -171,11 +200,15 @@ const onJudged = (verdict: Submission) => {
 }
 const resultMeta = computed(() => (latestStatus.value === null ? null : verdictMeta(latestStatus.value)))
 const resultBusy = computed(() => latestStatus.value !== null && !isTerminalStatus(latestStatus.value))
+watch(resultBusy, (busy) => emit('judging', busy))
 
 const submissionCount = ref(0)
 
 const newest = ref<Submission | null>(null)
 const judged = ref<Submission | null>(null)
+// How many tests the problem has, as far as this pane knows: the last verdict's count, for the ladder before the judge
+// says. Null when nothing has been judged here yet.
+const ladderHint = computed(() => judged.value?.details?.length ?? newest.value?.details?.length ?? null)
 watch(
     () => {
         if (!latest.value) return newest.value
@@ -187,7 +220,7 @@ watch(
 
 // --- Run: the code against the Testcases tab's cases ---
 const running = computed(() => !!testcasesRef.value?.running)
-const { triggerToast } = useToast()
+const { triggerToast, undo } = useToast()
 const run = async () => {
     const source = submitRef.value?.source()
     if (!source?.sourceCode.trim()) {
@@ -198,9 +231,19 @@ const run = async () => {
     await testcasesRef.value?.run(source)
 }
 
-// A past submission's code back in the editor.
+// A past submission's code back in the editor. It replaces what was there, so the toast offers Undo while the
+// previous code is still at hand; an empty editor had nothing to lose.
 const onLoad = (submission: Submission) => {
+    const previous = submitRef.value?.source()
     submitRef.value?.loadCode(submission.sourceCode, submission.language?.identifier)
-    triggerToast('Code loaded into the editor', 'success')
+    if (previous?.sourceCode.trim()) {
+        undo('Code loaded into the editor', {
+            description: 'Undo puts the code you had back.',
+            commit: () => {},
+            onUndo: () => submitRef.value?.loadCode(previous.sourceCode, previous.languageIdentifier),
+        })
+    } else {
+        triggerToast('Code loaded into the editor', 'success')
+    }
 }
 </script>

@@ -33,7 +33,7 @@
                                 :aria-label="`Open submission ${sub.id.substring(0, 8)}`"
                                 :class="[
                                     'cursor-pointer border-border hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
-                                    sub.id === highlightId ? 'bg-primary-soft/50' : '',
+                                    sub.id === highlightId ? 'bg-muted shadow-[inset_2px_0_0_var(--rule-2)]' : '',
                                 ]"
                                 @click="openDetail(sub.id)"
                                 @keydown.enter.self="openDetail(sub.id)"

@@ -18,9 +18,33 @@ export const MAX_OPEN_STREAMS = 4
 
 type VerdictHandler = (verdict: Submission) => void
 
+/** One judged test, as the stream's `progress` event carries it while the submission is judged. */
+export interface SubmissionProgress {
+    testCase: string
+    /** A SubmissionResult code. */
+    result: number
+    error?: number | null
+    cpuTime?: number | null
+    realTime?: number | null
+    memory?: number | null
+    /** The bundle's test count, or null when the judge could not tell. */
+    total?: number | null
+}
+
+export interface WatchOptions {
+    /** The user's own new submission: may take a stream slot from a history row. */
+    priority?: boolean
+    /** The judge started on it (a `started` event, or the stream found it already judging). */
+    onStarted?: () => void
+    /** One more test judged. Tests may repeat (a judge that failed over reports them again): key by `testCase`. */
+    onProgress?: (progress: SubmissionProgress) => void
+}
+
 interface Subscriber {
     onVerdict: VerdictHandler
     onGiveUp?: () => void
+    onStarted?: () => void
+    onProgress?: (progress: SubmissionProgress) => void
 }
 
 interface Watch {
@@ -60,6 +84,20 @@ const openStreams = () => Array.from(shared.values()).filter((w) => w.source !==
 const statusOf = (error: unknown): number | undefined =>
     (error as { response?: { status?: number } } | null)?.response?.status
 
+/** A `progress` payload with at least a test name and a result code; anything else is null. */
+export function parseProgress(data: unknown): SubmissionProgress | null {
+    let p: unknown
+    try {
+        p = typeof data === 'string' ? JSON.parse(data) : data
+    } catch {
+        return null
+    }
+    if (!p || typeof p !== 'object') return null
+    const { testCase, result } = p as Record<string, unknown>
+    if (typeof testCase !== 'string' || testCase === '' || typeof result !== 'number') return null
+    return p as SubmissionProgress
+}
+
 export interface SubmissionStreamDeps {
     /** Renews a lapsed session before the one reconnect; the tab's shared refresh by default. */
     refresh?: () => Promise<unknown>
@@ -71,8 +109,11 @@ export interface SubmissionStreamDeps {
  * Live verdicts: an EventSource per watched submission, with a polling fallback. A stream the server refuses on its
  * first connection, while the session may have lapsed (no refresh in the last 14 minutes), refreshes the session once
  * and reconnects once. Any other failure, a refusal on a fresh session, a
- * second refusal, 20 s of silence or an unreadable payload polls with backoff until a final verdict, a 404 or the
- * deadline. `onVerdict` runs once with the final verdict; `onGiveUp` runs once if the watch ends without one.
+ * second refusal, 20 s of silence or an unreadable verdict payload polls with backoff until a final verdict, a 404 or
+ * the deadline. The silence clock restarts on every `started` and `progress` event, so a long judgement that keeps
+ * reporting tests stays on the stream. `onVerdict` runs once with the final verdict; `onGiveUp` runs once if the watch
+ * ends without one; `onStarted` and `onProgress` (WatchOptions) run as the judge reports, and may never run (an older
+ * judge, or a watch that polls).
  */
 export function useSubmissionStream(deps: SubmissionStreamDeps = {}) {
     const refresh = deps.refresh ?? refreshSession
@@ -186,7 +227,24 @@ export function useSubmissionStream(deps: SubmissionStreamDeps = {}) {
             withCredentials: true,
         })
         w.source = source
-        w.timer = setTimeout(() => startPolling(w), FALLBACK_TIMEOUT_MS)
+        const armSilenceTimer = () => {
+            clearTimer(w)
+            w.timer = setTimeout(() => startPolling(w), FALLBACK_TIMEOUT_MS)
+        }
+        armSilenceTimer()
+
+        // Advisory events: a bad one is dropped (the verdict still comes), never a reason to poll.
+        source.addEventListener('started', () => {
+            if (w.source !== source) return
+            armSilenceTimer()
+            notify(Array.from(w.subs), (s) => s.onStarted?.())
+        })
+        source.addEventListener('progress', (ev: MessageEvent) => {
+            if (w.source !== source) return
+            armSilenceTimer()
+            const progress = parseProgress(ev.data)
+            if (progress) notify(Array.from(w.subs), (s) => s.onProgress?.(progress))
+        })
 
         source.addEventListener('verdict', (ev: MessageEvent) => {
             if (w.source !== source) return
@@ -214,7 +272,7 @@ export function useSubmissionStream(deps: SubmissionStreamDeps = {}) {
         })
     }
 
-    const watch = (id: string, onVerdict: VerdictHandler, onGiveUp?: () => void, opts: { priority?: boolean } = {}) => {
+    const watch = (id: string, onVerdict: VerdictHandler, onGiveUp?: () => void, opts: WatchOptions = {}) => {
         if (mine.has(id)) return
         const sub: Subscriber = {
             onVerdict: (v) => {
@@ -225,6 +283,8 @@ export function useSubmissionStream(deps: SubmissionStreamDeps = {}) {
                 mine.delete(id)
                 onGiveUp?.()
             },
+            onStarted: opts.onStarted,
+            onProgress: opts.onProgress,
         }
         let w = shared.get(id)
         if (w) {

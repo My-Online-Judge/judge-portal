@@ -499,4 +499,75 @@ describe('useSubmissionStream', () => {
     expect(MockEventSource.instances).toHaveLength(MAX_OPEN_STREAMS)
     expect(MockEventSource.instances.every((es) => !es.closed)).toBe(true)
   })
+
+  // --- the live ladder: started and progress events ---
+
+  it('a progress event is handed to onProgress and restarts the silence clock', async () => {
+    const onProgress = vi.fn()
+    const onStarted = vi.fn()
+    useSubmissionStream().watch('s1', () => {}, undefined, { onProgress, onStarted })
+    const es = MockEventSource.instances[0]
+    await vi.advanceTimersByTimeAsync(15_000)
+    es.emit('started', { data: '{"status":7}' })
+    expect(onStarted).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(15_000) // 30 s after opening: the start reset the clock
+    expect(es.closed).toBe(false)
+    es.emit('progress', { data: JSON.stringify({ testCase: '3', result: 0, cpuTime: 12, total: 10 }) })
+    expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({ testCase: '3', result: 0, total: 10 }))
+    await vi.advanceTimersByTimeAsync(19_999)
+    expect(es.closed).toBe(false)
+    await vi.advanceTimersByTimeAsync(1) // 20 s of silence after the last event: polling takes over
+    expect(es.closed).toBe(true)
+    expect(getById).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(getById).toHaveBeenCalledTimes(1)
+  })
+
+  it('a malformed progress payload is dropped without polling, and the verdict still lands', () => {
+    const onProgress = vi.fn()
+    const onVerdict = vi.fn()
+    useSubmissionStream().watch('s1', onVerdict, undefined, { onProgress })
+    const es = MockEventSource.instances[0]
+    es.emit('progress', { data: '{not json' })
+    es.emit('progress', { data: JSON.stringify({ result: 0 }) }) // no test name
+    es.emit('progress', { data: JSON.stringify({ testCase: '1' }) }) // no result
+    es.emit('progress', { data: JSON.stringify({ testCase: '', result: 0 }) })
+    expect(onProgress).not.toHaveBeenCalled()
+    expect(es.closed).toBe(false)
+    es.emit('verdict', verdictEvent(SubmissionResult.SUCCESS))
+    expect(onVerdict).toHaveBeenCalledTimes(1)
+    expect(getById).not.toHaveBeenCalled()
+  })
+
+  it('every subscriber of a shared watch hears progress; a watch without the option is unaffected', () => {
+    const a = vi.fn()
+    const b = vi.fn()
+    useSubmissionStream().watch('s1', () => {}, undefined, { onProgress: a })
+    useSubmissionStream().watch('s1', () => {}, undefined, { onProgress: b })
+    useSubmissionStream().watch('s1', () => {})
+    MockEventSource.instances[0].emit('progress', { data: JSON.stringify({ testCase: '1', result: -1 }) })
+    expect(a).toHaveBeenCalledTimes(1)
+    expect(b).toHaveBeenCalledTimes(1)
+  })
+
+  it('a progress event on a closed stream is ignored', async () => {
+    const onProgress = vi.fn()
+    useSubmissionStream().watch('s1', () => {}, undefined, { onProgress })
+    const es = MockEventSource.instances[0]
+    es.emit('error', {}) // polling now
+    es.emit('progress', { data: JSON.stringify({ testCase: '1', result: 0 }) })
+    expect(onProgress).not.toHaveBeenCalled()
+  })
+
+  it('after a give-up the same caller may watch the id again', async () => {
+    answerPolls(notFound())
+    const onGiveUp = vi.fn()
+    const stream = useSubmissionStream()
+    stream.watch('s1', () => {}, onGiveUp)
+    MockEventSource.instances[0].emit('error', {})
+    await vi.advanceTimersByTimeAsync(POLL_DELAYS_MS[0])
+    expect(onGiveUp).toHaveBeenCalledTimes(1)
+    stream.watch('s1', () => {}, onGiveUp)
+    expect(MockEventSource.instances).toHaveLength(2)
+  })
 })
