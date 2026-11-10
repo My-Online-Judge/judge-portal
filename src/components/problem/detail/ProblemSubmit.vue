@@ -245,9 +245,11 @@ const editorLanguage = computed(() => {
     return getMonacoLanguage(selectedLanguage.value)
 })
 
-// --- The draft: the code and its language, kept in this browser per problem ---
+// --- The draft: the code and its language, kept in this browser per account and problem ---
+// The owner is fixed for this editor's life: SolvePane is keyed by the user too, so another account gets a new editor.
+const draftOwner = authStore.user?.id ?? null
 const draftSaved = ref(false)
-const draft = readDraft(props.problemSlug)
+const draft = readDraft(draftOwner, props.problemSlug)
 if (draft) {
     sourceCode.value = draft.code
     draftSaved.value = true
@@ -270,7 +272,7 @@ const saveDraft = () => {
     clearTimeout(draftTimer)
     draftTimer = undefined
     if (!selectedLanguage.value) return
-    draftSaved.value = writeDraft(props.problemSlug, selectedLanguage.value.identifier, sourceCode.value)
+    draftSaved.value = writeDraft(draftOwner, props.problemSlug, selectedLanguage.value.identifier, sourceCode.value)
 }
 watch([sourceCode, selectedLanguage], () => {
     clearTimeout(draftTimer)
