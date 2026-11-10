@@ -111,7 +111,7 @@ describe('ProblemSubmit', () => {
 
     it('theDraftComesBackInItsLanguage', async () => {
         const py = { id: 'l2', name: 'Python 3', identifier: 'py3' }
-        localStorage.setItem('oj:draft:sum', JSON.stringify({ languageIdentifier: 'py3', code: 'print(1)', savedAt: 1 }))
+        localStorage.setItem('oj:draft:guest:sum', JSON.stringify({ languageIdentifier: 'py3', code: 'print(1)', savedAt: 1 }))
         const w = await mountSubmit({ languages: [cpp, py] })
         expect((w.get('[data-test="editor"]').element as HTMLTextAreaElement).value).toBe('print(1)')
         expect(w.text()).toContain('Python 3')

@@ -151,7 +151,7 @@
                 <StatementPane :problem="problem" :compact="!isDesktop" />
             </Teleport>
             <Teleport defer :to="isDesktop ? '#problem-pane-code' : '#problem-view-code'">
-                <SolvePane :key="slug" :slug="slug" :actions-to="isDesktop ? `#${ACTIONS_ID}` : `#${MOBILE_ACTIONS_ID}`"
+                <SolvePane :key="`${slug}:${authStore.user?.id ?? ''}`" :slug="slug" :actions-to="isDesktop ? `#${ACTIONS_ID}` : `#${MOBILE_ACTIONS_ID}`"
                     :view="isDesktop ? undefined : mobileView === 'result' ? 'result' : 'code'"
                     :sample-input="problem.sampleInput" :sample-output="problem.sampleOutput"
                     :contest-slug="submitContestSlug" :disabled-reason="disabledReason"
