@@ -417,10 +417,14 @@ const refreshStats = async () => {
         async () => (await fetchProblem(new AbortController().signal)).data.data,
         problem.value.totalSubmission ?? 0,
     )
+    // useFetch keeps the problem in a shallowRef: only a new object re-renders, a field set on the old one does not.
     if (fresh && problem.value) {
-        problem.value.totalSubmission = fresh.totalSubmission
-        problem.value.acceptedSubmission = fresh.acceptedSubmission
-        problem.value.statisticInfo = fresh.statisticInfo
+        problem.value = {
+            ...problem.value,
+            totalSubmission: fresh.totalSubmission,
+            acceptedSubmission: fresh.acceptedSubmission,
+            statisticInfo: fresh.statisticInfo,
+        }
     }
 }
 </script>

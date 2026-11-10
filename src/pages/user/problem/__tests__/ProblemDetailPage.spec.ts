@@ -366,4 +366,24 @@ describe('ProblemDetailPage', () => {
             )
         })
     })
+
+    it('showsTheNewTotalOnceASubmissionIsJudged', async () => {
+        h.isDesktop.value = true
+        // Reads the total off its prop the way ProblemMetaBar does, so it only changes if the page hands it a change Vue can see.
+        const Statement = defineComponent({
+            props: { problem: { type: Object, required: true }, compact: Boolean },
+            setup: (props) => () => render('span', { 'data-testid': 'total' }, String(props.problem.totalSubmission)),
+        })
+        const base = { slug: 'tong-tu-1-den-n', title: 'T', acceptedSubmission: 1, statisticInfo: {} }
+        h.getProblemBySlug
+            .mockResolvedValueOnce({ data: { data: { ...base, totalSubmission: 4 } } })
+            .mockResolvedValue({ data: { data: { ...base, totalSubmission: 5 } } })
+        wrapper = mount(ProblemDetailPage, { attachTo: document.body, global: { stubs: { ...stubs, StatementPane: Statement } } })
+        await flushPromises()
+        expect(document.querySelector('[data-testid="total"]')?.textContent).toBe('4')
+
+        wrapper.findComponent(SolvePane).vm.$emit('judged', { id: 's1', status: 0 })
+        await flushPromises()
+        expect(document.querySelector('[data-testid="total"]')?.textContent).toBe('5')
+    })
 })
